@@ -9,6 +9,6 @@ services:
       - ./data:/var/lib/postgresql/data
       - ./scripts:/scripts
     ports:
-      - '5432:5432'
+      - '5432:5433'
     env_file:
       - .env
