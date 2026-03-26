@@ -3,11 +3,30 @@ from dotenv import load_dotenv
 import psycopg2
 from typing import Optional
 from langchain.tools import tool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")  
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+class PgToolResponse(BaseModel):
+    _allow_direct: bool = False
+    status: str
+    data: dict
+    
+    @model_validator(mode="wrap")
+    @classmethod
+    def _block_direct(cls, values, handler):
+        raise TypeError("Use PgToolResponse.ok() or PgToolResponse.error()")
+    
+    @classmethod
+    def ok(cls, data: dict) -> "PgToolResponse":
+        return cls.model_construct(status="ok", data=data)
+    
+    @classmethod
+    def error(cls, e: Exception) -> "PgToolResponse":
+        return cls.model_construct(status="error", data={"message": str(e)})
+
 
 def get_conn():
     return psycopg2.connect(DATABASE_URL)
@@ -53,7 +72,7 @@ def add_transaction(
     category_id: Optional[int] = None,
     description: Optional[str] = None,
     payment_method: Optional[str] = None,
-) -> dict:
+) -> PgToolResponse:
     """Insere uma transação financeira no banco de dados Postgres.""" # docstring obrigatório da @tools do langchain (estranho, mas legal né?)
     with get_conn() as conn, conn.cursor() as cur:
         try:
@@ -86,12 +105,22 @@ def add_transaction(
 
             new_id, occurred = cur.fetchone()
             conn.commit()
-            return {"status": "ok", "id": new_id, "occurred_at": str(occurred)}
+            return PgToolResponse.ok({"id": new_id, "occurred_at": str(occurred)})
 
         except Exception as e:
             conn.rollback()
-            return {"status": "error", "message": str(e)}
+            return PgToolResponse.error(e)
 
+@tool("get_balance")
+def get_balance() -> PgToolResponse:
+    """Recupera do banco de dados o saldo atual a partir de todas as transações registradas"""
+    with get_conn() as conn, conn.cursor() as cur:
+        try:
+            cur.execute('SELECT sum(amount) FROM transactions;')
+            balance = cur.fetchone()[0]
+            return PgToolResponse.ok({"balance": balance})
+        except Exception as e:
+            return PgToolResponse.error(e)
 
 # Exporta a lista de tools
-TOOLS = [add_transaction]
+TOOLS = [add_transaction, get_balance]
