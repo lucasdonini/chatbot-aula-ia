@@ -43,11 +43,12 @@ class AddTransactionArgs(BaseModel):
     source_text: str = Field(..., description="Texto original do usuário.")
     occurred_at: Optional[str] = Field(
         default=None,
-        description="Timestamp ISO 8601; se ausente, usa NOW() no banco."
+        description="Data da transação segundo o prompt do usuário; se ausente, usa NOW() no banco."
     )
     type_id: Optional[int] = Field(default=None, description="ID em transaction_types (1=INCOME, 2=EXPENSES, 3=TRANSFER).")
     type_name: Optional[str] = Field(default=None, description="Nome do tipo: INCOME | EXPENSES | TRANSFER.")
     category_id: Optional[int] = Field(default=None, description="FK de categories (opcional).")
+    category_name: Optional[str] = Field(default="outros", description="Nome da categoria: comida | besteira | estudo | férias | transporte | moradia | saúde | lazer | contas | investimento | presente | outros")
     description: Optional[str] = Field(default=None, description="Descrição (opcional).")
     payment_method: Optional[str] = Field(default=None, description="Forma de pagamento (opcional).")
 
@@ -73,6 +74,16 @@ def _resolve_type_id(cur, type_id: Optional[int], type_name: Optional[str]) -> O
     return 2
 
 
+def _resolve_category_id(cur, category_id: Optional[int], category_name: Optional[str]) -> Optional[str]:
+    if category_name:
+        c = category_name.strip().lower()
+        cur.execute("SELECT id FROM categories WHERE LOWER(name)=%s LIMIT 1;", (c,))
+        return cur.fetchone()[0]
+    if category_id:
+        return int(category_id)
+    return 12
+
+
 # Tool: add_transaction
 @tool("add_transaction", args_schema=AddTransactionArgs)
 def add_transaction(
@@ -82,6 +93,7 @@ def add_transaction(
     type_id: Optional[int] = None,
     type_name: Optional[str] = None,
     category_id: Optional[int] = None,
+    category_name: Optional[str] = "outros",
     description: Optional[str] = None,
     payment_method: Optional[str] = None,
 ) -> PgToolResponse:
@@ -91,6 +103,10 @@ def add_transaction(
             resolved_type_id = _resolve_type_id(cur, type_id, type_name)
             if not resolved_type_id:
                 return PgToolResponse.error("Tipo inválido (use type_id ou type_name: INCOME/EXPENSES/TRANSFER).")
+            
+            resolved_category_id = _resolve_category_id(cur, category_id, category_name)
+            if not resolved_category_id:
+                return PgToolResponse.error("Categoria inválida (use category_id ou category_name: comida/besteira/estudo/férias/transporte/moradia/saúde/lazer/contas/investimento/presente/outros)")
 
             if occurred_at:
                 cur.execute(
@@ -101,7 +117,7 @@ def add_transaction(
                         (%s, %s, %s, %s, %s, %s::timestamptz, %s)
                     RETURNING id, occurred_at;
                     """,
-                    (amount, resolved_type_id, category_id, description, payment_method, occurred_at, source_text),
+                    (amount, resolved_type_id, resolved_category_id, description, payment_method, occurred_at, source_text),
                 )
             else:
                 cur.execute(
@@ -112,7 +128,7 @@ def add_transaction(
                         (%s, %s, %s, %s, %s, NOW(), %s)
                     RETURNING id, occurred_at;
                     """,
-                    (amount, resolved_type_id, category_id, description, payment_method, source_text),
+                    (amount, resolved_type_id, resolved_category_id, description, payment_method, source_text),
                 )
 
             new_id, occurred = cur.fetchone()

@@ -4,6 +4,7 @@ from langchain.agents import create_agent
 from langgraph.checkpoint.memory import MemorySaver
 
 from dotenv import load_dotenv
+from datetime import datetime
 import os
 
 from pg_tools import TOOLS
@@ -188,7 +189,7 @@ while True:
         break
     try:
         resposta = app.invoke(
-            {"messages": [{"role": "human", "content": user_input}]},
+            {"messages": [{"role": "human", "content": f"{datetime.now()} -> {user_input}"}]},
             config={"configurable": {"thread_id": "meu_id_de_sessao"}}
         )
         print(f"\n{resposta['messages'][-1].text}\n{'-' * 20}\n")
