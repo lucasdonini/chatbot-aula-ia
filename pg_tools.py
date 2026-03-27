@@ -24,8 +24,13 @@ class PgToolResponse(BaseModel):
         return cls.model_construct(status="ok", data=data)
     
     @classmethod
-    def error(cls, e: Exception) -> "PgToolResponse":
-        return cls.model_construct(status="error", data={"message": str(e)})
+    def error(cls, msg: str) -> "PgToolResponse":
+        return cls.model_construct(status="error", data={"message": msg})
+    
+    @classmethod
+    def exception(cls, e: Exception) -> "PgToolResponse":
+        return cls.error(str(e))
+
 
 
 def get_conn():
@@ -78,7 +83,7 @@ def add_transaction(
         try:
             resolved_type_id = _resolve_type_id(cur, type_id, type_name)
             if not resolved_type_id:
-                return {"status": "error", "message": "Tipo inválido (use type_id ou type_name: INCOME/EXPENSES/TRANSFER)."}
+                return PgToolResponse.error("Tipo inválido (use type_id ou type_name: INCOME/EXPENSES/TRANSFER).")
 
             if occurred_at:
                 cur.execute(
@@ -109,7 +114,7 @@ def add_transaction(
 
         except Exception as e:
             conn.rollback()
-            return PgToolResponse.error(e)
+            return PgToolResponse.exception(e)
 
 @tool("get_balance")
 def get_balance() -> PgToolResponse:
@@ -120,7 +125,7 @@ def get_balance() -> PgToolResponse:
             balance = cur.fetchone()[0]
             return PgToolResponse.ok({"balance": balance})
         except Exception as e:
-            return PgToolResponse.error(e)
+            return PgToolResponse.exception(e)
 
 # Exporta a lista de tools
 TOOLS = [add_transaction, get_balance]
