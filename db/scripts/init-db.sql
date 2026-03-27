@@ -45,21 +45,29 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE INDEX IF NOT EXISTS idx_events_start_time
   ON events (start_time DESC);
 
-INSERT INTO transaction_types (type) VALUES
-  ('INCOME'),
-  ('EXPENSES'),
-  ('TRANSFER');
+INSERT INTO transaction_types (type)
+SELECT unnest(ARRAY['INCOME', 'EXPENSES', 'TRANSFER'])
+WHERE NOT EXISTS (SELECT 1 FROM transaction_types LIMIT 1);
 
-INSERT INTO categories (name) VALUES
-  ('comida'),
-  ('besteira'),
-  ('estudo'),
-  ('férias'),
-  ('transporte'),
-  ('moradia'),
-  ('saúde'),
-  ('lazer'),
-  ('contas'),
-  ('investimento'),
-  ('presente'),
-  ('outros');
+INSERT INTO categories (name)
+SELECT unnest(ARRAY[
+  'comida', 'besteira', 'estudo', 'férias', 'transporte',
+  'moradia', 'saúde', 'lazer', 'contas', 'investimento',
+  'presente', 'outros'
+])
+WHERE NOT EXISTS (SELECT 1 FROM categories LIMIT 1);
+
+CREATE OR REPLACE VIEW last_transactions AS
+SELECT
+  t.id,
+  t.amount,
+  ty.type,
+  c.name AS category,
+  t.description,
+  t.payment_method,
+  t.occurred_at,
+  t.source_text
+FROM transactions t
+JOIN transaction_types ty ON ty.id = t.type
+LEFT JOIN categories c ON c.id = t.category_id
+ORDER BY t.id DESC;

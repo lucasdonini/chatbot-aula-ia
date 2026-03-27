@@ -1,0 +1,5 @@
+FROM postgres:latest
+
+COPY ./scripts/init-db.sql /docker-entrypoint-initdb.d/
+
+CMD [ "postgres" ]

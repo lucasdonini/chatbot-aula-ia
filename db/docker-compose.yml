@@ -2,12 +2,13 @@ services:
   postgresql:
     container_name: acessoria-sql
     restart: unless-stopped
-    image: postgres
+    build: .
     tty: true
     stdin_open: true
     volumes:
       - ./data:/var/lib/postgresql/data
       - ./scripts:/scripts
+      - ./.psqlrc:/etc/postgresql-common/psqlrc
     ports:
       - '5433:5432'
     env_file:
