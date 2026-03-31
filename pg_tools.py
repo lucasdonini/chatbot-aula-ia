@@ -147,7 +147,7 @@ def saldo_total() -> PgToolResponse:
         try:
             cur.execute('SELECT sum(amount) FROM transactions WHERE type <> 3;')
             balance = cur.fetchone()[0]
-            return PgToolResponse.ok({"balance": balance})
+            return PgToolResponse.ok({"saldo": balance})
         except Exception as e:
             return PgToolResponse.exception(e)
 
