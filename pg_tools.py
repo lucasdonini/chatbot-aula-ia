@@ -190,5 +190,19 @@ def saldo_diario(hoje: datetime) -> PgToolResponse:
             return PgToolResponse.exception(e)
 
 
+@tool("search_transactions")
+def search_transactions() -> PgToolResponse:
+    '''
+    Retorna o histórico completo de transações registradas no banco de dados
+    '''
+    with get_conn() as conn, conn.cursor() as cur:
+        try:
+            cur.execute('SELECT * FROM transactions;')
+            transactions = cur.fetchall()
+            return PgToolResponse.ok(data={"transacoes": transactions})
+        except Exception as e:
+            return PgToolResponse.exception(e)
+
+
 # Exporta a lista de tools
-TOOLS = [add_transaction, saldo_total, saldo_diario]
+TOOLS = [add_transaction, saldo_total, saldo_diario, search_transactions]
