@@ -139,8 +139,8 @@ def add_transaction(
             conn.rollback()
             return PgToolResponse.exception(e)
 
-@tool("get_balance")
-def get_balance() -> PgToolResponse:
+@tool("saldo_total")
+def saldo_total() -> PgToolResponse:
     """Recupera do banco de dados o saldo atual a partir de todas as transações registradas"""
     with get_conn() as conn, conn.cursor() as cur:
         try:
@@ -151,4 +151,4 @@ def get_balance() -> PgToolResponse:
             return PgToolResponse.exception(e)
 
 # Exporta a lista de tools
-TOOLS = [add_transaction, get_balance]
+TOOLS = [add_transaction, saldo_total]
