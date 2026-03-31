@@ -4,6 +4,7 @@ import psycopg2
 from typing import Optional
 from langchain.tools import tool
 from pydantic import BaseModel, Field, model_validator
+from datetime import datetime
 
 load_dotenv()
 
@@ -51,6 +52,10 @@ class AddTransactionArgs(BaseModel):
     category_name: Optional[str] = Field(default="outros", description="Nome da categoria: comida | besteira | estudo | férias | transporte | moradia | saúde | lazer | contas | investimento | presente | outros")
     description: Optional[str] = Field(default=None, description="Descrição (opcional).")
     payment_method: Optional[str] = Field(default=None, description="Forma de pagamento (opcional).")
+
+
+class SaldoDiarioArgs(BaseModel):
+    hoje: datetime = Field(..., description="Dia local informado em America/Sao_Paulo")
 
 
 TYPE_ALIASES = {
@@ -152,5 +157,38 @@ def saldo_total() -> PgToolResponse:
             return PgToolResponse.exception(e)
 
 
+@tool("saldo_diario", args_schema=SaldoDiarioArgs)
+def saldo_diario(hoje: datetime) -> PgToolResponse:
+    '''
+    Retorna o saldo (INCOME - EXPENSES) do dia local informado em America/Sao_Paulo.
+    Ignora TRANSFER (type=3)
+    '''
+    with get_conn() as conn, conn.cursor() as cur:
+        try:
+            cur.execute(
+                '''
+                SELECT sum(amount) 
+                FROM transactions 
+                WHERE type = 1 
+                AND (occurred_at AT TIME ZONE 'America/Sao_Paulo')::date = %s''',
+                (hoje,)
+            )
+            income = cur.fetchone()[0]
+            income = 0 if not income else income
+            
+            cur.execute(
+                '''
+                SELECT sum(amount)
+                FROM transactions
+                WHERE type = 2
+                AND (occurred_at AT TIME ZONE 'America/Sao_Paulo')::date = %s''',
+                (hoje,)
+            )
+            expenses = cur.fetchone()[0]
+            return PgToolResponse.ok({"saldo_diario": income - expenses})
+        except Exception as e:
+            return PgToolResponse.exception(e)
+
+
 # Exporta a lista de tools
-TOOLS = [add_transaction, saldo_total]
+TOOLS = [add_transaction, saldo_total, saldo_diario]
