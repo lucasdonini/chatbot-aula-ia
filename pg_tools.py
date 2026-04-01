@@ -54,7 +54,7 @@ class AddTransactionArgs(BaseModel):
     payment_method: Optional[str] = Field(default=None, description="Forma de pagamento (opcional).")
 
 
-class SaldoDiarioArgs(BaseModel):
+class DailyBalanceArgs(BaseModel):
     hoje: date = Field(..., description="Dia local informado sem informação de hora")
 
 
@@ -145,8 +145,8 @@ def add_transaction(
             return PgToolResponse.exception(e)
 
 
-@tool("saldo_total")
-def saldo_total() -> PgToolResponse:
+@tool("total_balance")
+def total_balance() -> PgToolResponse:
     """Recupera do banco de dados o saldo atual a partir de todas as transações registradas"""
     with get_conn() as conn, conn.cursor() as cur:
         try:
@@ -171,8 +171,8 @@ def saldo_total() -> PgToolResponse:
             return PgToolResponse.exception(e)
 
 
-@tool("saldo_diario", args_schema=SaldoDiarioArgs)
-def saldo_diario(hoje: date) -> PgToolResponse:
+@tool("daily_balance", args_schema=DailyBalanceArgs)
+def daily_balance(hoje: date) -> PgToolResponse:
     '''
     Retorna o saldo (INCOME - EXPENSES) do dia local informado em America/Sao_Paulo.
     Ignora TRANSFER (type=3)
@@ -221,4 +221,4 @@ def search_transactions() -> PgToolResponse:
 
 
 # Exporta a lista de tools
-TOOLS = [add_transaction, saldo_total, saldo_diario, search_transactions]
+TOOLS = [add_transaction, total_balance, daily_balance, search_transactions]
