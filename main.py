@@ -65,6 +65,7 @@ agenda e compromissos.
 - Sempre que uma transação for informada (de qualquer tipo) tente registrá-la no banco de dados usando a tool adequada. Se não conseguir, informe o usuário de que o modelo recebeu a informação mas não conseguir registrá-la na base de dados.
 - Sempre que precisar da data, busque na string da pergunta.
 - Sempre que precisar de informações passadas que não estão presentes no prompt ou histórico local, busque no histórico de transações.
+- Quando for buscar informações usando tools que pedem data, passe no formato YYYY-MM-DD sem hora ou fuso horário
 
 
 ### FORMATO DE RESPOSTA

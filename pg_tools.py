@@ -4,7 +4,7 @@ import psycopg2
 from typing import Optional
 from langchain.tools import tool
 from pydantic import BaseModel, Field, model_validator
-from datetime import datetime
+from datetime import date
 
 load_dotenv()
 
@@ -55,7 +55,7 @@ class AddTransactionArgs(BaseModel):
 
 
 class SaldoDiarioArgs(BaseModel):
-    hoje: datetime = Field(..., description="Dia local informado em America/Sao_Paulo")
+    hoje: date = Field(..., description="Dia local informado sem informação de hora")
 
 
 TYPE_ALIASES = {
@@ -150,15 +150,29 @@ def saldo_total() -> PgToolResponse:
     """Recupera do banco de dados o saldo atual a partir de todas as transações registradas"""
     with get_conn() as conn, conn.cursor() as cur:
         try:
-            cur.execute('SELECT sum(amount) FROM transactions WHERE type <> 3;')
-            balance = cur.fetchone()[0]
-            return PgToolResponse.ok({"saldo": balance})
+            cur.execute('''
+                SELECT sum(amount) 
+                FROM transactions 
+                WHERE type = 1'''
+            )
+            income = cur.fetchone()[0]
+            income = 0 if not income else income
+            
+            cur.execute('''
+                SELECT sum(amount)
+                FROM transactions
+                WHERE type = 2'''
+            )
+            expenses = cur.fetchone()[0]
+            expenses = 0 if not expenses else expenses
+            
+            return PgToolResponse.ok({"saldo_diario": income - expenses})
         except Exception as e:
             return PgToolResponse.exception(e)
 
 
 @tool("saldo_diario", args_schema=SaldoDiarioArgs)
-def saldo_diario(hoje: datetime) -> PgToolResponse:
+def saldo_diario(hoje: date) -> PgToolResponse:
     '''
     Retorna o saldo (INCOME - EXPENSES) do dia local informado em America/Sao_Paulo.
     Ignora TRANSFER (type=3)
@@ -170,7 +184,7 @@ def saldo_diario(hoje: datetime) -> PgToolResponse:
                 SELECT sum(amount) 
                 FROM transactions 
                 WHERE type = 1 
-                AND (occurred_at AT TIME ZONE 'America/Sao_Paulo')::date = %s''',
+                AND occurred_at = %s''',
                 (hoje,)
             )
             income = cur.fetchone()[0]
@@ -181,10 +195,12 @@ def saldo_diario(hoje: datetime) -> PgToolResponse:
                 SELECT sum(amount)
                 FROM transactions
                 WHERE type = 2
-                AND (occurred_at AT TIME ZONE 'America/Sao_Paulo')::date = %s''',
+                AND occurred_at = %s''',
                 (hoje,)
             )
             expenses = cur.fetchone()[0]
+            expenses = 0 if not expenses else expenses
+            
             return PgToolResponse.ok({"saldo_diario": income - expenses})
         except Exception as e:
             return PgToolResponse.exception(e)
