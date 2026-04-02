@@ -189,25 +189,23 @@ def daily_balance(target_date: date) -> PgToolResponse:
         try:
             cur.execute(
                 '''
-                SELECT sum(amount) 
+                SELECT coalesce(sum(amount), 0) 
                 FROM transactions 
                 WHERE type = 1 
                 AND occurred_at < %s''',
                 (query_date,)
             )
             income = cur.fetchone()[0]
-            income = 0 if not income else income
             
             cur.execute(
                 '''
-                SELECT sum(amount)
+                SELECT coalesce(sum(amount), 0)
                 FROM transactions
                 WHERE type = 2
                 AND occurred_at = %s''',
                 (query_date,)
             )
             expenses = cur.fetchone()[0]
-            expenses = 0 if not expenses else expenses
             
             return PgToolResponse.ok({"saldo_diario": income - expenses})
         except Exception as e:
