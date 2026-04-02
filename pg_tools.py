@@ -4,7 +4,7 @@ import psycopg2
 from typing import Optional
 from langchain.tools import tool
 from pydantic import BaseModel, Field, model_validator
-from datetime import date
+from datetime import date, timedelta
 
 load_dotenv()
 
@@ -52,10 +52,6 @@ class AddTransactionArgs(BaseModel):
     category_name: Optional[str] = Field(default="outros", description="Nome da categoria: comida | besteira | estudo | férias | transporte | moradia | saúde | lazer | contas | investimento | presente | outros")
     description: Optional[str] = Field(default=None, description="Descrição (opcional).")
     payment_method: Optional[str] = Field(default=None, description="Forma de pagamento (opcional).")
-
-
-class DailyBalanceArgs(BaseModel):
-    hoje: date = Field(..., description="Dia local informado sem informação de hora")
 
 
 TYPE_ALIASES = {
@@ -171,12 +167,24 @@ def total_balance() -> PgToolResponse:
             return PgToolResponse.exception(e)
 
 
+class DailyBalanceArgs(BaseModel):
+    target_date: date = Field(..., description=(
+        "Data de referência para o cálculo do saldo. "
+        "O saldo retornado será o acumulado de todas as entradas (INCOME) "
+        "e saídas (EXPENSES), ignorando transferências (TRANSFER)"
+        "registradas ATÉ esse dia (inclusive). "
+        "Exemplos: 'qual meu saldo hoje' → {hoje}, "
+        "'qual era meu saldo no fim de março' → 2026-03-31."
+    ))
+
+
 @tool("daily_balance", args_schema=DailyBalanceArgs)
-def daily_balance(hoje: date) -> PgToolResponse:
+def daily_balance(target_date: date) -> PgToolResponse:
     '''
     Retorna o saldo (INCOME - EXPENSES) do dia local informado em America/Sao_Paulo.
     Ignora TRANSFER (type=3)
     '''
+    query_date = target_date + timedelta(days=1)
     with get_conn() as conn, conn.cursor() as cur:
         try:
             cur.execute(
@@ -184,8 +192,8 @@ def daily_balance(hoje: date) -> PgToolResponse:
                 SELECT sum(amount) 
                 FROM transactions 
                 WHERE type = 1 
-                AND occurred_at = %s''',
-                (hoje,)
+                AND occurred_at < %s''',
+                (query_date,)
             )
             income = cur.fetchone()[0]
             income = 0 if not income else income
@@ -196,7 +204,7 @@ def daily_balance(hoje: date) -> PgToolResponse:
                 FROM transactions
                 WHERE type = 2
                 AND occurred_at = %s''',
-                (hoje,)
+                (query_date,)
             )
             expenses = cur.fetchone()[0]
             expenses = 0 if not expenses else expenses
