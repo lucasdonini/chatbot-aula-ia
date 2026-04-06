@@ -18,7 +18,7 @@ llm_gemini = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     temperature=temperature,
     top_p=top_p,
-    google_api_key=os.getenv('GEMINI_API_KEY')
+    google_api_key=os.getenv("GEMINI_API_KEY"),
 )
 
 llm_groq = ChatGroq(
@@ -26,7 +26,7 @@ llm_groq = ChatGroq(
     # model="qwen/qwen3-32b",
     temperature=temperature,
     top_p=top_p,
-    api_key=os.getenv('GROQ_API_KEY')
+    api_key=os.getenv("GROQ_API_KEY"),
 )
 
 llm = llm_gemini.with_fallbacks([llm_groq])
@@ -190,15 +190,23 @@ SHOTS_CUT = (
 # =============================================================================
 
 SYSTEM_PROMPT_COMPLETO = (
-    SYSTEM_PROMPT     + "\n\n" +
-    SHOTS_OPEN        + "\n\n" +
-    SHOT_1            + "\n\n" +
-    SHOT_2            + "\n\n" +
-    SHOT_3            + "\n\n" +
-    SHOT_4            + "\n\n" +
-    SHOT_5            + "\n\n" +
-    SHOT_6            + "\n\n" +
-    SHOTS_CUT
+    SYSTEM_PROMPT
+    + "\n\n"
+    + SHOTS_OPEN
+    + "\n\n"
+    + SHOT_1
+    + "\n\n"
+    + SHOT_2
+    + "\n\n"
+    + SHOT_3
+    + "\n\n"
+    + SHOT_4
+    + "\n\n"
+    + SHOT_5
+    + "\n\n"
+    + SHOT_6
+    + "\n\n"
+    + SHOTS_CUT
 )
 
 chckpointer = MemorySaver()
@@ -206,21 +214,25 @@ app = create_agent(
     model=llm,
     tools=TOOLS,
     system_prompt=SYSTEM_PROMPT_COMPLETO,
-    checkpointer=chckpointer
+    checkpointer=chckpointer,
 )
 
-os.system('cls')
-print('\nBem vindo! Converse hoje mesmo com o Acessor.IA!!', "\n")
+os.system("cls")
+print("\nBem vindo! Converse hoje mesmo com o Acessor.IA!!", "\n")
 
 while True:
     user_input = input(">>> ")
-    if user_input.lower() in ('sair', 'exit', 'tchau', 'bye', 'end', 'fim'):
-        print('Encerrando a conversa')
+    if user_input.lower() in ("sair", "exit", "tchau", "bye", "end", "fim"):
+        print("Encerrando a conversa")
         break
     try:
         resposta = app.invoke(
-            {"messages": [{"role": "human", "content": f"{datetime.now()} -> {user_input}"}]},
-            config={"configurable": {"thread_id": "meu_id_de_sessao"}}
+            {
+                "messages": [
+                    {"role": "human", "content": f"{datetime.now()} -> {user_input}"}
+                ]
+            },
+            config={"configurable": {"thread_id": "meu_id_de_sessao"}},
         )
         print(f"\n{resposta['messages'][-1].text}\n{'-' * 20}\n")
     except Exception as e:
