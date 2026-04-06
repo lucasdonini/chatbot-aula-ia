@@ -1,0 +1,29 @@
+[project]
+name = "acessorIA"
+version = "0.1.0"
+requires-python = "==3.12.*"
+dependencies = [
+    "python-dotenv>=1.2.2",
+    "google-genai>=1.68.0",
+    "langchain>=1.2.14",
+    "langchain-google-genai>=4.2.1",
+    "pymongo>=4.16.0",
+    "langchain-groq>=1.1.1",
+    "psycopg2>=2.9.11",
+]
+
+[dependency-groups]
+dev = [
+    "black>=24.0.0",
+    "pre-commit>=4.5.0"
+]
+
+[tool.pytest.ini_options]
+minversion = "8.3"
+addopts = "-ra -q"
+testpaths = ["tests"]
+pythonpath = ". src"
+
+[tool.black]
+target-version = ['py313']
+line-length = 88

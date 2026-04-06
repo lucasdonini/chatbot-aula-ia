@@ -1,7 +1,0 @@
-python-dotenv
-google-genai
-langchain
-langchain-google-genai
-pymongo
-langchain-groq
-psycopg2
