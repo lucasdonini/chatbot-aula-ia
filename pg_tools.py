@@ -310,7 +310,7 @@ def search_transactions(
     type: str = None,
     category: str = None,
     description: str = None,
-    limit: int = 5,
+    limit: int = 50,
 ) -> PgToolResponse:
     """
     Busca no banco de dados uma transação de acordo com os parâmetros passados.
