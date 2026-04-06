@@ -207,7 +207,7 @@ def total_balance() -> PgToolResponse:
             expenses = cur.fetchone()[0]
             expenses = 0 if not expenses else expenses
 
-            return PgToolResponse.ok({"saldo_diario": income - expenses})
+            return PgToolResponse.ok({"saldo": income - expenses})
         except Exception as e:
             return PgToolResponse.exception(e)
 
