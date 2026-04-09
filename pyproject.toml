@@ -25,5 +25,5 @@ testpaths = ["tests"]
 pythonpath = ". src"
 
 [tool.black]
-target-version = ['py313']
+target-version = ['py312']
 line-length = 88
