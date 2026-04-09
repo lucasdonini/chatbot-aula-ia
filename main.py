@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 from datetime import datetime
 import os
 
-from pg_tools import TOOLS
+from tools.db import TOOLS
+from model.EnvSettings import env
 
 load_dotenv()
 
@@ -18,7 +19,7 @@ llm_gemini = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     temperature=temperature,
     top_p=top_p,
-    google_api_key=os.getenv("GEMINI_API_KEY"),
+    google_api_key=env.gemini_api_key,
 )
 
 llm_groq = ChatGroq(
@@ -26,7 +27,7 @@ llm_groq = ChatGroq(
     # model="qwen/qwen3-32b",
     temperature=temperature,
     top_p=top_p,
-    api_key=os.getenv("GROQ_API_KEY"),
+    api_key=env.groq_api_key,
 )
 
 llm = llm_gemini.with_fallbacks([llm_groq])
