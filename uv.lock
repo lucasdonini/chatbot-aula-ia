@@ -14,7 +14,6 @@ dependencies = [
     { name = "psycopg2" },
     { name = "pydantic-settings" },
     { name = "pymongo" },
-    { name = "python-dotenv" },
 ]
 
 [package.dev-dependencies]
@@ -32,7 +31,6 @@ requires-dist = [
     { name = "psycopg2", specifier = ">=2.9.11" },
     { name = "pydantic-settings", specifier = ">=2.13.1" },
     { name = "pymongo", specifier = ">=4.16.0" },
-    { name = "python-dotenv", specifier = ">=1.2.2" },
 ]
 
 [package.metadata.requires-dev]
