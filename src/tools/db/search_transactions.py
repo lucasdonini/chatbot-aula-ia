@@ -1,4 +1,6 @@
-from .utils import get_cursor, resolve_category_id, resolve_type_id
+from src.tools.db.utils import get_cursor
+
+from .utils import resolve_category_id, resolve_type_id
 from .response import DatabaseToolResponse
 from pydantic import BaseModel, Field
 from typing import Optional
