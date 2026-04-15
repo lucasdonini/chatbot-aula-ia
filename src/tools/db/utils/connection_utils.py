@@ -1,5 +1,5 @@
 from psycopg2.extensions import connection, cursor
-from src.model.EnvSettings import env
+from model.env import env
 from typing import Generator
 from contextlib import contextmanager
 import psycopg2

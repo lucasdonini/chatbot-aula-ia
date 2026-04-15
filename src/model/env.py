@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings
 
 
-class Env(BaseSettings):
+class EnvVariables(BaseSettings):
     gemini_api_key: str
     groq_api_key: str
     database_url: str
@@ -9,4 +9,4 @@ class Env(BaseSettings):
     model_config = {"env_file": ".env"}
 
 
-env = Env()
+env = EnvVariables()
