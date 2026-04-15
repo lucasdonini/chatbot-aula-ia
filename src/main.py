@@ -1,12 +1,6 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_groq import ChatGroq
-from langchain.agents import create_agent
-from langgraph.checkpoint.memory import MemorySaver
-
+from .agents import router_app, financial_app, agenda_app, orquestrator_app
 from datetime import datetime
 import os
-
-from .agents import router_app, financial_app, agenda_app, orquestrator_app
 
 
 os.system("cls")
