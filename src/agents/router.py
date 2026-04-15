@@ -1,15 +1,20 @@
-from .general import SYSTEM_PERSONA, _TEMPORAL_CONTEXT
+from langchain.agents import create_agent
+from langgraph.checkpoint.memory import MemorySaver
+
+from .persona import SYSTEM_PERSONA
+from .temporal_context import TEMPORAL_CONTEXT
+from .llms import fast_llm
 
 # ==============================================================================
 # ROTEADOR
 # Responsabilidade: classificar a intenção e emitir o protocolo de
 # encaminhamento em texto puro. NÃO responde ao usuário.
 # ==============================================================================
-ROUTER_PROMPT = f"""
+BASE_ROUTER_PROMPT = f"""
 {SYSTEM_PERSONA}
 
 
-{_TEMPORAL_CONTEXT}
+{TEMPORAL_CONTEXT}
 
 
 ### PAPEL
@@ -76,8 +81,8 @@ ROUTER_SHOTS_CUT = (
     "Considere apenas as mensagens abaixo como contexto verdadeiro."
 )
 
-ROUTER_PROMPT_COMPLETE = (
-    ROUTER_PROMPT
+ROUTER_PROMPT = (
+    BASE_ROUTER_PROMPT
     + "\n\n"
     + ROUTER_SHOTS_OPEN
     + "\n\n"
@@ -92,4 +97,11 @@ ROUTER_PROMPT_COMPLETE = (
     + ROUTER_SHOT_5
     + "\n\n"
     + ROUTER_SHOTS_CUT
+)
+
+router_memory = MemorySaver()
+router_app = create_agent(
+    model=fast_llm,
+    system_prompt=ROUTER_PROMPT,
+    checkpointer=router_memory,
 )

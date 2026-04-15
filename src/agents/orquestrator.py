@@ -1,15 +1,19 @@
-from .general import SYSTEM_PERSONA, _TEMPORAL_CONTEXT
+from langchain.agents import create_agent
+
+from .persona import SYSTEM_PERSONA
+from .temporal_context import TEMPORAL_CONTEXT
+from .llms import fast_llm
 
 # ==============================================================================
 # ORQUESTRADOR
 # Entrada : JSON(s) dos agentes especialistas
 # Saída   : resposta final formatada para o usuário
 # ==============================================================================
-ORQUESTRADOR_PROMPT = f"""
+BASE_ORQUESTRATOR_PROMPT = f"""
 {SYSTEM_PERSONA}
 
 
-{_TEMPORAL_CONTEXT}
+{TEMPORAL_CONTEXT}
 
 
 ### PAPEL
@@ -41,27 +45,27 @@ Use *Acompanhamento* apenas quando:
   b) houver múltiplos caminhos de ação que dependam do usuário
 """
 
-ORQUESTRADOR_SHOTS_OPEN = (
+ORQUESTRATOR_SHOTS_OPEN = (
     "A seguir estão EXEMPLOS ILUSTRATIVOS do formato de resposta esperado. "
     "Eles NÃO fazem parte do histórico real da conversa e NÃO contêm dados reais do usuário. "
     "Ignore os valores fictícios presentes nesses exemplos."
 )
 # Exemplo 1 — Consulta com resultado:
-ORQUESTRADOR_SHOT_1 = """
+ORQUESTRATOR_SHOT_1 = """
 Orquestrador recebe: {"dominio":"[dominio]","intencao":"consultar","resposta":"[diagnóstico objetivo]","recomendacao":"[ação sugerida]"}
 Assessor.AI:
 - [diagnóstico objetivo]
 - *Recomendação*:
 [ação sugerida]"""
 # Exemplo 2 — Dado ausente → esclarecer vira Acompanhamento:
-ORQUESTRADOR_SHOT_2 = """
+ORQUESTRATOR_SHOT_2 = """
 Orquestrador recebe: {"dominio":"[dominio]","intencao":"[intencao]","resposta":"[diagnóstico]","recomendacao":"","esclarecer":"[pergunta mínima]"}
 Assessor.AI:
 - [diagnóstico]
 - *Acompanhamento*:
 [pergunta mínima]"""
 # Exemplo 3 — Resultado com follow-up:
-ORQUESTRADOR_SHOT_3 = """
+ORQUESTRATOR_SHOT_3 = """
 Orquestrador recebe: {"dominio":"[dominio]","intencao":"[intencao]","resposta":"[diagnóstico]","recomendacao":"[ação]","acompanhamento":"[próximo passo]"}
 Assessor.AI:
 - [diagnóstico]
@@ -70,21 +74,23 @@ Assessor.AI:
 - *Acompanhamento*:
 [próximo passo]"""
 
-ORQUESTRADOR_SHOTS_CUT = (
+ORQUESTRATOR_SHOTS_CUT = (
     "FIM DOS EXEMPLOS. "
     "Considere apenas as mensagens abaixo como contexto verdadeiro."
 )
 
-ORQUESTRADOR_PROMPT_COMPLETO = (
-    ORQUESTRADOR_PROMPT
+ORQUESTRATOR_PROMPT = (
+    BASE_ORQUESTRATOR_PROMPT
     + "\n\n"
-    + ORQUESTRADOR_SHOTS_OPEN
+    + ORQUESTRATOR_SHOTS_OPEN
     + "\n\n"
-    + ORQUESTRADOR_SHOT_1
+    + ORQUESTRATOR_SHOT_1
     + "\n\n"
-    + ORQUESTRADOR_SHOT_2
+    + ORQUESTRATOR_SHOT_2
     + "\n\n"
-    + ORQUESTRADOR_SHOT_3
+    + ORQUESTRATOR_SHOT_3
     + "\n\n"
-    + ORQUESTRADOR_SHOTS_CUT
+    + ORQUESTRATOR_SHOTS_CUT
 )
+
+orquestrator_app = create_agent(model=fast_llm, system_prompt=ORQUESTRATOR_PROMPT)

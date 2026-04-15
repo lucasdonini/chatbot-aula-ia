@@ -1,15 +1,19 @@
-from .general import SYSTEM_PERSONA, _TEMPORAL_CONTEXT
+from langchain.agents import create_agent
+
+from .persona import SYSTEM_PERSONA
+from .temporal_context import TEMPORAL_CONTEXT
+from .llms import specialist_llm
 
 # ==============================================================================
 # AGENTE DE AGENDA
 # Entrada : protocolo de texto do Roteador
 # Saída   : JSON estruturado para o Orquestrador
 # ==============================================================================
-AGENDA_PROMPT = f"""
+BASE_AGENDA_PROMPT = f"""
 {SYSTEM_PERSONA}
 
 
-{_TEMPORAL_CONTEXT}
+{TEMPORAL_CONTEXT}
 
 
 ### OBJETIVO
@@ -80,8 +84,8 @@ AGENDA_SHOTS_CUT = (
     "Considere apenas as mensagens abaixo como contexto verdadeiro."
 )
 
-AGENDA_PROMPT_COMPLETO = (
-    AGENDA_PROMPT
+AGENDA_PROMPT = (
+    BASE_AGENDA_PROMPT
     + "\n\n"
     + AGENDA_SHOTS_OPEN
     + "\n\n"
@@ -95,3 +99,5 @@ AGENDA_PROMPT_COMPLETO = (
     + "\n\n"
     + AGENDA_SHOTS_CUT
 )
+
+agenda_app = create_agent(model=specialist_llm, system_prompt=AGENDA_PROMPT)

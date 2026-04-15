@@ -1,15 +1,20 @@
-from .general import SYSTEM_PERSONA, _TEMPORAL_CONTEXT
+from langchain.agents import create_agent
+
+from src.tools.db import TOOLS
+from .persona import SYSTEM_PERSONA
+from .temporal_context import TEMPORAL_CONTEXT
+from .llms import specialist_llm
 
 # ==============================================================================
 # AGENTE FINANCEIRO
 # Entrada : protocolo de texto do Roteador
 # Saída   : JSON estruturado para o Orquestrador
 # ==============================================================================
-FINANCEIRO_PROMPT = f"""
+BASE_FINANCIAL_PROMPT = f"""
 {SYSTEM_PERSONA}
 
 
-{_TEMPORAL_CONTEXT}
+{TEMPORAL_CONTEXT}
 
 
 ### OBJETIVO
@@ -54,49 +59,53 @@ Campos opcionais (incluir SOMENTE se necessário):
   - indicadores    : {{chaves livres e numéricas úteis ao log}}
 
 """
-FINANCEIRO_SHOTS_OPEN = (
+FINANCIAL_SHOTS_OPEN = (
     "A seguir estão EXEMPLOS ILUSTRATIVOS do formato de saída esperado. "
     "Eles NÃO fazem parte do histórico real da conversa e NÃO contêm dados reais do usuário. "
     "Ignore os valores fictícios presentes nesses exemplos."
 )
 # Exemplo 1 — Consulta com resultado:
-FINANCEIRO_SHOT_1 = """
+FINANCIAL_SHOT_1 = """
 Roteador: ROUTE=financeiro
 PERGUNTA_ORIGINAL=[pergunta sobre gastos em uma categoria e período]
 Financeiro: {"dominio":"financeiro","intencao":"consultar","resposta":"Você gastou R$ [valor] com '[categoria]' em [período].","recomendacao":"[sugestão de detalhamento ou ação]","janela_tempo":{"de":"[data início]","ate":"[data fim]","rotulo":"[rótulo do período]"}}"""
 # Exemplo 2 — Inserção de transação:
-FINANCEIRO_SHOT_2 = """
+FINANCIAL_SHOT_2 = """
 Roteador: ROUTE=financeiro
 PERGUNTA_ORIGINAL=[pedido para registrar gasto com valor e forma de pagamento]
 Financeiro: {"dominio":"financeiro","intencao":"inserir","resposta":"Lancei R$ [valor] em '[categoria]' [data] ([pagamento]).","recomendacao":"[pergunta ou observação opcional]","escrita":{"operacao":"adicionar","id":[id gerado]}}"""
 # Exemplo 3 — Dado ausente → esclarecer:
-FINANCEIRO_SHOT_3 = """
+FINANCIAL_SHOT_3 = """
 Roteador: ROUTE=financeiro
 PERGUNTA_ORIGINAL=[pedido de resumo sem período definido]
 Financeiro: {"dominio":"financeiro","intencao":"resumo","resposta":"Preciso do período para seguir.","recomendacao":"","esclarecer":"Qual período considerar (ex.: hoje, esta semana, mês passado)?"}"""
 # Exemplo 4 — Fora de escopo:
-FINANCEIRO_SHOT_4 = """
+FINANCIAL_SHOT_4 = """
 Roteador: ROUTE=financeiro
 PERGUNTA_ORIGINAL=[pergunta não relacionada a finanças ou agenda]
 Financeiro: {"dominio":"financeiro","intencao":"consultar","resposta":"Essa pergunta está fora da minha área de atuação.","recomendacao":"Posso ajudar com finanças ou agenda. O que prefere?"}"""
 
-FINANCEIRO_SHOTS_CUT = (
+FINANCIAL_SHOTS_CUT = (
     "FIM DOS EXEMPLOS. "
     "Considere apenas as mensagens abaixo como contexto verdadeiro."
 )
 
-FINANCEIRO_PROMPT_COMPLETO = (
-    FINANCEIRO_PROMPT
+FINANCIAL_PROMPT = (
+    BASE_FINANCIAL_PROMPT
     + "\n\n"
-    + FINANCEIRO_SHOTS_OPEN
+    + FINANCIAL_SHOTS_OPEN
     + "\n\n"
-    + FINANCEIRO_SHOT_1
+    + FINANCIAL_SHOT_1
     + "\n\n"
-    + FINANCEIRO_SHOT_2
+    + FINANCIAL_SHOT_2
     + "\n\n"
-    + FINANCEIRO_SHOT_3
+    + FINANCIAL_SHOT_3
     + "\n\n"
-    + FINANCEIRO_SHOT_4
+    + FINANCIAL_SHOT_4
     + "\n\n"
-    + FINANCEIRO_SHOTS_CUT
+    + FINANCIAL_SHOTS_CUT
+)
+
+financial_app = create_agent(
+    model=specialist_llm, system_prompt=FINANCIAL_PROMPT, tools=TOOLS
 )
