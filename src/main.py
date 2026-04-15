@@ -12,7 +12,7 @@ while True:
         print("Encerrando a conversa")
         break
     try:
-        resposta = router_app.invoke(
+        response = router_app.invoke(
             {
                 "messages": [
                     {"role": "human", "content": f"{datetime.now()} -> {user_input}"}
@@ -20,7 +20,7 @@ while True:
             },
             config={"configurable": {"thread_id": "meu_id_de_sessao"}},
         )
-        print(f"\n{resposta['messages'][-1].text}\n{'-' * 20}\n")
+        print(f"\n{response['messages'][-1].text}\n{'-' * 20}\n")
     except Exception as e:
         print("Erro ao consumir API:", e)
         break
