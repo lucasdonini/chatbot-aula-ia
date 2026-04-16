@@ -17,8 +17,8 @@ llm_gemini = ChatGoogleGenerativeAI(
 llm_groq = ChatGroq(
     model="llama-3.3-70b-versatile",
     temperature=SPECIALIST_TEMPERATURE,
-    top_p=SPECIALIST_TOP_P,
     api_key=env.groq_api_key,
+    model_kwargs={"top_p": SPECIALIST_TOP_P},
 )
 
 specialist_llm = llm_gemini.with_fallbacks([llm_groq])
