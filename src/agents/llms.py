@@ -1,6 +1,6 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
-from model.env import env
+from src.model.env import env
 
 
 SPECIALIST_TEMPERATURE: float = 0.7
