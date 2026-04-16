@@ -24,5 +24,5 @@ llm_groq = ChatGroq(
 specialist_llm = llm_gemini.with_fallbacks([llm_groq])
 
 fast_llm = ChatGroq(
-    model="openai/gpt-oos-120b", temperature=0.0, api_key=env.groq_api_key
+    model="openai/gpt-oss-120b", temperature=0.0, api_key=env.groq_api_key
 )
