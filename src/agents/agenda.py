@@ -1,8 +1,8 @@
 from langchain.agents import create_agent
 
-from .persona import SYSTEM_PERSONA
-from .temporal_context import TEMPORAL_CONTEXT
-from .llms import specialist_llm
+from .utils.persona import SYSTEM_PERSONA
+from .utils.temporal_context import TEMPORAL_CONTEXT
+from .utils.llms import specialist_llm
 
 # ==============================================================================
 # AGENTE DE AGENDA

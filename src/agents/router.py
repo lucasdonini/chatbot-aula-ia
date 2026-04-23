@@ -1,9 +1,9 @@
 from langchain.agents import create_agent
 from langgraph.checkpoint.memory import MemorySaver
 
-from .persona import SYSTEM_PERSONA
-from .temporal_context import TEMPORAL_CONTEXT
-from .llms import fast_llm
+from .utils.persona import SYSTEM_PERSONA
+from .utils.temporal_context import TEMPORAL_CONTEXT
+from .utils.llms import fast_llm
 
 # ==============================================================================
 # ROTEADOR
