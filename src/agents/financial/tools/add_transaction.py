@@ -1,4 +1,4 @@
-from src.tools.db.utils import get_cursor
+from src.infrastructure.db_connection import get_cursor
 
 from .utils import resolve_type_id, resolve_category_id
 from .response import DatabaseToolResponse

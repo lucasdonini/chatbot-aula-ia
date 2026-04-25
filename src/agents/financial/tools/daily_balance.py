@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from datetime import date, timedelta
 from langchain.tools import tool
-from .utils import get_cursor
+from src.infrastructure.db_connection import get_cursor
 from .response import DatabaseToolResponse
 
 

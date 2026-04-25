@@ -1,9 +1,5 @@
-from langchain.agents import create_agent
-
-from src.tools.db import TOOLS
-from .utils.persona import SYSTEM_PERSONA
-from .utils.temporal_context import TEMPORAL_CONTEXT
-from .utils.llms import specialist_llm
+from ..general_persona import SYSTEM_PERSONA
+from ..temporal_context import TEMPORAL_CONTEXT
 
 # ==============================================================================
 # AGENTE FINANCEIRO
@@ -104,8 +100,4 @@ FINANCIAL_PROMPT = (
     + FINANCIAL_SHOT_4
     + "\n\n"
     + FINANCIAL_SHOTS_CUT
-)
-
-financial_app = create_agent(
-    model=specialist_llm, system_prompt=FINANCIAL_PROMPT, tools=TOOLS
 )

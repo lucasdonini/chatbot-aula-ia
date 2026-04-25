@@ -1,8 +1,5 @@
-from langchain.agents import create_agent
-
-from .utils.persona import SYSTEM_PERSONA
-from .utils.temporal_context import TEMPORAL_CONTEXT
-from .utils.llms import specialist_llm
+from ..general_persona import SYSTEM_PERSONA
+from ..temporal_context import TEMPORAL_CONTEXT
 
 # ==============================================================================
 # AGENTE DE AGENDA
@@ -99,5 +96,3 @@ AGENDA_PROMPT = (
     + "\n\n"
     + AGENDA_SHOTS_CUT
 )
-
-agenda_app = create_agent(model=specialist_llm, system_prompt=AGENDA_PROMPT)

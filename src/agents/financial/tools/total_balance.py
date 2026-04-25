@@ -1,4 +1,4 @@
-from .utils import get_cursor
+from src.infrastructure.db_connection import get_cursor
 from .response import DatabaseToolResponse
 from langchain.tools import tool
 

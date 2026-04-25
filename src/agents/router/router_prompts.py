@@ -1,9 +1,5 @@
-from langchain.agents import create_agent
-from langgraph.checkpoint.memory import MemorySaver
-
-from .utils.persona import SYSTEM_PERSONA
-from .utils.temporal_context import TEMPORAL_CONTEXT
-from .utils.llms import fast_llm
+from ..general_persona import SYSTEM_PERSONA
+from ..temporal_context import TEMPORAL_CONTEXT
 
 # ==============================================================================
 # ROTEADOR
@@ -97,11 +93,4 @@ ROUTER_PROMPT = (
     + ROUTER_SHOT_5
     + "\n\n"
     + ROUTER_SHOTS_CUT
-)
-
-router_memory = MemorySaver()
-router_app = create_agent(
-    model=fast_llm,
-    system_prompt=ROUTER_PROMPT,
-    checkpointer=router_memory,
 )

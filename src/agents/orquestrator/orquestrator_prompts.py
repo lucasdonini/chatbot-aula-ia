@@ -1,8 +1,5 @@
-from langchain.agents import create_agent
-
-from .utils.persona import SYSTEM_PERSONA
-from .utils.temporal_context import TEMPORAL_CONTEXT
-from .utils.llms import fast_llm
+from ..general_persona import SYSTEM_PERSONA
+from ..temporal_context import TEMPORAL_CONTEXT
 
 # ==============================================================================
 # ORQUESTRADOR
@@ -92,5 +89,3 @@ ORQUESTRATOR_PROMPT = (
     + "\n\n"
     + ORQUESTRATOR_SHOTS_CUT
 )
-
-orquestrator_app = create_agent(model=fast_llm, system_prompt=ORQUESTRATOR_PROMPT)
