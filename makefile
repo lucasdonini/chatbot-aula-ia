@@ -16,7 +16,7 @@ build-db:
 	docker compose up -d --build
 
 run:
-$(PYTHON) -m src.main
+	$(PYTHON) -m src.main
 
 prepare-environment:
 	uv sync
