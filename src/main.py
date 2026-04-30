@@ -24,7 +24,12 @@ def make_question(user_input: str, session_id: str) -> str:
 
         specialist = SPECIALISTS[specialist_name]
         specialist_response = invoke_agent(specialist, router_response, session_id)
-        return invoke_agent(orquestrator_app, specialist_response, session_id)
+
+        return (
+            invoke_agent(orquestrator_app, specialist_response, session_id)
+            if specialist_name != "faq"
+            else specialist_response
+        )
 
     except Exception as e:
         print(f"Erro no roteador: {e}")
