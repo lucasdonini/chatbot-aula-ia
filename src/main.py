@@ -1,5 +1,8 @@
 from .agents import router_app, orquestrator_app, SPECIALISTS, CONSULTANTS
-import os, re
+from .infrastructure.md_console import print
+
+import os
+import re
 
 
 def invoke_agent(agent, user_input: str, session_id: str) -> str:
@@ -33,7 +36,7 @@ def make_question(user_input: str, session_id: str) -> str:
 
 
 os.system("cls")
-print("\nBem vindo! Converse hoje mesmo com o Assessor.IA!!", "\n")
+print("\n# Bem vindo! Converse hoje mesmo com o Assessor.IA!!\n")
 
 while True:
     user_input = input(">>> ")
@@ -42,4 +45,4 @@ while True:
         break
 
     response = make_question(user_input, "meu_id_de_sessao")
-    print(f"\n{response}\n{'-' * 20}\n")
+    print(f"\n{response}\n---\n\n")
