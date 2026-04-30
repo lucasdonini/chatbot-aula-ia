@@ -6,6 +6,6 @@ COPY ./sql/init-db.sql /docker-entrypoint-initdb.d/
 COPY ./.psqlrc /etc/postgresql-common/psqlrc
 
 EXPOSE 5432
-VOLUME [ "pgdata" ]
+VOLUME /var/lib/postgresql/data
 
 CMD [ "postgres" ]
