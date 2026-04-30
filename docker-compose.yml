@@ -1,3 +1,6 @@
+volumes:
+  pgdata:
+
 services:
   postgresql:
     container_name: acessoria-sql
@@ -6,9 +9,7 @@ services:
     tty: true
     stdin_open: true
     volumes:
-      - ./data:/var/lib/postgresql/data
-      - ./scripts:/scripts
-      - ./.psqlrc:/etc/postgresql-common/psqlrc
+      - pgdata:/var/lib/postgresql/data
     ports:
       - '5433:5432'
     env_file:
