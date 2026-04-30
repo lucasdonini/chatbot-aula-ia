@@ -29,7 +29,7 @@ def make_question(user_input: str, session_id: str) -> str:
         return f"Erro no roteador: agente {agent_name} não encontrado"
 
     except Exception as e:
-        print(f"Erro no roteador: {e}")
+        return f"Erro no roteador: {e}"
 
 
 os.system("cls")
