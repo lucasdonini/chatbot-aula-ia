@@ -10,11 +10,15 @@ dependencies = [
     "langchain-groq>=1.1.1",
     "psycopg2>=2.9.11",
     "pydantic-settings>=2.13.1",
+    "langchain-text-splitters>=1.1.2",
+    "faiss-cpu>=1.13.2",
+    "langchain-community>=0.4.1",
+    "pypdf>=6.10.2",
 ]
 
 [dependency-groups]
 dev = [
-    "black>=24.0.0",
+    "black>=25.1.0",
     "pre-commit>=4.5.0"
 ]
 
