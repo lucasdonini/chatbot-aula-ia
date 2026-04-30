@@ -31,7 +31,7 @@ def make_question(user_input: str, session_id: str) -> str:
 
 
 os.system("cls")
-print("\nBem vindo! Converse hoje mesmo com o Acessor.IA!!", "\n")
+print("\nBem vindo! Converse hoje mesmo com o Assessor.IA!!", "\n")
 
 while True:
     user_input = input(">>> ")
