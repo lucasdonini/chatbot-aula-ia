@@ -1,4 +1,4 @@
-from .agents import router_app, orquestrator_app, SPECIALISTS
+from .agents import router_app, orquestrator_app, SPECIALISTS, CONSULTANTS
 import os, re
 
 
@@ -17,19 +17,16 @@ def make_question(user_input: str, session_id: str) -> str:
         match = re.search(r"(?<=ROUTE=)\w+", router_response)
         if not match:
             return router_response
+        agent_name = match.group()
 
-        specialist_name = match.group()
-        if not specialist_name in SPECIALISTS:
-            return f"Erro no roteador: agente {specialist_name} não encontrado"
+        if specialist := SPECIALISTS.get(agent_name):
+            specialist_response = invoke_agent(specialist, router_response, session_id)
+            return invoke_agent(orquestrator_app, specialist_response, session_id)
 
-        specialist = SPECIALISTS[specialist_name]
-        specialist_response = invoke_agent(specialist, router_response, session_id)
+        if consultant := CONSULTANTS.get(agent_name):
+            return invoke_agent(consultant, router_response, session_id)
 
-        return (
-            invoke_agent(orquestrator_app, specialist_response, session_id)
-            if specialist_name != "faq"
-            else specialist_response
-        )
+        return f"Erro no roteador: agente {agent_name} não encontrado"
 
     except Exception as e:
         print(f"Erro no roteador: {e}")
