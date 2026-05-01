@@ -1,3 +1,5 @@
+import logging
+
 from src.infrastructure.db_connection import get_cursor
 
 from .utils import resolve_type_id, resolve_category_id
@@ -6,6 +8,8 @@ from psycopg2.extensions import cursor
 from pydantic import BaseModel, Field
 from langchain.tools import tool
 from typing import Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 class AddTransactionArgs(BaseModel):
@@ -76,19 +80,26 @@ def add_transaction(
     payment_method: Optional[str] = None,
 ) -> DatabaseToolResponse:
     """Insere uma transação financeira no banco de dados Postgres."""  # docstring obrigatório da @tools do langchain (estranho, mas legal né?)
+    logger.info("add_transaction tool called")
     try:
         with get_cursor() as cur:
             resolved_type_id = resolve_type_id(cur, type_id, type_name)
             if not resolved_type_id:
+                logger.error("Type id not resolved: (%s, %s)", type_id, type_name)
                 return DatabaseToolResponse.error(
                     "Tipo inválido (use type_id ou type_name: INCOME/EXPENSES/TRANSFER)."
                 )
+            logger.debug("Type id resolved: %s", resolved_type_id)
 
             resolved_category_id = resolve_category_id(cur, category_id, category_name)
             if not resolved_category_id:
+                logger.error(
+                    "Category id not resolved: (%s, %s)", category_id, category_name
+                )
                 return DatabaseToolResponse.error(
                     "Categoria inválida (use category_id ou category_name: comida/besteira/estudo/férias/transporte/moradia/saúde/lazer/contas/investimento/presente/outros)"
                 )
+            logger.debug("Categoy id resolved: %s", resolve_category_id)
 
             if occurred_at:
                 _insert_with_date(
@@ -113,7 +124,15 @@ def add_transaction(
                 ),
 
             new_id, occurred = cur.fetchone()
+            logger.info(
+                "Transaction added successfully to database: id=%s, occuerred_at=%s",
+                new_id,
+                occurred,
+            )
             return DatabaseToolResponse.ok({"id": new_id, "occurred_at": str(occurred)})
 
     except Exception as e:
+        logger.exception(
+            "Exception raised while trying to add trying to add transaction to database"
+        )
         return DatabaseToolResponse.exception(e)

@@ -1,3 +1,5 @@
+import logging
+
 from src.infrastructure.db_connection import get_cursor
 
 from .utils import resolve_category_id, resolve_type_id
@@ -6,6 +8,8 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import date
 from langchain.tools import tool
+
+logger = logging.getLogger(__name__)
 
 
 class SearchTransactionsQueryArgs(BaseModel):
@@ -70,9 +74,11 @@ def search_transactions(
     Buscas por source_text ou description fazem busca parcial para permitir que transações com description
     'fiz uma doação para ...' sejam retornadas buscando apenas por 'doação'.
     """
+    logger.info("search_transactions tool called0")
     try:
         with get_cursor() as cur:
             if limit < 0:
+                logger.error("Invalid limit passed to tool: %s", limit)
                 return DatabaseToolResponse.error("Limite inválido. Deve ser >= 0.")
 
             query = "SELECT * FROM transactions"
@@ -82,17 +88,21 @@ def search_transactions(
             if source_text:
                 args.append(f"%{source_text}%")
                 where_conditions.append("source_text = %s")
+                logger.debug("source_text added to WHERE clause: %s", source_text)
 
             if description:
                 args.append(f"%{description}%")
                 where_conditions.append("description ILIKE %s")
+                logger.debug("description added to WHERE clause: %s", description)
 
             try:
                 if type:
                     type_id = resolve_type_id(cur=cur, type_name=type, type_id=None)
                     args.append(type_id)
                     where_conditions.append("type = %s")
+                    logger.debug("type added to WHERE clause: (%s, %s)", type_id, type)
             except Exception as e:
+                logger.exception("Exception raised while resolving type id")
                 return DatabaseToolResponse.exception(e)
 
             try:
@@ -102,16 +112,30 @@ def search_transactions(
                     )
                     args.append(category_id)
                     where_conditions.append("category_id = %s")
+                    logger.debug(
+                        "category added to WHERE clause: (%s, %s)",
+                        category_id,
+                        category,
+                    )
             except Exception as e:
+                logger.exception("Exception rasied while resolving category id")
                 return DatabaseToolResponse.exception(e)
 
             if occurred_at_start:
                 args.append(occurred_at_start)
                 where_conditions.append("occurred_at >= %s")
+                logger.debug(
+                    "start of occurred_at range added to WHERE clause: %s",
+                    occurred_at_start,
+                )
 
             if occurred_at_end:
                 args.append(occurred_at_end)
                 where_conditions.append("occurred_at < %s")
+                logger.debug(
+                    "end of occurred_at range added to WHERE clause: %s",
+                    occurred_at_end,
+                )
 
             if where_conditions:
                 query += " WHERE " + " AND ".join(where_conditions)
@@ -119,8 +143,15 @@ def search_transactions(
             if limit > 0:
                 query += f"LIMIT {limit}"
             query += ";"
+            logger.debug("Final query: %s", query)
 
             cur.execute(query, tuple(args))
-            return DatabaseToolResponse.ok({"transactions": cur.fetchall()})
+            transactions = cur.fetchall()
+            logger.info(
+                "Transactions searched successfully. Search result size: %s",
+                len(transactions),
+            )
+            return DatabaseToolResponse.ok({"transactions": transactions})
     except Exception as e:
+        logger.exception("Exception raised while searching transactions")
         return DatabaseToolResponse.exception(e)

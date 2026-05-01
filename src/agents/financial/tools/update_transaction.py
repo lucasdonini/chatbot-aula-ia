@@ -1,3 +1,5 @@
+import logging
+
 from src.infrastructure.db_connection import get_cursor
 
 from .utils import resolve_type_id, resolve_category_id
@@ -6,6 +8,8 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import date, timedelta
 from langchain.tools import tool
+
+logger = logging.getLogger(__name__)
 
 
 class UpdateTransactionArgs(BaseModel):
@@ -61,6 +65,7 @@ def update_transaction(
         E (date_local em America/Sao_Paulo), então atualiza.
     Retorna: status, rows_affected, id, e o registro atualizado.
     """
+    logger.info("update_transaction tool called")
     if not any(
         [
             amount,
@@ -73,6 +78,7 @@ def update_transaction(
             occurred_at,
         ]
     ):
+        logger.error("Tried to update nothing")
         return DatabaseToolResponse.error(
             "Nada para atualizar: forneça pelo menos um campo (amount, type, category, description, payment_method, occurred_at)."
         )
@@ -83,6 +89,8 @@ def update_transaction(
             target_id = id
             if target_id is None:
                 if not match_text or not date_local:
+                    # TODO: return DatabaseToolResponse
+                    logger.error("No unique identifier provided")
                     return {
                         "status": "error",
                         "message": "Sem 'id': informe match_text E date_local para localizar o registro.",
@@ -104,10 +112,12 @@ def update_transaction(
                 )
                 row = cur.fetchone()
                 if not row:
+                    logger.error("No matching transaction foud to update")
                     return DatabaseToolResponse.error(
                         "Nenhuma transação encontrada para os filtros fornecidos."
                     )
                 target_id = row[0]
+                logger.debug("Update target transaction: id=%s", target_id)
 
             # Resolver type_id / category_id a partir de nomes, se fornecidos
             resolved_type_id = (
@@ -115,9 +125,12 @@ def update_transaction(
                 if (type_id or type_name)
                 else None
             )
+            logger.debug("Resolved type id: %s", resolved_type_id)
+
             resolved_category_id = category_id
             if category_name and not category_id:
                 resolved_category_id = resolve_category_id(cur, category_name)
+            logger.debug("Resolved category id: %s")
 
             # Montar SET dinâmico
             sets = []
@@ -125,31 +138,51 @@ def update_transaction(
             if amount is not None:
                 sets.append("amount = %s")
                 params.append(amount)
+                logger.debug("amount added to UPDATE: %s", amount)
+
             if resolved_type_id is not None:
                 sets.append("type = %s")
                 params.append(resolved_type_id)
+                logger.debug(
+                    "type added to UPDATE: (%s, %s)", resolved_type_id, type_name
+                )
+
             if resolved_category_id is not None:
                 sets.append("category_id = %s")
                 params.append(resolved_category_id)
+                logger.debug(
+                    "category added to UPDATE: (%s, %s)",
+                    resolved_category_id,
+                    category_name,
+                )
+
             if description is not None:
                 sets.append("description = %s")
                 params.append(description)
+                logger.debug("description added to UPDATE> %s", description)
+
             if payment_method is not None:
                 sets.append("payment_method = %s")
                 params.append(payment_method)
+                logger.debug("payment_method added to UPDATE: %s", payment_method)
+
             if occurred_at is not None:
                 sets.append("occurred_at = %s::timestamptz")
                 params.append(occurred_at)
+                logger.debug("occurred_at added to UPDATE: %s", occurred_at)
 
             if not sets:
+                logger.error("Tried to update nothing")
                 return DatabaseToolResponse.error("Nenhum campo válido para atualizar.")
 
             params.append(target_id)
 
-            cur.execute(
-                f"UPDATE transactions SET {', '.join(sets)} WHERE id = %s;", params
-            )
+            query = f"UPDATE transactions SET {', '.join(sets)} WHERE id = %s;"
+            logger.debug("UPDATE query: %s", query)
+
+            cur.execute(query, params)
             rows_affected = cur.rowcount
+            logger.debug("Updated rows: %s", rows_affected)
 
             # Retornar o registro atualizado
             cur.execute(
@@ -178,9 +211,11 @@ def update_transaction(
                     "source_text": r[7],
                 }
 
+            logger.info("Transaction updated successfully: %s", updated)
             return DatabaseToolResponse.ok(
                 {"rows_affected": rows_affected, "id": target_id, "updated": updated}
             )
 
     except Exception as e:
+        logger.exception("Exception rasied while updating transaction")
         return DatabaseToolResponse.exception(e)
