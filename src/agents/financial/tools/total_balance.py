@@ -7,7 +7,6 @@ from langchain.tools import tool
 logger = logging.getLogger(__name__)
 
 
-# TODO: use coalesce() in database query instead of treating null in the backend
 @tool("total_balance")
 def total_balance() -> DatabaseToolResponse:
     """Recupera do banco de dados o saldo atual a partir de todas as transações registradas"""
@@ -15,19 +14,17 @@ def total_balance() -> DatabaseToolResponse:
     try:
         with get_cursor() as cur:
             cur.execute("""
-                SELECT sum(amount) 
+                SELECT coalesce(sum(amount), 0) 
                 FROM transactions 
                 WHERE type = 1""")
             income = cur.fetchone()[0]
-            income = 0 if not income else income
             logger.debug("Income retreived: %s", income)
 
             cur.execute("""
-                SELECT sum(amount)
+                SELECT coalesce(sum(amount), 0)
                 FROM transactions
                 WHERE type = 2""")
             expenses = cur.fetchone()[0]
-            expenses = 0 if not expenses else expenses
             logger.debug("Expenses retreived: %s", expenses)
 
             balance = income - expenses
