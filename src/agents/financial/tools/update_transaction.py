@@ -89,12 +89,10 @@ def update_transaction(
             target_id = id
             if target_id is None:
                 if not match_text or not date_local:
-                    # TODO: return DatabaseToolResponse
                     logger.error("No unique identifier provided")
-                    return {
-                        "status": "error",
-                        "message": "Sem 'id': informe match_text E date_local para localizar o registro.",
-                    }
+                    return DatabaseToolResponse.error(
+                        "Sem 'id': informe match_text E date_local para localizar o registro."
+                    )
 
                 # Buscar o mais recente no dia local informado que combine o texto
                 date_end: date = date_local + timedelta(days=1)
