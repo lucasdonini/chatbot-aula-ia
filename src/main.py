@@ -20,8 +20,9 @@ def invoke_agent(agent, user_input: str, session_id: str) -> str:
 
 def make_question(user_input: str, session_id: str) -> str:
     try:
-        router_response = invoke_agent(router_app, user_input, session_id)
         logger.info("Agent invoked: router")
+        router_response = invoke_agent(router_app, user_input, session_id)
+        logger.debug("Router response: %s", router_response)
 
         match = re.search(r"(?<=ROUTE=)\w+", router_response)
         if not match:
@@ -30,19 +31,24 @@ def make_question(user_input: str, session_id: str) -> str:
         logger.debug("Matched agent: %s from input: %s", agent_name, router_response)
 
         if specialist := SPECIALISTS.get(agent_name):
-            specialist_response = invoke_agent(specialist, router_response, session_id)
-            response = invoke_agent(orquestrator_app, specialist_response, session_id)
             logger.info(
                 "Specialist invoked: %s -> input = %s", agent_name, router_response
             )
-            logger.debug("Specialist response: %s", response)
+            specialist_response = invoke_agent(specialist, router_response, session_id)
+            logger.debug("Specialist response: %s", specialist_response)
+
+            logger.info(
+                "Agent invoked: orquestrator -> input = %s", specialist_response
+            )
+            response = invoke_agent(orquestrator_app, specialist_response, session_id)
+            logger.debug("Orquestrator response: %s", response)
             return response
 
         if consultant := CONSULTANTS.get(agent_name):
-            response = invoke_agent(consultant, router_response, session_id)
             logger.info(
                 "Consultant invoked: %s -> input = %s", agent_name, router_response
             )
+            response = invoke_agent(consultant, router_response, session_id)
             logger.debug("Consultant response: %s", response)
             return response
 
