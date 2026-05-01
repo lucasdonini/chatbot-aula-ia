@@ -21,22 +21,29 @@ def invoke_agent(agent, user_input: str, session_id: str) -> str:
 def make_question(user_input: str, session_id: str) -> str:
     try:
         router_response = invoke_agent(router_app, user_input, session_id)
-        logger.debug("Agent invoked: router -> input = %s", user_input)
+        logger.info("Agent invoked: router")
 
         match = re.search(r"(?<=ROUTE=)\w+", router_response)
         if not match:
             return router_response
         agent_name = match.group()
+        logger.debug("Matched agent: %s from input: %s", agent_name, router_response)
 
         if specialist := SPECIALISTS.get(agent_name):
             specialist_response = invoke_agent(specialist, router_response, session_id)
             response = invoke_agent(orquestrator_app, specialist_response, session_id)
-            logger.debug("Agent invoked: %s -> input = %s", agent_name, router_response)
+            logger.info(
+                "Specialist invoked: %s -> input = %s", agent_name, router_response
+            )
+            logger.debug("Specialist response: %s", response)
             return response
 
         if consultant := CONSULTANTS.get(agent_name):
             response = invoke_agent(consultant, router_response, session_id)
-            logger.debug("Agent invoked: %s -> input = %s", agent_name, router_response)
+            logger.info(
+                "Consultant invoked: %s -> input = %s", agent_name, router_response
+            )
+            logger.debug("Consultant response: %s", response)
             return response
 
         logger.error("Router agent tried to access an unexisting agent: %s", agent_name)
@@ -47,7 +54,7 @@ def make_question(user_input: str, session_id: str) -> str:
         return f"Sinto muito, tivemos um erro interno. Tente novamente mais tarde."
 
 
-logger.debug("App started")
+logger.info("App started")
 os.system("cls")
 print("\n# Bem vindo! Converse hoje mesmo com o Assessor.IA!!\n")
 
@@ -60,4 +67,4 @@ while True:
     response = make_question(user_input, "meu_id_de_sessao")
     print(f"\n{response}\n---\n\n")
 
-logger.debug("App closed")
+logger.info("App closed")

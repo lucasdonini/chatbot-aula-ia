@@ -26,3 +26,4 @@ def setup_logger(log_file: str = "logs/app.log", level: int = logging.DEBUG) -> 
     logging.getLogger("langgraph").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("markdown_it").setLevel(logging.WARNING)
+    logging.getLogger("faiss").setLevel(logging.WARNING)
