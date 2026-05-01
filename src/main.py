@@ -71,6 +71,6 @@ while True:
         break
 
     response = make_question(user_input, "meu_id_de_sessao")
-    print(f"\n{response}\n---\n\n")
+    print(f"\n{response}\n\n---\n\n")
 
 logger.info("App closed")
