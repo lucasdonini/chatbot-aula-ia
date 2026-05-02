@@ -3,7 +3,7 @@ import logging
 from src.infrastructure.db_connection import get_cursor
 
 from .utils import resolve_category_id, resolve_type_id
-from .response import DatabaseToolResponse
+from src.model.common.tool_response import ToolResponse
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import date
@@ -63,7 +63,7 @@ def search_transactions(
     category: str = None,
     description: str = None,
     limit: int = 50,
-) -> DatabaseToolResponse:
+) -> ToolResponse:
     """
     Busca no banco de dados uma transação de acordo com os parâmetros passados.
     Caso nenhum parâmetro seja passado, retorna as útlimas 10 transações.
@@ -79,7 +79,7 @@ def search_transactions(
         with get_cursor() as cur:
             if limit < 0:
                 logger.error("Invalid limit passed to tool: %s", limit)
-                return DatabaseToolResponse.error("Limite inválido. Deve ser >= 0.")
+                return ToolResponse.error("Limite inválido. Deve ser >= 0.")
 
             query = "SELECT * FROM transactions"
             where_conditions = []
@@ -103,7 +103,7 @@ def search_transactions(
                     logger.debug("type added to WHERE clause: (%s, %s)", type_id, type)
             except Exception as e:
                 logger.exception("Exception raised while resolving type id")
-                return DatabaseToolResponse.exception(e)
+                return ToolResponse.exception(e)
 
             try:
                 if category:
@@ -119,7 +119,7 @@ def search_transactions(
                     )
             except Exception as e:
                 logger.exception("Exception rasied while resolving category id")
-                return DatabaseToolResponse.exception(e)
+                return ToolResponse.exception(e)
 
             if occurred_at_start:
                 args.append(occurred_at_start)
@@ -151,7 +151,7 @@ def search_transactions(
                 "Transactions searched successfully. Search result size: %s",
                 len(transactions),
             )
-            return DatabaseToolResponse.ok({"transactions": transactions})
+            return ToolResponse.ok({"transactions": transactions})
     except Exception as e:
         logger.exception("Exception raised while searching transactions")
-        return DatabaseToolResponse.exception(e)
+        return ToolResponse.exception(e)

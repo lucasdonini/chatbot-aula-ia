@@ -3,7 +3,7 @@ import logging
 from src.infrastructure.db_connection import get_cursor
 
 from .utils import resolve_type_id, resolve_category_id
-from .response import DatabaseToolResponse
+from src.model.common.tool_response import ToolResponse
 from psycopg2.extensions import cursor
 from pydantic import BaseModel, Field
 from langchain.tools import tool
@@ -78,7 +78,7 @@ def add_transaction(
     category_name: Optional[str] = "outros",
     description: Optional[str] = None,
     payment_method: Optional[str] = None,
-) -> DatabaseToolResponse:
+) -> ToolResponse:
     """Insere uma transação financeira no banco de dados Postgres."""  # docstring obrigatório da @tools do langchain (estranho, mas legal né?)
     logger.info("add_transaction tool called")
     try:
@@ -86,7 +86,7 @@ def add_transaction(
             resolved_type_id = resolve_type_id(cur, type_id, type_name)
             if not resolved_type_id:
                 logger.error("Type id not resolved: (%s, %s)", type_id, type_name)
-                return DatabaseToolResponse.error(
+                return ToolResponse.error(
                     "Tipo inválido (use type_id ou type_name: INCOME/EXPENSES/TRANSFER)."
                 )
             logger.debug("Type id resolved: %s", resolved_type_id)
@@ -96,7 +96,7 @@ def add_transaction(
                 logger.error(
                     "Category id not resolved: (%s, %s)", category_id, category_name
                 )
-                return DatabaseToolResponse.error(
+                return ToolResponse.error(
                     "Categoria inválida (use category_id ou category_name: comida/besteira/estudo/férias/transporte/moradia/saúde/lazer/contas/investimento/presente/outros)"
                 )
             logger.debug("Categoy id resolved: %s", resolve_category_id)
@@ -129,10 +129,10 @@ def add_transaction(
                 new_id,
                 occurred,
             )
-            return DatabaseToolResponse.ok({"id": new_id, "occurred_at": str(occurred)})
+            return ToolResponse.ok({"id": new_id, "occurred_at": str(occurred)})
 
     except Exception as e:
         logger.exception(
             "Exception raised while trying to add trying to add transaction to database"
         )
-        return DatabaseToolResponse.exception(e)
+        return ToolResponse.exception(e)

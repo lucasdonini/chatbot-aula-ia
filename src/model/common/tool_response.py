@@ -1,7 +1,7 @@
 from pydantic import BaseModel, model_validator
 
 
-class DatabaseToolResponse(BaseModel):
+class ToolResponse(BaseModel):
     _allow_direct: bool = False
     status: str
     data: dict
@@ -14,13 +14,13 @@ class DatabaseToolResponse(BaseModel):
         )
 
     @classmethod
-    def ok(cls, data: dict) -> "DatabaseToolResponse":
+    def ok(cls, data: dict) -> "ToolResponse":
         return cls.model_construct(status="ok", data=data)
 
     @classmethod
-    def error(cls, msg: str) -> "DatabaseToolResponse":
+    def error(cls, msg: str) -> "ToolResponse":
         return cls.model_construct(status="error", data={"message": msg})
 
     @classmethod
-    def exception(cls, e: Exception) -> "DatabaseToolResponse":
+    def exception(cls, e: Exception) -> "ToolResponse":
         return cls.error(str(e))

@@ -3,7 +3,7 @@ import logging
 from src.infrastructure.db_connection import get_cursor
 
 from .utils import resolve_type_id, resolve_category_id
-from .response import DatabaseToolResponse
+from src.model.common.tool_response import ToolResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import date, timedelta
@@ -56,7 +56,7 @@ def update_transaction(
     description: Optional[str] = None,
     payment_method: Optional[str] = None,
     occurred_at: Optional[str] = None,
-) -> DatabaseToolResponse:
+) -> ToolResponse:
     """
     Atualiza uma transação existente.
     Estratégias:
@@ -79,7 +79,7 @@ def update_transaction(
         ]
     ):
         logger.error("Tried to update nothing")
-        return DatabaseToolResponse.error(
+        return ToolResponse.error(
             "Nada para atualizar: forneça pelo menos um campo (amount, type, category, description, payment_method, occurred_at)."
         )
 
@@ -90,7 +90,7 @@ def update_transaction(
             if target_id is None:
                 if not match_text or not date_local:
                     logger.error("No unique identifier provided")
-                    return DatabaseToolResponse.error(
+                    return ToolResponse.error(
                         "Sem 'id': informe match_text E date_local para localizar o registro."
                     )
 
@@ -111,7 +111,7 @@ def update_transaction(
                 row = cur.fetchone()
                 if not row:
                     logger.error("No matching transaction foud to update")
-                    return DatabaseToolResponse.error(
+                    return ToolResponse.error(
                         "Nenhuma transação encontrada para os filtros fornecidos."
                     )
                 target_id = row[0]
@@ -171,7 +171,7 @@ def update_transaction(
 
             if not sets:
                 logger.error("Tried to update nothing")
-                return DatabaseToolResponse.error("Nenhum campo válido para atualizar.")
+                return ToolResponse.error("Nenhum campo válido para atualizar.")
 
             params.append(target_id)
 
@@ -210,10 +210,10 @@ def update_transaction(
                 }
 
             logger.info("Transaction updated successfully: %s", updated)
-            return DatabaseToolResponse.ok(
+            return ToolResponse.ok(
                 {"rows_affected": rows_affected, "id": target_id, "updated": updated}
             )
 
     except Exception as e:
         logger.exception("Exception rasied while updating transaction")
-        return DatabaseToolResponse.exception(e)
+        return ToolResponse.exception(e)

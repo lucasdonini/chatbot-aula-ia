@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from datetime import date, timedelta
 from langchain.tools import tool
 from src.infrastructure.db_connection import get_cursor
-from .response import DatabaseToolResponse
+from src.model.common.tool_response import ToolResponse
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class DailyBalanceArgs(BaseModel):
 
 
 @tool("daily_balance", args_schema=DailyBalanceArgs)
-def daily_balance(target_date: date) -> DatabaseToolResponse:
+def daily_balance(target_date: date) -> ToolResponse:
     """
     Retorna o saldo (INCOME - EXPENSES) do dia local informado em America/Sao_Paulo.
     Ignora TRANSFER (type=3)
@@ -57,7 +57,7 @@ def daily_balance(target_date: date) -> DatabaseToolResponse:
 
             balance = income - expenses
             logger.info("Daily balance retreived successfully: %s", balance)
-            return DatabaseToolResponse.ok({"saldo_diario": balance})
+            return ToolResponse.ok({"saldo_diario": balance})
     except Exception as e:
         logger.exception("Exception raised while retreiving daily balance")
-        return DatabaseToolResponse.exception(e)
+        return ToolResponse.exception(e)

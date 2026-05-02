@@ -1,14 +1,14 @@
 import logging
 
 from src.infrastructure.db_connection import get_cursor
-from .response import DatabaseToolResponse
+from src.model.common.tool_response import ToolResponse
 from langchain.tools import tool
 
 logger = logging.getLogger(__name__)
 
 
 @tool("total_balance")
-def total_balance() -> DatabaseToolResponse:
+def total_balance() -> ToolResponse:
     """Recupera do banco de dados o saldo atual a partir de todas as transações registradas"""
     logger.info("total_balance tool called")
     try:
@@ -29,7 +29,7 @@ def total_balance() -> DatabaseToolResponse:
 
             balance = income - expenses
             logger.info("Total balance retreived successfully: %s", balance)
-            return DatabaseToolResponse.ok({"saldo": balance})
+            return ToolResponse.ok({"saldo": balance})
     except Exception as e:
         logger.exception("Exception raised white retreiving total balance")
-        return DatabaseToolResponse.exception(e)
+        return ToolResponse.exception(e)
