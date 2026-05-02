@@ -5,7 +5,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-from src.model.env import env
+from .settings import settings
 from .paths import FAQ_INDEX, FAQ_PDF
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def _get_embeddings() -> GoogleGenerativeAIEmbeddings:
     return GoogleGenerativeAIEmbeddings(
-        model="gemini-embedding-2-preview", api_key=env.gemini_api_key
+        model="gemini-embedding-2-preview", api_key=settings.gemini_api_key
     )
 
 

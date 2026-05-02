@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class EnvVariables(BaseSettings):
+class Settings(BaseSettings):
     gemini_api_key: str
     groq_api_key: str
 
@@ -17,4 +17,4 @@ class EnvVariables(BaseSettings):
         return f"postgresql://{self.pguser}:{self.postgres_password}@localhost:{self.db_port}/{self.postgres_db}"
 
 
-env = EnvVariables()
+settings = Settings()
