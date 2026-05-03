@@ -18,8 +18,9 @@ class ToolResponse(BaseModel):
         return cls.model_construct(status="ok", data=data)
 
     @classmethod
-    def error(cls, msg: str) -> "ToolResponse":
-        return cls.model_construct(status="error", data={"message": msg})
+    def error(cls, msg: str, details: dict = {}) -> "ToolResponse":
+        data = {"message": msg, "details": details}
+        return cls.model_construct(status="error", data=data)
 
     @classmethod
     def exception(cls, e: Exception) -> "ToolResponse":
