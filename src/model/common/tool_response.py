@@ -1,4 +1,5 @@
 from pydantic import BaseModel, model_validator
+from typing import Optional
 
 
 class ToolResponse(BaseModel):
@@ -18,8 +19,8 @@ class ToolResponse(BaseModel):
         return cls.model_construct(status="ok", data=data)
 
     @classmethod
-    def error(cls, msg: str, details: dict = {}) -> "ToolResponse":
-        data = {"message": msg, "details": details}
+    def error(cls, msg: str, details: Optional[dict] = None) -> "ToolResponse":
+        data = {"message": msg, "details": details if details else {}}
         return cls.model_construct(status="error", data=data)
 
     @classmethod
