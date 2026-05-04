@@ -99,7 +99,7 @@ def add_transaction(
                 return ToolResponse.error(
                     "Categoria inválida (use category_id ou category_name: comida/besteira/estudo/férias/transporte/moradia/saúde/lazer/contas/investimento/presente/outros)"
                 )
-            logger.debug("Categoy id resolved: %s", resolve_category_id)
+            logger.debug("Categoy id resolved: %s", resolved_category_id)
 
             if occurred_at:
                 _insert_with_date(
