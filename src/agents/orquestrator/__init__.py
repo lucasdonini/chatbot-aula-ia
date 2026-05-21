@@ -1,1 +1,1 @@
-from .orquestrator_app import orquestrator_app
+from .orquestrator_app import orquestrator_node

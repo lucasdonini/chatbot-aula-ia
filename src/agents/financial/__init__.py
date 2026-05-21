@@ -1,1 +1,1 @@
-from .financial_app import financial_app
+from .financial_app import financial_node

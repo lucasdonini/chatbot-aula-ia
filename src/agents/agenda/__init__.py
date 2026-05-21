@@ -1,1 +1,1 @@
-from .agenda_app import agenda_app
+from .agenda_app import agenda_node
