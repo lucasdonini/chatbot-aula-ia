@@ -57,3 +57,10 @@ graph.add_edge(NODE_NAMES[faq_reader_node], END)  # FAQ bypassa o orquestrador
 # Memória centralizada no grafo — persiste o Estado inteiro entre turns
 memory = MemorySaver()
 agent_flux = graph.compile(checkpointer=memory)
+
+
+def execute_agent_flux(initial_state: GraphState, session_id: str) -> GraphState:
+    return agent_flux.invoke(
+        initial_state,
+        config={"configurable": {"thread_id": session_id}},
+    )

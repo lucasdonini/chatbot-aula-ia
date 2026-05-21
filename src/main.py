@@ -1,7 +1,7 @@
 from .model.common.graph_state import GraphState
 from .infrastructure.md_console import print
 from .infrastructure.logger import setup_logger
-from .agents import agent_flux
+from .agents import execute_agent_flux
 
 import logging
 import os
@@ -20,11 +20,7 @@ def make_question(user_question: str, session_id: str) -> str:
         "final_output": "",
     }
 
-    final_state: GraphState = agent_flux.invoke(
-        initial_state,
-        config={"configurable": {"thread_id": session_id}},
-    )
-
+    final_state = execute_agent_flux(initial_state, session_id)
     logger.info("Question anwered. Final state: %s", final_state)
     return final_state["final_output"]
 
