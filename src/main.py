@@ -25,7 +25,7 @@ def make_question(user_question: str, session_id: str) -> str:
         config={"configurable": {"thread_id": session_id}},
     )
 
-    logger.debug("Question anwered. Called agents: %s", final_state["called_agents"])
+    logger.info("Question anwered. Final state: %s", final_state)
     return final_state["final_output"]
 
 
