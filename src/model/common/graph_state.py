@@ -1,19 +1,17 @@
-from typing import TypedDict, Annotated
+from langgraph.graph import MessagesState
+from typing import Annotated
 from enum import StrEnum
 import operator
 
 
-class GraphState(TypedDict):
-    input: str  # sobrescrito a cada etapa
-    session_id: str  # ID da sessão
-    called_agents: Annotated[list[str], operator.add]  # acumula entre nós
-    specialist_output: str  # JSON do especialista ativo
-    final_output: str  # resposta para o usuário
+class GraphState(MessagesState):
+    called_agents: Annotated[list[str], operator.add]
+    route: str
+    pii_map: dict
 
 
 class GraphStateKeys(StrEnum):
-    INPUT = "input"
-    SESSION_ID = "session_id"
+    MESSAGES = "messages"
     CALLED_AGENTS = "called_agents"
-    SPECIALIST_OUTPUT = "specialist_output"
-    FINAL_OUTPUT = "final_output"
+    ROUTE = "route"
+    PII_MAP = "pii_map"
