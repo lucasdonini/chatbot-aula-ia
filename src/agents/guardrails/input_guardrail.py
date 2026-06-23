@@ -1,12 +1,13 @@
 from typing import Any
 import re
 
-from langchain_core.messages import RemoveMessage
+from langchain_core.messages import RemoveMessage, HumanMessage, AIMessage
+from langgraph.graph import END
 
 from src.model.common.graph_state import GraphState, GraphStateKeys
 from src.model.common.guardrail_result import GuardrailResult
-from src.utils import make_message_human, make_message_assistant
 from .anonymization import anonymize_input
+from ..router import ROUTER_NODE_NAME
 from ..llms import fast_llm
 
 _INJECTION_PATTERNS = [
@@ -118,7 +119,10 @@ def _input_guardrail(input: str) -> GuardrailResult:
         motivo, mensagem = _BLOCK_RESPONSES[categoria]
         return GuardrailResult.block(motivo, mensagem)
 
-    return GuardrailResult.input_aproved()
+    return GuardrailResult.input_aproved(input)
+
+
+INPUT_GUARDRAIL_NODE_NAME = "input_guardrail"
 
 
 def input_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
@@ -128,17 +132,17 @@ def input_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
 
     if result.blocked:
         return {
-            GraphStateKeys.ROUTE: "fim",
+            GraphStateKeys.ROUTE: END,
             GraphStateKeys.CALLED_AGENTS: [f"guardrail_entrada -> {result.reason}"],
-            GraphStateKeys.MESSAGES: [make_message_assistant(result.message)],
+            GraphStateKeys.MESSAGES: [AIMessage(content=result.message)],
         }
 
     return {
-        GraphStateKeys.ROUTE: "roteador",
+        GraphStateKeys.ROUTE: ROUTER_NODE_NAME,
         GraphStateKeys.CALLED_AGENTS: [f"guardrail_entrada -> {result.reason}"],
         GraphStateKeys.PII_MAP: pii_map,
         GraphStateKeys.MESSAGES: [
             RemoveMessage(id=user_input.id),
-            make_message_human(result.message),
+            HumanMessage(content=result.message),
         ],
     }

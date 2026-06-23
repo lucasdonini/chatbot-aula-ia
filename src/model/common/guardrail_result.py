@@ -17,8 +17,10 @@ class GuardrailResult(BaseModel):
         return cls.model_construct(blocked=True, reason=reason, message=message)
 
     @classmethod
-    def input_aproved(cls) -> "GuardrailResult":
-        return cls.model_construct(blocked=False, reason="Input aproved", message="")
+    def input_aproved(cls, message: str) -> "GuardrailResult":
+        return cls.model_construct(
+            blocked=False, reason="Input aproved", message=message
+        )
 
     @classmethod
     def output_aproved(cls, message: str) -> "GuardrailResult":

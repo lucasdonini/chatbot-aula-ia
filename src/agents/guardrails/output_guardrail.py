@@ -1,6 +1,8 @@
 from typing import Any
 import re
 
+from langchain_core.messages import AIMessage
+
 from src.model.common.graph_state import GraphState, GraphStateKeys
 from src.model.common.guardrail_result import GuardrailResult
 from .anonymization import deanonymize_output, PII
@@ -35,7 +37,7 @@ def _output_guardrail(
         output = re.sub(pattern, f"[{type} OMITIDO]", output)
 
     # 2. Resolve tokens de PII da entrada
-    output = deanonymize_output(output, pii_map, restaurar=restaurar_pii)
+    output = deanonymize_output(output, pii_map, restore=restaurar_pii)
 
     # 3. Revisão de compliance financeiro
     result = fast_llm.invoke(_COMPLIANCE_PROMPT.format(resposta=output)).content.strip()
@@ -45,9 +47,12 @@ def _output_guardrail(
     return GuardrailResult.output_aproved(output)
 
 
+OUTPUT_GUARDRAIL_NODE_NAME = "output_guardrail"
+
+
 def output_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
     result = _output_guardrail(state["messages"][-1].text, state["pii_map"])
     return {
-        GraphStateKeys.MESSAGES: [{"role": "assistant", "content": result["conteudo"]}],
+        GraphStateKeys.MESSAGES: [AIMessage(content=result.message)],
         GraphStateKeys.CALLED_AGENTS: ["guardrail_saida"],
     }

@@ -1,12 +1,29 @@
-from ..general_persona import SYSTEM_PERSONA
-from ..temporal_context import TEMPORAL_CONTEXT
+import logging
+
+from langchain.agents import create_agent
+
+from .temporal_context import TEMPORAL_CONTEXT
+from .general_persona import SYSTEM_PERSONA
+from .llms import fast_llm
+from .agenda import AGENDA_NODE_NAME
+from .faq import FAQ_NODE_NAME
+from .financial import FINANCIAL_NODE_NAME
+
+logger = logging.getLogger(__name__)
+
+SPECIALIST_ROUTES = {
+    AGENDA_NODE_NAME,
+    FAQ_NODE_NAME,
+    FINANCIAL_NODE_NAME,
+}
+
 
 # ==============================================================================
 # ROTEADOR
 # Responsabilidade: classificar a intenção e emitir o protocolo de
 # encaminhamento em texto puro. NÃO responde ao usuário.
 # ==============================================================================
-BASE_ROUTER_PROMPT = f"""
+_BASE_PROMPT = f"""
 {SYSTEM_PERSONA}
 
 
@@ -15,7 +32,7 @@ BASE_ROUTER_PROMPT = f"""
 
 ### PAPEL
 - Acolher o usuário e manter o foco em FINANÇAS ou AGENDA/compromissos.
-- Decidir a rota: {{financeiro | agenda | faq}} ou fora_escopo se a pergunta não se encaixar em nenhuma das rotas conhecidas.
+- Decidir a rota: {SPECIALIST_ROUTES} ou fora_escopo se a pergunta não se encaixar em nenhuma das rotas conhecidas.
 - Responder diretamente em:
   (a) saudações/small talk, ou 
   (b) fora de escopo.
@@ -27,72 +44,77 @@ BASE_ROUTER_PROMPT = f"""
 
 
 ### AGENTES DISPONÍVEIS
-- financeiro : gastos, receitas, dívidas, orçamento, metas, saldo, investimentos.
-- agenda     : compromissos, eventos, lembretes, tarefas, horários, conflitos.
-- faq        : dúvidas sobre o Assessor.IA - regras, políticas, termos, responsabilidades restrições, privacidade, segurança, comportamento previsto do sistema.
+- {FINANCIAL_NODE_NAME} : gastos, receitas, dívidas, orçamento, metas, saldo, investimentos.
+- {AGENDA_NODE_NAME}    : compromissos, eventos, lembretes, tarefas, horários, conflitos.
+- {FAQ_NODE_NAME}       : dúvidas sobre o Assessor.IA - regras, políticas, termos, responsabilidades restrições, privacidade, segurança, comportamento previsto do sistema.
 
 
 ### PROTOCOLO DE ENCAMINHAMENTO 
-ROUTE=[financeiro|agenda|faq]
+ROUTE={SPECIALIST_ROUTES}
 PERGUNTA_ORIGINAL=[mensagem completa do usuário, sem edições]
 
 """
-ROUTER_SHOTS_OPEN = (
+
+_SHOTS_OPEN = (
     "A seguir estão EXEMPLOS ILUSTRATIVOS do comportamento esperado. "
     "Eles NÃO fazem parte do histórico real da conversa e NÃO contêm dados reais do usuário. "
     "Ignore os valores fictícios presentes nesses exemplos."
 )
 
 # Exemplo 1 — Saudação → resposta direta
-ROUTER_SHOT_1 = """
+_SHOT_1 = """
 Usuário: [saudação qualquer]
 Roteador: Olá! Posso te ajudar com finanças ou agenda; por onde quer começar?"""
 
 # Exemplo 2 — Fora de escopo → resposta direta:
-ROUTER_SHOT_2 = """
+_SHOT_2 = """
 Usuário: [pergunta fora de finanças ou agenda]
 Roteador: Consigo ajudar apenas com finanças ou agenda. Prefere olhar seus gastos ou marcar um compromisso?"""
 
 # Exemplo 3 — Ambíguo → clarificação mínima:
-ROUTER_SHOT_3 = """
+_SHOT_3 = """
 Usuário: [mensagem que pode ser financeiro ou agenda]
 Roteador: Você quer lançar uma transação (finanças) ou criar um compromisso no calendário (agenda)?"""
 
 # Exemplo 4 — Financeiro → encaminhar:
-ROUTER_SHOT_4 = f"""
+_SHOT_4 = f"""
 Usuário: [pergunta sobre gastos, receitas, dívidas ou metas]
 Roteador:
-ROUTE=financeiro
+ROUTE={FINANCIAL_NODE_NAME}
 PERGUNTA_ORIGINAL=[mensagem completa do usuário]
 """
 
 # Exemplo 5 — Agenda → encaminhar:
-ROUTER_SHOT_5 = f"""
+_SHOT_5 = f"""
 Usuário: [pergunta sobre compromisso, evento ou disponibilidade]
 Roteador:
-ROUTE=agenda
+ROUTE={AGENDA_NODE_NAME}
 PERGUNTA_ORIGINAL=[mensagem completa do usuário]
 """
 
-ROUTER_SHOTS_CUT = (
+_SHOTS_CUT = (
     "FIM DOS EXEMPLOS. "
     "Considere apenas as mensagens abaixo como contexto verdadeiro."
 )
 
-ROUTER_PROMPT = (
-    BASE_ROUTER_PROMPT
+_PROMPT = (
+    _BASE_PROMPT
     + "\n\n"
-    + ROUTER_SHOTS_OPEN
+    + _SHOTS_OPEN
     + "\n\n"
-    + ROUTER_SHOT_1
+    + _SHOT_1
     + "\n\n"
-    + ROUTER_SHOT_2
+    + _SHOT_2
     + "\n\n"
-    + ROUTER_SHOT_3
+    + _SHOT_3
     + "\n\n"
-    + ROUTER_SHOT_4
+    + _SHOT_4
     + "\n\n"
-    + ROUTER_SHOT_5
+    + _SHOT_5
     + "\n\n"
-    + ROUTER_SHOTS_CUT
+    + _SHOTS_CUT
 )
+
+
+ROUTER_NODE_NAME = "router"
+router_agent = create_agent(model=fast_llm, system_prompt=_PROMPT)

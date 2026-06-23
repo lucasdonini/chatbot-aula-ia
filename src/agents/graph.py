@@ -1,56 +1,65 @@
+import logging
+
 from langgraph.graph import StateGraph, START, END
+from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.checkpoint.memory import MemorySaver
 
 from src.model.common.graph_state import GraphState
-from .agenda import agenda_app
-from .faq_reader import faq_reader_app
-from .router import router_node
-from .financial import financial_app
-from .orquestrator import orquestrator_node
-from .guardrails import input_guardrail_node, output_guardrail_node
-
-import logging
+from .agenda import agenda_agent, AGENDA_NODE_NAME
+from .faq import faq_agent, FAQ_NODE_NAME
+from .router import router_agent, ROUTER_NODE_NAME
+from .financial import financial_agent, FINANCIAL_NODE_NAME
+from .orquestrator import orquestrator_agent, ORQUESTRATOR_NODE_NAME
+from .guardrails import (
+    input_guardrail_node,
+    output_guardrail_node,
+    INPUT_GUARDRAIL_NODE_NAME,
+    OUTPUT_GUARDRAIL_NODE_NAME,
+)
 
 logger = logging.getLogger(__file__)
 
+SPECIALIST_NODES = {
+    FAQ_NODE_NAME,
+    FINANCIAL_NODE_NAME,
+    AGENDA_NODE_NAME,
+}
 
-def chose_specialist(state: GraphState) -> str:
+
+def _chose_specialist(state: GraphState) -> str:
     """Lê o protocolo do roteador e devolve o nome do próximo nó."""
-    text = state["input"].strip()
+    text = state["messages"][-1].text.strip()
 
     if not text.startswith("ROUTE="):
-        return "fim"  # resposta direta já foi escrita no nó do roteador
+        return END  # resposta direta já foi escrita no nó do roteador
 
     route = text.split("\n", 1)[0].split("=", 1)[1].strip()
-    return route if route else "fim"
+    return route if route and route in SPECIALIST_NODES else END
+
+
+def _redirect_from_input_guardrail(state: GraphState) -> str:
+    route = state["route"]
+    return route if route and route == ROUTER_NODE_NAME else END
 
 
 graph = StateGraph(GraphState)
 
-graph.add_node("roteador", router_node)
-graph.add_node("financeiro", financial_app)
-graph.add_node("agenda", agenda_app)
-graph.add_node("faq", faq_reader_app)
-graph.add_node("orquestrador", orquestrator_node)
-graph.add_node("guardrail_entrada", input_guardrail_node)
-graph.add_node("guardrail_saida", output_guardrail_node)
+graph.add_node(ROUTER_NODE_NAME, router_agent)
+graph.add_node(FINANCIAL_NODE_NAME, financial_agent)
+graph.add_node(AGENDA_NODE_NAME, agenda_agent)
+graph.add_node(FAQ_NODE_NAME, faq_agent)
+graph.add_node(ORQUESTRATOR_NODE_NAME, orquestrator_agent)
+graph.add_node(INPUT_GUARDRAIL_NODE_NAME, input_guardrail_node)
+graph.add_node(OUTPUT_GUARDRAIL_NODE_NAME, output_guardrail_node)
 
-graph.add_edge(START, "guardrail_entrada")
-graph.add_conditional_edges(
-    "guardrail_entrada",
-    lambda x: x["route"] if x["route"] == "roteador" else "fim",
-    {"roteador": "roteador", "fim": END},
-)
-graph.add_conditional_edges(
-    "roteador",
-    chose_specialist,
-    {"financeiro": "financeiro", "agenda": "agenda", "faq": "faq", "fim": END},
-)
-graph.add_edge("financeiro", "orquestrador")
-graph.add_edge("agenda", "orquestrador")
-graph.add_edge("orquestrador", "guardrail_saida")
-graph.add_edge("guardrail_saida", END)
-graph.add_edge("faq", END)
+graph.add_edge(START, INPUT_GUARDRAIL_NODE_NAME)
+graph.add_conditional_edges(INPUT_GUARDRAIL_NODE_NAME, _redirect_from_input_guardrail)
+graph.add_conditional_edges(ROUTER_NODE_NAME, _chose_specialist)
+graph.add_edge(FINANCIAL_NODE_NAME, ORQUESTRATOR_NODE_NAME)
+graph.add_edge(AGENDA_NODE_NAME, ORQUESTRATOR_NODE_NAME)
+graph.add_edge(ORQUESTRATOR_NODE_NAME, OUTPUT_GUARDRAIL_NODE_NAME)
+graph.add_edge(OUTPUT_GUARDRAIL_NODE_NAME, END)
+graph.add_edge(FAQ_NODE_NAME, END)
 
 # Memória centralizada no grafo — persiste o Estado inteiro entre turns
 memory = MemorySaver()
@@ -59,7 +68,7 @@ agent_flux = graph.compile(checkpointer=memory)
 
 def execute_agent_flux(user_input: str, session_id: str) -> str:
     initial_state: GraphState = {
-        "messages": [{"role": "human", "content": user_input}],
+        "messages": [HumanMessage(content=user_input)],
         "called_agents": [],
         "route": "",
         "pii_map": {},

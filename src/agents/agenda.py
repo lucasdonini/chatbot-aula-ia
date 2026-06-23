@@ -1,12 +1,17 @@
-from ..general_persona import SYSTEM_PERSONA
-from ..temporal_context import TEMPORAL_CONTEXT
+from langchain.agents import create_agent
+
+from .llms import specialist_llm
+from .general_persona import SYSTEM_PERSONA
+from .temporal_context import TEMPORAL_CONTEXT
 
 # ==============================================================================
 # AGENTE DE AGENDA
 # Entrada : protocolo de texto do Roteador
 # Saída   : JSON estruturado para o Orquestrador
 # ==============================================================================
-BASE_AGENDA_PROMPT = f"""
+AGENDA_NODE_NAME = "agenda"
+
+_BASE_PROMTP = f"""
 {SYSTEM_PERSONA}
 
 
@@ -50,49 +55,55 @@ Campos opcionais (incluir SOMENTE se necessário):
 
 """
 
-AGENDA_SHOTS_OPEN = (
+_SHOTS_OPEN = (
     "A seguir estão EXEMPLOS ILUSTRATIVOS do formato de saída esperado. "
     "Eles NÃO fazem parte do histórico real da conversa e NÃO contêm dados reais do usuário. "
     "Ignore os valores fictícios presentes nesses exemplos."
 )
+
 # Exemplo 1 — Consulta de disponibilidade:
-AGENDA_SHOT_1 = """
-Roteador: ROUTE=agenda
+_SHOT_1 = f"""
+Roteador: ROUTE={AGENDA_NODE_NAME}
 PERGUNTA_ORIGINAL=[pergunta sobre janela livre em um período]
-Agenda: {"dominio":"agenda","intencao":"disponibilidade","resposta":"Você está livre [período] das [hora início] às [hora fim].","recomendacao":"Quer reservar [sugestão de horário]?","janela_tempo":{"de":"[datetime início]","ate":"[datetime fim]","rotulo":"[rótulo]"}}"""
+Agenda: {{"dominio":"agenda","intencao":"disponibilidade","resposta":"Você está livre [período] das [hora início] às [hora fim].","recomendacao":"Quer reservar [sugestão de horário]?","janela_tempo":{{"de":"[datetime início]","ate":"[datetime fim]","rotulo":"[rótulo]"}}}}"""
+
 # Exemplo 2 — Criação de evento:
-AGENDA_SHOT_2 = """
+_SHOT_2 = f"""
 Roteador: ROUTE=agenda
 PERGUNTA_ORIGINAL=[pedido para marcar evento com participante, data e duração]
-Agenda: {"dominio":"agenda","intencao":"criar","resposta":"Posso criar '[título]' em [data] [hora início]–[hora fim].","recomendacao":"Confirmo o registro?","janela_tempo":{"de":"[datetime início]","ate":"[datetime fim]","rotulo":"[rótulo]"},"evento":{"titulo":"[título]","data":"[YYYY-MM-DD]","inicio":"[HH:MM]","fim":"[HH:MM]","local":"[local]","participantes":["[participante]"]}}"""
+Agenda: {{"dominio":"agenda","intencao":"criar","resposta":"Posso criar '[título]' em [data] [hora início]–[hora fim].","recomendacao":"Confirmo o registro?","janela_tempo":{{"de":"[datetime início]","ate":"[datetime fim]","rotulo":"[rótulo]"}},"evento":{{"titulo":"[título]","data":"[YYYY-MM-DD]","inicio":"[HH:MM]","fim":"[HH:MM]","local":"[local]","participantes":["[participante]"]}}}}"""
+
 # Exemplo 3 — Conflito de horário:
-AGENDA_SHOT_3 = """
+_SHOT_3 = f"""
 Roteador: ROUTE=agenda
 PERGUNTA_ORIGINAL=[pedido para marcar evento em horário já ocupado]
-Agenda: {"dominio":"agenda","intencao":"conflitos","resposta":"Você já tem '[evento existente]' em [horário]; marcar [novo evento] criaria conflito.","recomendacao":"A melhor janela disponível é [horário alternativo].","acompanhamento":"Quer que eu registre para [horário alternativo]?"}"""
+Agenda: {{"dominio":"agenda","intencao":"conflitos","resposta":"Você já tem '[evento existente]' em [horário]; marcar [novo evento] criaria conflito.","recomendacao":"A melhor janela disponível é [horário alternativo].","acompanhamento":"Quer que eu registre para [horário alternativo]?"}}"""
+
 # Exemplo 4 — Dado ausente → esclarecer:
-AGENDA_SHOT_4 = """
+_SHOT_4 = f"""
 Roteador: ROUTE=agenda
 PERGUNTA_ORIGINAL=[pedido de agendamento sem horário definido]
-Agenda: {"dominio":"agenda","intencao":"criar","resposta":"Preciso do horário para agendar.","recomendacao":"","esclarecer":"Qual horário você prefere em [data]?"}"""
+Agenda: {{"dominio":"agenda","intencao":"criar","resposta":"Preciso do horário para agendar.","recomendacao":"","esclarecer":"Qual horário você prefere em [data]?"}}"""
 
-AGENDA_SHOTS_CUT = (
+_SHOTS_CUT = (
     "FIM DOS EXEMPLOS. "
     "Considere apenas as mensagens abaixo como contexto verdadeiro."
 )
 
-AGENDA_PROMPT = (
-    BASE_AGENDA_PROMPT
+_PROMPT = (
+    _BASE_PROMTP
     + "\n\n"
-    + AGENDA_SHOTS_OPEN
+    + _SHOTS_OPEN
     + "\n\n"
-    + AGENDA_SHOT_1
+    + _SHOT_1
     + "\n\n"
-    + AGENDA_SHOT_2
+    + _SHOT_2
     + "\n\n"
-    + AGENDA_SHOT_3
+    + _SHOT_3
     + "\n\n"
-    + AGENDA_SHOT_4
+    + _SHOT_4
     + "\n\n"
-    + AGENDA_SHOTS_CUT
+    + _SHOTS_CUT
 )
+
+agenda_agent = create_agent(model=specialist_llm, system_prompt=_PROMPT)
