@@ -1,25 +1,57 @@
+import asyncio
 import logging
 import os
+import uuid
+
+from langchain_core.messages import HumanMessage
 
 from .agents import execute_agent_flux
 from .infrastructure.logger import setup_logger
 from .infrastructure.md_console import print
+from .infrastructure.mongo_connection import MongoManager
+from .services.chat_session_service import ChatSessionService
+from .services.session_summary_service import SessionSummaryService
 
-setup_logger()
-logger = logging.getLogger(__name__)
+
+async def main() -> None:
+    session_id = str(uuid.uuid4())
+    summary_service = SessionSummaryService()
+    session_service = ChatSessionService(summary_service)
+    try:
+        mongo_manager = MongoManager()
+        await mongo_manager.init_database()
+        await session_service.init_session(session_id)
+        await _execute_interaction_loop(session_id=session_id, service=session_service)
+
+    except Exception as e:
+        logger.exception("Critical error: %s", e)
+        print("**Unknow error ocurred! Try again later.**")
+
+    finally:
+        await session_service.finalize_session(session_id)
 
 
-logger.info("App started")
-os.system("cls")
-print("\n# Bem vindo! Converse hoje mesmo com o Assessor.IA!!\n")
+async def _execute_interaction_loop(
+    service: ChatSessionService, session_id: str
+) -> None:
+    os.system("cls")
+    print("\n# Bem vindo! Converse hoje mesmo com o Assessor.IA!!\n")
 
-while True:
-    user_input = input(">>> ")
-    if user_input.lower() in ("sair", "exit", "tchau", "bye", "end", "fim"):
-        print("Encerrando a conversa")
-        break
+    while True:
+        user_input = HumanMessage(content=input(">>> "))
+        await service.save_message(session_id=session_id, message=user_input)
+        if user_input.content.lower() in ("sair", "exit", "tchau", "bye", "end", "fim"):
+            print("Encerrando a conversa")
+            break
 
-    response = execute_agent_flux(user_input, "meu_id_de_sessao")
-    print(f"\n{response}\n\n---\n\n")
+        response = execute_agent_flux(user_input, session_id)
+        await service.save_message(session_id=session_id, message=response)
+        print(f"\n{response.content}\n\n---\n\n")
 
-logger.info("App closed")
+
+if __name__ == "__main__":
+    setup_logger()
+    logger = logging.getLogger(__name__)
+    logger.info("App started")
+    asyncio.run(main())
+    logger.info("App closed")

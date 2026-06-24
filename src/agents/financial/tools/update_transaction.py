@@ -6,8 +6,8 @@ from langchain.tools import tool
 from psycopg2.extensions import cursor
 from pydantic import BaseModel, Field
 
-from src.infrastructure.db_connection import get_cursor
-from src.model.common.tool_response import ToolResponse
+from src.infrastructure.pg_connection import get_cursor
+from src.model.tool_response import ToolResponse
 
 from .utils import resolve_category_id, resolve_type_id
 

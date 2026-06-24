@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @contextmanager
 def get_connection() -> Generator[connection, None, None]:
-    conn: connection = psycopg2.connect(settings.database_url)
+    conn: connection = psycopg2.connect(settings.pg_url)
     try:
         logger.info("Connection opened")
         yield conn

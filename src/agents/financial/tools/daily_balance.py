@@ -4,8 +4,8 @@ from datetime import date, timedelta
 from langchain.tools import tool
 from pydantic import BaseModel, Field
 
-from src.infrastructure.db_connection import get_cursor
-from src.model.common.tool_response import ToolResponse
+from src.infrastructure.pg_connection import get_cursor
+from src.model.tool_response import ToolResponse
 
 logger = logging.getLogger(__name__)
 

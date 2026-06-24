@@ -5,8 +5,8 @@ from typing import Any
 
 from langchain_core.messages import AIMessage
 
-from src.model.common.graph_state import GraphState, GraphStateKeys
-from src.model.common.guardrail_result import GuardrailResult
+from src.model.graph_state import GraphState, GraphStateKeys
+from src.model.guardrail_result import GuardrailResult
 
 from ..llms import fast_llm
 from .anonymization import PII, deanonymize_output

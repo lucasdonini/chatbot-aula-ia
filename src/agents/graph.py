@@ -1,10 +1,10 @@
 import logging
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
-from src.model.common.graph_state import GraphState
+from src.model.graph_state import GraphState
 
 from .agenda import AGENDA_NODE_NAME, agenda_agent
 from .faq import FAQ_NODE_NAME, faq_agent
@@ -18,7 +18,7 @@ from .guardrails import (
 from .orquestrator import ORQUESTRATOR_NODE_NAME, orquestrator_agent
 from .router import ROUTER_NODE_NAME, router_agent
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 SPECIALIST_NODES = {
     FAQ_NODE_NAME,
@@ -67,9 +67,9 @@ memory = MemorySaver()
 agent_flux = graph.compile(checkpointer=memory)
 
 
-def execute_agent_flux(user_input: str, session_id: str) -> str:
+def execute_agent_flux(user_input: HumanMessage, session_id: str) -> AIMessage:
     initial_state: GraphState = {
-        "messages": [HumanMessage(content=user_input)],
+        "messages": [user_input],
         "called_agents": [],
         "route": "",
         "pii_map": {},
@@ -80,4 +80,4 @@ def execute_agent_flux(user_input: str, session_id: str) -> str:
     )
 
     logger.debug("Called agents: %s", final_state["called_agents"])
-    return final_state["messages"][-1].text
+    return final_state["messages"][-1]

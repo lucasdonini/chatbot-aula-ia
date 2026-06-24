@@ -6,8 +6,8 @@ from typing import Any
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
 from langgraph.graph import END
 
-from src.model.common.graph_state import GraphState, GraphStateKeys
-from src.model.common.guardrail_result import GuardrailResult
+from src.model.graph_state import GraphState, GraphStateKeys
+from src.model.guardrail_result import GuardrailResult
 
 from ..llms import fast_llm
 from ..router import ROUTER_NODE_NAME

@@ -10,10 +10,13 @@ class Settings(BaseSettings):
     postgres_password: str
     postgres_db: str
 
+    mongodb_uri: str = "mongodb://localhost:27017"
+    mongodb_dbname: str = "assessoria"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property
-    def database_url(self):
+    def pg_url(self):
         return f"postgresql://{self.pguser}:{self.postgres_password}@localhost:{self.db_port}/{self.postgres_db}"
 
 
