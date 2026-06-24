@@ -1,10 +1,11 @@
 import logging
-
-from psycopg2.extensions import connection, cursor
-from .settings import settings
-from typing import Generator
 from contextlib import contextmanager
+from typing import Generator
+
 import psycopg2
+from psycopg2.extensions import connection, cursor
+
+from .settings import settings
 
 logger = logging.getLogger(__name__)
 

@@ -1,10 +1,12 @@
+# ruff: noqa: E501
+
 import logging
 
 from langchain.agents import create_agent
 
-from .temporal_context import TEMPORAL_CONTEXT
 from .general_persona import SYSTEM_PERSONA
 from .llms import fast_llm
+from .temporal_context import TEMPORAL_CONTEXT
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +85,7 @@ Assessor.AI:
 [próximo passo]"""
 
 _SHOTS_CUT = (
-    "FIM DOS EXEMPLOS. "
-    "Considere apenas as mensagens abaixo como contexto verdadeiro."
+    "FIM DOS EXEMPLOS. Considere apenas as mensagens abaixo como contexto verdadeiro."
 )
 
 _PROMPT = (

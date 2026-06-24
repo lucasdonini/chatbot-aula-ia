@@ -1,8 +1,10 @@
+# ruff: noqa: E501
+
 from langchain.agents import create_agent
 
-from .tools import TOOLS
-from ..llms import fast_llm
 from ..general_persona import SYSTEM_PERSONA
+from ..llms import fast_llm
+from .tools import TOOLS
 
 FAQ_NODE_NAME = "faq"
 
@@ -49,8 +51,7 @@ PERGUNTA_ORIGINAL=[dúvida sobre tema não coberto pelo FAQ]
 FAQ: Não encontrei essa informação no FAQ do sistema."""
 
 _SHOTS_CUT = (
-    "FIM DOS EXEMPLOS. "
-    "Considere apenas as mensagens abaixo como contexto verdadeiro."
+    "FIM DOS EXEMPLOS. Considere apenas as mensagens abaixo como contexto verdadeiro."
 )
 
 _PROMPT = (

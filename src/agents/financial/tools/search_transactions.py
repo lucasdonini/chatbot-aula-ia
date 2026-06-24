@@ -1,13 +1,14 @@
 import logging
+from datetime import date
+from typing import Optional
+
+from langchain.tools import tool
+from pydantic import BaseModel, Field
 
 from src.infrastructure.db_connection import get_cursor
+from src.model.common.tool_response import ToolResponse
 
 from .utils import resolve_category_id, resolve_type_id
-from src.model.common.tool_response import ToolResponse
-from pydantic import BaseModel, Field
-from typing import Optional
-from datetime import date
-from langchain.tools import tool
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +16,18 @@ logger = logging.getLogger(__name__)
 class SearchTransactionsQueryArgs(BaseModel):
     source_text: Optional[str] = Field(
         default=None,
-        description="Texto original da mensagem do usuário que gerou o registro. Inclua apenas quando tiver certeza de qual prompt gerou a transação.",
+        description=(
+            "Texto original da mensagem do usuário que gerou o registro. "
+            "Inclua apenas quando tiver certeza de qual prompt gerou a transação."
+        ),
     )
 
     occurred_at_start: Optional[date] = Field(
         default=None,
-        description="Data de início do intervalo de datas de transações alvo. Inclua quando quiser limitar um intervalo de datas.",
+        description=(
+            "Data de início do intervalo de datas de transações alvo. "
+            "Inclua quando quiser limitar um intervalo de datas."
+        ),
     )
 
     occurred_at_end: Optional[date] = Field(
@@ -35,22 +42,36 @@ class SearchTransactionsQueryArgs(BaseModel):
 
     type: Optional[str] = Field(
         default=None,
-        description="Nome do tipo: INCOME | EXPENSES | TRANSFER. Inclua quando estiver buscando um tipo de transação específico.",
+        description=(
+            "Nome do tipo: INCOME | EXPENSES | TRANSFER. "
+            "Inclua quando estiver buscando um tipo de transação específico."
+        ),
     )
 
     category: Optional[str] = Field(
         default=None,
-        description="Nome da categoria: comida | besteira | estudo | férias | transporte | moradia | saúde | lazer | contas | investimento | presente | outros. Inclua quando estiver buscando uma categoria específica.",
+        description=(
+            "Nome da categoria: comida | besteira | estudo | "
+            "férias | transporte | moradia | saúde | lazer | "
+            "contas | investimento | presente | outros. Inclua "
+            "quando estiver buscando uma categoria específica."
+        ),
     )
 
     description: Optional[str] = Field(
         default=None,
-        description="Descrição da transação. Pode ser necessário pesquisar várias vezes pois não é um parâmetro objetivo.",
+        description=(
+            "Descrição da transação. Pode ser necessário pesquisar várias vezes "
+            "pois não é um parâmetro objetivo."
+        ),
     )
 
     limit: Optional[int] = Field(
         default=50,
-        description="Número máximo de transações. Use 0 para sem limite. Para perguntas sobre 'maior' ou 'menor', use 0 ou um valor alto.",
+        description=(
+            "Número máximo de transações. Use 0 para sem limite. "
+            "Para perguntas sobre 'maior' ou 'menor', use 0 ou um valor alto."
+        ),
     )
 
 
@@ -67,11 +88,14 @@ def search_transactions(
     """
     Busca no banco de dados uma transação de acordo com os parâmetros passados.
     Caso nenhum parâmetro seja passado, retorna as útlimas 10 transações.
-    Se a data de início for passada mas a de final não, retorna todas desde o início até hoje.
-    Se a data de início não for passada mas a de final for, retora todas até a data de final.
-    Buscar usando parâmetros como source_text e description pode ser ineficiente, uma vez que são
-    textos humanos ou gerados pelo modelo, o que os torna menos padronizados.
-    Buscas por source_text ou description fazem busca parcial para permitir que transações com description
+    Se a data de início for passada mas a de final não, retorna todas desde o início
+    até hoje.
+    Se a data de início não for passada mas a de final for, retora todas até a
+    data de final.
+    Buscar usando parâmetros como source_text e description pode ser ineficiente,
+    uma vez que são textos humanos, o que os torna menos padronizados.
+    Buscas por source_text ou description fazem busca parcial para permitir
+    que transações com description
     'fiz uma doação para ...' sejam retornadas buscando apenas por 'doação'.
     """
     logger.info("search_transactions tool called0")
@@ -139,7 +163,10 @@ def search_transactions(
 
             if where_conditions:
                 query += " WHERE " + " AND ".join(where_conditions)
-            query += f' ORDER BY occurred_at {"DESC" if occurred_at_start or occurred_at_end else "ASC"} '
+            query += (
+                " ORDER BY occurred_at "
+                f"{'DESC' if occurred_at_start or occurred_at_end else 'ASC'} "
+            )
             if limit > 0:
                 query += f"LIMIT {limit}"
             query += ";"

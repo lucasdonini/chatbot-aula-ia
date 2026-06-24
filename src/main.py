@@ -1,9 +1,9 @@
-from .infrastructure.md_console import print
-from .infrastructure.logger import setup_logger
-from .agents import execute_agent_flux
-
 import logging
 import os
+
+from .agents import execute_agent_flux
+from .infrastructure.logger import setup_logger
+from .infrastructure.md_console import print
 
 setup_logger()
 logger = logging.getLogger(__name__)

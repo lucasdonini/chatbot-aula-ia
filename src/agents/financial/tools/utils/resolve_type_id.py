@@ -1,5 +1,6 @@
-from psycopg2.extensions import cursor
 from typing import Optional, Tuple
+
+from psycopg2.extensions import cursor
 
 TYPE_ALIASES = {
     "INCOME": "INCOME",
@@ -34,7 +35,8 @@ def resolve_type_id(
 
         if not row:
             raise ValueError(
-                f"Type (id={type_id}, name={type_name}) is not recognized. Try one of these: {TYPE_ALIASES.keys()}"
+                f"Type (id={type_id}, name={type_name}) is not recognized. "
+                f"Try one of these: {TYPE_ALIASES.keys()}"
             )
         return row[0]
 

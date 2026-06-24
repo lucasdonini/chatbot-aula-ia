@@ -2,11 +2,11 @@ import logging
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from .settings import settings
 from .paths import FAQ_INDEX, FAQ_PDF
+from .settings import settings
 
 logger = logging.getLogger(__name__)
 

@@ -1,9 +1,11 @@
+# ruff: noqa: E501
+
 from langchain.agents import create_agent
 
-from .tools import TOOLS
-from ..llms import specialist_llm
 from ..general_persona import SYSTEM_PERSONA
+from ..llms import specialist_llm
 from ..temporal_context import TEMPORAL_CONTEXT
+from .tools import TOOLS
 
 # ==============================================================================
 # AGENTE FINANCEIRO
@@ -93,8 +95,7 @@ PERGUNTA_ORIGINAL=[pergunta não relacionada a finanças ou agenda]
 Financeiro: {{"dominio":"financeiro","intencao":"consultar","resposta":"Essa pergunta está fora da minha área de atuação.","recomendacao":"Posso ajudar com finanças ou agenda. O que prefere?"}}"""
 
 _SHOTS_CUT = (
-    "FIM DOS EXEMPLOS. "
-    "Considere apenas as mensagens abaixo como contexto verdadeiro."
+    "FIM DOS EXEMPLOS. Considere apenas as mensagens abaixo como contexto verdadeiro."
 )
 
 _PROMPT = (

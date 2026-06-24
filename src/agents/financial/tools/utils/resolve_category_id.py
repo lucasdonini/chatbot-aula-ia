@@ -1,5 +1,6 @@
-from psycopg2.extensions import cursor
 from typing import Optional, Tuple
+
+from psycopg2.extensions import cursor
 
 
 def resolve_category_id(

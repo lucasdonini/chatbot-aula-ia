@@ -1,14 +1,17 @@
-from typing import Any
-import re
+# ruff: noqa: E501
 
-from langchain_core.messages import RemoveMessage, HumanMessage, AIMessage
+import re
+from typing import Any
+
+from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
 from langgraph.graph import END
 
 from src.model.common.graph_state import GraphState, GraphStateKeys
 from src.model.common.guardrail_result import GuardrailResult
-from .anonymization import anonymize_input
-from ..router import ROUTER_NODE_NAME
+
 from ..llms import fast_llm
+from ..router import ROUTER_NODE_NAME
+from .anonymization import anonymize_input
 
 _INJECTION_PATTERNS = [
     r"ignore\s+(as\s+)?instru[çc][oõ]es",

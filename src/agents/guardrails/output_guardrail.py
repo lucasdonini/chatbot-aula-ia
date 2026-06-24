@@ -1,12 +1,15 @@
-from typing import Any
+# ruff: noqa: E501
+
 import re
+from typing import Any
 
 from langchain_core.messages import AIMessage
 
 from src.model.common.graph_state import GraphState, GraphStateKeys
 from src.model.common.guardrail_result import GuardrailResult
-from .anonymization import deanonymize_output, PII
+
 from ..llms import fast_llm
+from .anonymization import PII, deanonymize_output
 
 _COMPLIANCE_PROMPT = """\
 Você é um revisor de compliance para assessoria financeira regulada pela CVM e ANBIMA.

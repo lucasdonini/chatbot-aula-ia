@@ -1,6 +1,6 @@
+import re
 from typing import Tuple
 from uuid import uuid4
-import re
 
 # Default PII both for input and output
 PII = [
@@ -27,7 +27,8 @@ def anonymize_input(text: str) -> Tuple[str, dict]:
 
 
 def deanonymize_output(text: str, pii_map: dict, restore: bool = False) -> str:
-    """Resolve PII tokens from output. By default, ommits: does not repeat personal data."""
+    """Resolve PII tokens from output.
+    By default, ommits: does not repeat personal data."""
     for token, value in pii_map.items():
         if token in text:
             replacement = value if restore else f"[{token.split('_')[1]} OMITIDO]"

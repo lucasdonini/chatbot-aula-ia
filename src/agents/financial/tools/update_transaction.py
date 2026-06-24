@@ -1,15 +1,15 @@
 import logging
-
-from src.model.common.tool_response import ToolResponse
-from src.infrastructure.db_connection import get_cursor
-from .utils import resolve_type_id, resolve_category_id
-
-from pydantic import BaseModel, Field
-from typing import Optional, List, TypedDict
 from datetime import date, timedelta
-from psycopg2.extensions import cursor
+from typing import List, Optional, TypedDict
 
 from langchain.tools import tool
+from psycopg2.extensions import cursor
+from pydantic import BaseModel, Field
+
+from src.infrastructure.db_connection import get_cursor
+from src.model.common.tool_response import ToolResponse
+
+from .utils import resolve_category_id, resolve_type_id
 
 logger = logging.getLogger(__name__)
 
@@ -17,15 +17,24 @@ logger = logging.getLogger(__name__)
 class UpdateTransactionArgs(BaseModel):
     id: Optional[int] = Field(
         default=None,
-        description="ID da transação a atualizar. Se ausente, será feita uma busca por (match_text + date_local).",
+        description=(
+            "ID da transação a atualizar. "
+            "Se ausente, será feita uma busca por (match_text + date_local)."
+        ),
     )
     match_text: Optional[str] = Field(
         default=None,
-        description="Texto para localizar transação quando id não for informado (busca em source_text/description).",
+        description=(
+            "Texto para localizar transação quando id não "
+            "for informado (busca em source_text/description)."
+        ),
     )
     date_local: Optional[date] = Field(
         default=None,
-        description="Data local (YYYY-MM-DD); usado em conjunto com match_text quando id ausente.",
+        description=(
+            "Data local (YYYY-MM-DD); usado em conjunto "
+            "com match_text quando id ausente."
+        ),
     )
     amount: Optional[float] = Field(default=None, description="Novo valor.")
     type_id: Optional[int] = Field(default=None, description="Novo type_id (1/2/3).")
@@ -57,7 +66,7 @@ def _locate_target_ids(
     # Buscar o mais recente no dia local informado que combine o texto
     date_end: date = date_local + timedelta(days=1)
     cur.execute(
-        f"""
+        """
         SELECT t.id
         FROM transactions t
         WHERE (t.source_text ILIKE %s OR t.description ILIKE %s)
@@ -180,7 +189,8 @@ def update_transaction(
     Atualiza uma transação existente.
     Estratégias:
       - Se 'id' for informado: atualiza diretamente por ID.
-      - Caso contrário: localiza a transação mais recente que combine (match_text em source_text/description)
+      - Caso contrário: localiza a transação mais recente que combine
+        (match_text em source_text/description)
         E (date_local em America/Sao_Paulo), então atualiza.
     Retorna: status, rows_affected, id, e o registro atualizado.
     """
@@ -199,7 +209,8 @@ def update_transaction(
     ):
         logger.error("Tried to update nothing")
         return ToolResponse.error(
-            "Nada para atualizar: forneça pelo menos um campo (amount, type, category, description, payment_method, occurred_at)."
+            "Nada para atualizar: forneça pelo menos um campo "
+            "(amount, type, category, description, payment_method, occurred_at)."
         )
 
     try:

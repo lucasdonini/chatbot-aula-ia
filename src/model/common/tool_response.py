@@ -1,5 +1,6 @@
-from pydantic import BaseModel, model_validator
 from typing import Optional
+
+from pydantic import BaseModel, model_validator
 
 
 class ToolResponse(BaseModel):
@@ -11,7 +12,8 @@ class ToolResponse(BaseModel):
     @classmethod
     def _block_direct(cls, value, handler):
         raise TypeError(
-            "Direct instantiation is not allowed. Use DatabaseToolResponse[.ok()/.error()/.exception()] instead."
+            "Direct instantiation is not allowed. "
+            "Use DatabaseToolResponse[.ok()/.error()/.exception()] instead."
         )
 
     @classmethod

@@ -19,8 +19,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "black>=26.3.1",
     "pre-commit>=4.5.0",
+    "ruff==0.15.19",
 ]
 
 [tool.pytest.ini_options]
@@ -29,6 +29,12 @@ addopts = "-ra -q"
 testpaths = ["tests"]
 pythonpath = ". src"
 
-[tool.black]
-target-version = ['py312']
+[tool.ruff]
 line-length = 88
+
+[tool.ruff.format]
+quote-style = "double"
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]

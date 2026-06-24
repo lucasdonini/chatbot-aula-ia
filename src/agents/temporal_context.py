@@ -1,3 +1,5 @@
+# ruff: noqa: E501
+
 from datetime import datetime, timezone
 
 _now = datetime.now(timezone.utc).astimezone()

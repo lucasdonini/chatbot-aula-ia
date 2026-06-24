@@ -1,9 +1,9 @@
 import logging
-
-from langchain_core.documents.base import Document
-from langchain.tools import tool
-from pydantic import BaseModel, Field
 from typing import List
+
+from langchain.tools import tool
+from langchain_core.documents.base import Document
+from pydantic import BaseModel, Field
 
 from src.infrastructure.faiss_store import get_faq_db
 
