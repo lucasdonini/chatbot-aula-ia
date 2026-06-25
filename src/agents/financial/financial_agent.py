@@ -1,5 +1,3 @@
-# ruff: noqa: E501
-
 import logging
 import time
 from typing import Any, Dict

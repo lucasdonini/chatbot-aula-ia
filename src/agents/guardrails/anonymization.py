@@ -3,17 +3,9 @@ import re
 from typing import Tuple
 from uuid import uuid4
 
-logger = logging.getLogger(__name__)
+from .anonymization_config import PII
 
-# Default PII both for input and output
-PII = [
-    ("CPF", r"\d{3}\.?\d{3}\.?\d{3}-?\d{2}"),
-    ("CNPJ", r"\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}"),
-    ("TELEFONE", r"\(?\d{2}\)?\s?\d{4,5}-?\d{4}"),
-    ("EMAIL", r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"),
-    ("CONTA", r"\d{4,6}-\d{1}"),
-    ("CARTAO", r"\d{4}\s?\d{4}\s?\d{4}\s?\d{4}"),
-]
+logger = logging.getLogger(__name__)
 
 
 def anonymize_input(text: str) -> Tuple[str, dict]:
@@ -29,6 +21,9 @@ def anonymize_input(text: str) -> Tuple[str, dict]:
 
     logger.info("Input anonymized: %s", text)
     return text, pii_map
+
+
+__all__ = ["anonymize_input", "deanonymize_output"]
 
 
 def deanonymize_output(text: str, pii_map: dict, restore: bool = False) -> str:

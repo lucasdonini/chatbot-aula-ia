@@ -1,5 +1,3 @@
-# ruff: noqa: E501
-
 import logging
 import re
 import time
@@ -11,24 +9,11 @@ from src.model.graph_state import GraphState, GraphStateKeys
 from src.model.guardrail_result import GuardrailResult
 
 from ..llms import fast_llm
-from .anonymization import PII, deanonymize_output
+from .anonymization import deanonymize_output
+from .anonymization_config import PII
+from .guardrails_prompts import COMPLIANCE_PROMPT
 
 logger = logging.getLogger(__name__)
-
-_COMPLIANCE_PROMPT = """\
-Você é um revisor de compliance para assessoria financeira regulada pela CVM e ANBIMA.
-Corrija a resposta SOMENTE se ela garantir rentabilidade futura, recomendar ativo específico
-sem disclaimer de risco, ou afirmar certeza sobre comportamento futuro do mercado.
-Se estiver adequada, repita-a sem alterações.
-
-Responda SOMENTE:
-STATUS: APROVADO ou CORRIGIDO
-RESPOSTA:
-[texto final]
-
-Resposta para revisar:
-{resposta}
-"""
 
 
 def _output_guardrail(
@@ -49,7 +34,7 @@ def _output_guardrail(
     output = deanonymize_output(output, pii_map, restore=restaurar_pii)
 
     # 3. Revisão de compliance financeiro
-    result = fast_llm.invoke(_COMPLIANCE_PROMPT.format(resposta=output)).content.strip()
+    result = fast_llm.invoke(COMPLIANCE_PROMPT.format(resposta=output)).content.strip()
     if "RESPOSTA:" in result:
         output = result.split("RESPOSTA:", 1)[1].strip() or output
 
