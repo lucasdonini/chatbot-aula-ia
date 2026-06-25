@@ -1,7 +1,9 @@
 import logging
+import time
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 
 from src.model.graph_state import GraphState
@@ -63,11 +65,17 @@ graph.add_edge(OUTPUT_GUARDRAIL_NODE_NAME, END)
 graph.add_edge(FAQ_NODE_NAME, END)
 
 # Memória centralizada no grafo — persiste o Estado inteiro entre turns
-memory = MemorySaver()
+json_serializer = JsonPlusSerializer(
+    allowed_msgpack_modules=[("src.model.graph_state", "GraphStateKeys")]
+)
+memory = MemorySaver(serde=json_serializer)
 agent_flux = graph.compile(checkpointer=memory)
 
 
 def execute_agent_flux(user_input: HumanMessage, session_id: str) -> AIMessage:
+    start_time = time.perf_counter()
+    logger.info("Question made: %s", user_input.content)
+
     initial_state: GraphState = {
         "messages": [user_input],
         "called_agents": [],
@@ -79,5 +87,7 @@ def execute_agent_flux(user_input: HumanMessage, session_id: str) -> AIMessage:
         initial_state, config={"configurable": {"thread_id": session_id}}
     )
 
+    end_time = time.perf_counter()
     logger.debug("Called agents: %s", final_state["called_agents"])
+    logger.info("Question answered. Time: %s", end_time - start_time)
     return final_state["messages"][-1]
