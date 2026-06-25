@@ -1,10 +1,17 @@
 # ruff: noqa: E501
 
+import logging
+from typing import Any, Dict
+
 from langchain.agents import create_agent
+
+from src.model.graph_state import GraphState, GraphStateKeys
 
 from ..general_persona import SYSTEM_PERSONA
 from ..llms import fast_llm
 from .tools import TOOLS
+
+logger = logging.getLogger(__name__)
 
 FAQ_NODE_NAME = "faq"
 
@@ -67,3 +74,12 @@ _PROMPT = (
 )
 
 faq_agent = create_agent(model=fast_llm, system_prompt=_PROMPT, tools=TOOLS)
+
+
+async def faq_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
+    logger.debug("FAQ specialist called. State: %s", state)
+    response = await faq_agent.ainvoke(state)
+    return {
+        GraphStateKeys.MESSAGES: response.get("messages") or [],
+        GraphStateKeys.CALLED_AGENTS: [FAQ_NODE_NAME],
+    }

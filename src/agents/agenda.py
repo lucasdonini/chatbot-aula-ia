@@ -1,10 +1,18 @@
 # ruff: noqa: E501
 
+import logging
+from typing import Any, Dict
+
 from langchain.agents import create_agent
+
+from src.model.graph_state import GraphState, GraphStateKeys
 
 from .general_persona import SYSTEM_PERSONA
 from .llms import specialist_llm
 from .temporal_context import TEMPORAL_CONTEXT
+
+logger = logging.getLogger(__name__)
+
 
 # ==============================================================================
 # AGENTE DE AGENDA
@@ -108,3 +116,12 @@ _PROMPT = (
 )
 
 agenda_agent = create_agent(model=specialist_llm, system_prompt=_PROMPT)
+
+
+async def agenda_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
+    logger.info("Agenda specialist called. State: %s", state)
+    response = await agenda_agent.ainvoke(state)
+    return {
+        GraphStateKeys.MESSAGES: response.get("messages") or [],
+        GraphStateKeys.CALLED_AGENTS: [AGENDA_NODE_NAME],
+    }

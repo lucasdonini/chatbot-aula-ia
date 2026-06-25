@@ -1,5 +1,6 @@
 # ruff: noqa: E501
 
+import logging
 import re
 from typing import Any
 
@@ -10,6 +11,8 @@ from src.model.guardrail_result import GuardrailResult
 
 from ..llms import fast_llm
 from .anonymization import PII, deanonymize_output
+
+logger = logging.getLogger(__name__)
 
 _COMPLIANCE_PROMPT = """\
 Você é um revisor de compliance para assessoria financeira regulada pela CVM e ANBIMA.
@@ -35,6 +38,8 @@ def _output_guardrail(
     Nunca bloqueia — sempre retorna o texto revisado em 'conteudo'.
     """
 
+    logger.info("Verifying output compliance...")
+
     # 1. Remove PII que o modelo tenha gerado
     for type, pattern in PII:
         output = re.sub(pattern, f"[{type} OMITIDO]", output)
@@ -47,6 +52,7 @@ def _output_guardrail(
     if "RESPOSTA:" in result:
         output = result.split("RESPOSTA:", 1)[1].strip() or output
 
+    logger.debug("Output aproved: %s", output)
     return GuardrailResult.output_aproved(output)
 
 
@@ -54,8 +60,9 @@ OUTPUT_GUARDRAIL_NODE_NAME = "output_guardrail"
 
 
 def output_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
+    logger.info("Output Guardrail called. State: %s", state)
     result = _output_guardrail(state["messages"][-1].text, state["pii_map"])
     return {
         GraphStateKeys.MESSAGES: [AIMessage(content=result.message)],
-        GraphStateKeys.CALLED_AGENTS: ["guardrail_saida"],
+        GraphStateKeys.CALLED_AGENTS: [OUTPUT_GUARDRAIL_NODE_NAME],
     }

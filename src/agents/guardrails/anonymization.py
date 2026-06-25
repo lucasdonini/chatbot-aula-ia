@@ -1,6 +1,9 @@
+import logging
 import re
 from typing import Tuple
 from uuid import uuid4
+
+logger = logging.getLogger(__name__)
 
 # Default PII both for input and output
 PII = [
@@ -14,6 +17,7 @@ PII = [
 
 
 def anonymize_input(text: str) -> Tuple[str, dict]:
+    logger.info("Anonymizing input...")
     pii_map = {}
 
     for type, pattern in PII:
@@ -23,12 +27,14 @@ def anonymize_input(text: str) -> Tuple[str, dict]:
             pii_map[token] = value
             text = text.replace(value, token, 1)
 
+    logger.info("Input anonymized: %s", text)
     return text, pii_map
 
 
 def deanonymize_output(text: str, pii_map: dict, restore: bool = False) -> str:
     """Resolve PII tokens from output.
     By default, ommits: does not repeat personal data."""
+    logger.info("Deanonymizing output...")
     for token, value in pii_map.items():
         if token in text:
             replacement = value if restore else f"[{token.split('_')[1]} OMITIDO]"

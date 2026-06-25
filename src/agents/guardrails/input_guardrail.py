@@ -1,5 +1,6 @@
 # ruff: noqa: E501
 
+import logging
 import re
 from typing import Any
 
@@ -12,6 +13,8 @@ from src.model.guardrail_result import GuardrailResult
 from ..llms import fast_llm
 from ..router import ROUTER_NODE_NAME
 from .anonymization import anonymize_input
+
+logger = logging.getLogger(__name__)
 
 _INJECTION_PATTERNS = [
     r"ignore\s+(as\s+)?instru[çc][oõ]es",
@@ -93,9 +96,12 @@ def _input_guardrail(input: str) -> GuardrailResult:
     Deterministic first, then LLM only if needed.
     """
 
+    logger.info("Verifying input compliance...")
+
     # 1. Prompt injection
     for pattern in _INJECTION_PATTERNS:
         if re.search(pattern, input, re.IGNORECASE):
+            logger.debug("Input blocked for prompt injection: %s", input)
             return GuardrailResult.block(
                 "prompt_injection", "Não consigo processar essa solicitação."
             )
@@ -104,6 +110,7 @@ def _input_guardrail(input: str) -> GuardrailResult:
     texto_lower = input.lower()
     for kw in _INTERN_DATA_KEYWORDS:
         if kw in texto_lower:
+            logger.debug("Input blocked for PII.")
             return GuardrailResult.block(
                 "acesso_dados_internos",
                 "Não tenho como compartilhar informações internas do sistema.",
@@ -122,6 +129,7 @@ def _input_guardrail(input: str) -> GuardrailResult:
         motivo, mensagem = _BLOCK_RESPONSES[categoria]
         return GuardrailResult.block(motivo, mensagem)
 
+    logger.debug("Input aproved: %s", input)
     return GuardrailResult.input_aproved(input)
 
 
@@ -129,6 +137,7 @@ INPUT_GUARDRAIL_NODE_NAME = "input_guardrail"
 
 
 def input_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
+    logger.info("Input Guardrail called. State: %s", state)
     user_input = state["messages"][-1]
     anonymized, pii_map = anonymize_input(user_input.text)
     result = _input_guardrail(anonymized)
@@ -136,13 +145,13 @@ def input_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
     if result.blocked:
         return {
             GraphStateKeys.ROUTE: END,
-            GraphStateKeys.CALLED_AGENTS: [f"guardrail_entrada -> {result.reason}"],
+            GraphStateKeys.CALLED_AGENTS: [INPUT_GUARDRAIL_NODE_NAME],
             GraphStateKeys.MESSAGES: [AIMessage(content=result.message)],
         }
 
     return {
         GraphStateKeys.ROUTE: ROUTER_NODE_NAME,
-        GraphStateKeys.CALLED_AGENTS: [f"guardrail_entrada -> {result.reason}"],
+        GraphStateKeys.CALLED_AGENTS: [INPUT_GUARDRAIL_NODE_NAME],
         GraphStateKeys.PII_MAP: pii_map,
         GraphStateKeys.MESSAGES: [
             RemoveMessage(id=user_input.id),

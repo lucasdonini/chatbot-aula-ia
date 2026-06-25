@@ -1,3 +1,3 @@
-from .pdf_rag import faq_retreiver
+from .pdf_rag import faq_retriever
 
-TOOLS = [faq_retreiver]
+TOOLS = [faq_retriever]

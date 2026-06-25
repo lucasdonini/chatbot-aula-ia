@@ -1,8 +1,11 @@
 # ruff: noqa: E501
 
 import logging
+from typing import Any, Dict
 
 from langchain.agents import create_agent
+
+from src.model.graph_state import GraphState, GraphStateKeys
 
 from .general_persona import SYSTEM_PERSONA
 from .llms import fast_llm
@@ -104,3 +107,12 @@ _PROMPT = (
 
 ORQUESTRATOR_NODE_NAME = "orquestrator"
 orquestrator_agent = create_agent(model=fast_llm, system_prompt=_PROMPT)
+
+
+async def orquestrator_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
+    logger.info("Orquestrator called. State: %s", state)
+    response = await orquestrator_agent.ainvoke(state)
+    return {
+        GraphStateKeys.MESSAGES: response.get("messages") or [],
+        GraphStateKeys.CALLED_AGENTS: [ORQUESTRATOR_NODE_NAME],
+    }

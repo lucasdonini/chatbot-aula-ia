@@ -8,17 +8,17 @@ from langgraph.graph import END, START, StateGraph
 
 from src.model.graph_state import GraphState
 
-from .agenda import AGENDA_NODE_NAME, agenda_agent
-from .faq import FAQ_NODE_NAME, faq_agent
-from .financial import FINANCIAL_NODE_NAME, financial_agent
+from .agenda import AGENDA_NODE_NAME, agenda_node
+from .faq import FAQ_NODE_NAME, faq_node
+from .financial import FINANCIAL_NODE_NAME, financial_node
 from .guardrails import (
     INPUT_GUARDRAIL_NODE_NAME,
     OUTPUT_GUARDRAIL_NODE_NAME,
     input_guardrail_node,
     output_guardrail_node,
 )
-from .orquestrator import ORQUESTRATOR_NODE_NAME, orquestrator_agent
-from .router import ROUTER_NODE_NAME, router_agent
+from .orquestrator import ORQUESTRATOR_NODE_NAME, orquestrator_node
+from .router import ROUTER_NODE_NAME, router_node
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +47,11 @@ def _redirect_from_input_guardrail(state: GraphState) -> str:
 
 graph = StateGraph(GraphState)
 
-graph.add_node(ROUTER_NODE_NAME, router_agent)
-graph.add_node(FINANCIAL_NODE_NAME, financial_agent)
-graph.add_node(AGENDA_NODE_NAME, agenda_agent)
-graph.add_node(FAQ_NODE_NAME, faq_agent)
-graph.add_node(ORQUESTRATOR_NODE_NAME, orquestrator_agent)
+graph.add_node(ROUTER_NODE_NAME, router_node)
+graph.add_node(FINANCIAL_NODE_NAME, financial_node)
+graph.add_node(AGENDA_NODE_NAME, agenda_node)
+graph.add_node(FAQ_NODE_NAME, faq_node)
+graph.add_node(ORQUESTRATOR_NODE_NAME, orquestrator_node)
 graph.add_node(INPUT_GUARDRAIL_NODE_NAME, input_guardrail_node)
 graph.add_node(OUTPUT_GUARDRAIL_NODE_NAME, output_guardrail_node)
 
@@ -72,7 +72,7 @@ memory = MemorySaver(serde=json_serializer)
 agent_flux = graph.compile(checkpointer=memory)
 
 
-def execute_agent_flux(user_input: HumanMessage, session_id: str) -> AIMessage:
+async def execute_agent_flux(user_input: HumanMessage, session_id: str) -> AIMessage:
     start_time = time.perf_counter()
     logger.info("Question made: %s", user_input.content)
 
@@ -83,7 +83,7 @@ def execute_agent_flux(user_input: HumanMessage, session_id: str) -> AIMessage:
         "pii_map": {},
     }
 
-    final_state: GraphState = agent_flux.invoke(
+    final_state: GraphState = await agent_flux.ainvoke(
         initial_state, config={"configurable": {"thread_id": session_id}}
     )
 

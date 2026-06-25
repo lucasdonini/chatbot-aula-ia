@@ -1,11 +1,19 @@
 # ruff: noqa: E501
 
+import logging
+from typing import Any, Dict
+
 from langchain.agents import create_agent
+
+from src.model.graph_state import GraphState, GraphStateKeys
 
 from ..general_persona import SYSTEM_PERSONA
 from ..llms import specialist_llm
 from ..temporal_context import TEMPORAL_CONTEXT
 from .tools import TOOLS
+
+logger = logging.getLogger(__name__)
+
 
 # ==============================================================================
 # AGENTE FINANCEIRO
@@ -115,3 +123,12 @@ _PROMPT = (
 )
 
 financial_agent = create_agent(model=specialist_llm, system_prompt=_PROMPT, tools=TOOLS)
+
+
+async def financial_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
+    logger.log("Financial specialist called. State: %s", state)
+    response = await financial_agent.ainvoke(state)
+    return {
+        GraphStateKeys.MESSAGES: response.get("messages") or [],
+        GraphStateKeys.CALLED_AGENTS: [FINANCIAL_NODE_NAME],
+    }

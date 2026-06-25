@@ -45,7 +45,7 @@ async def _execute_interaction_loop(
 
         question = HumanMessage(content=user_input)
         await service.save_message(session_id=session_id, message=question)
-        response = execute_agent_flux(question, session_id)
+        response = await execute_agent_flux(question, session_id)
         await service.save_message(session_id=session_id, message=response)
         print(f"\n{response.content}\n\n---\n\n")
 
