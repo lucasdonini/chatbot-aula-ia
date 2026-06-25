@@ -38,13 +38,14 @@ async def _execute_interaction_loop(
     print("\n# Bem vindo! Converse hoje mesmo com o Assessor.IA!!\n")
 
     while True:
-        user_input = HumanMessage(content=input(">>> "))
-        await service.save_message(session_id=session_id, message=user_input)
-        if user_input.content.lower() in ("sair", "exit", "tchau", "bye", "end", "fim"):
+        user_input = input(">>> ")
+        if user_input.lower() in ("sair", "exit", "tchau", "bye", "end", "fim"):
             print("Encerrando a conversa")
             break
 
-        response = execute_agent_flux(user_input, session_id)
+        question = HumanMessage(content=user_input)
+        await service.save_message(session_id=session_id, message=question)
+        response = execute_agent_flux(question, session_id)
         await service.save_message(session_id=session_id, message=response)
         print(f"\n{response.content}\n\n---\n\n")
 
