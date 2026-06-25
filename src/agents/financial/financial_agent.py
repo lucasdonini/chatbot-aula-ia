@@ -1,6 +1,7 @@
 # ruff: noqa: E501
 
 import logging
+import time
 from typing import Any, Dict
 
 from langchain.agents import create_agent
@@ -17,8 +18,11 @@ financial_agent = create_agent(model=specialist_llm, system_prompt=PROMPT, tools
 
 
 async def financial_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
-    logger.log("Financial specialist called. State: %s", state)
+    start_time = time.perf_counter()
+    logger.info("Financial specialist called. State: %s", state)
     response = await financial_agent.ainvoke(state)
+    end_time = time.perf_counter()
+    logger.info("Financial node finished. Time: %s", end_time - start_time)
     return {
         GraphStateKeys.MESSAGES: response.get("messages") or [],
         GraphStateKeys.CALLED_AGENTS: [FINANCIAL_NODE_NAME],

@@ -2,6 +2,7 @@
 
 import logging
 import re
+import time
 from typing import Any
 
 from langchain_core.messages import AIMessage
@@ -60,8 +61,11 @@ OUTPUT_GUARDRAIL_NODE_NAME = "output_guardrail"
 
 
 def output_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
+    start_time = time.perf_counter()
     logger.info("Output Guardrail called. State: %s", state)
     result = _output_guardrail(state["messages"][-1].text, state["pii_map"])
+    end_time = time.perf_counter()
+    logger.info("Output Guardrail node finished. Time: %s", end_time - start_time)
     return {
         GraphStateKeys.MESSAGES: [AIMessage(content=result.message)],
         GraphStateKeys.CALLED_AGENTS: [OUTPUT_GUARDRAIL_NODE_NAME],
