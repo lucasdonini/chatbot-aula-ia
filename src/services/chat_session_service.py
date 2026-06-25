@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Union
 
+from bson import ObjectId
 from langchain_core.messages import AIMessage, HumanMessage
 
 from src.model.chat_session import ChatMessage, ChatSession
@@ -9,7 +10,7 @@ from src.model.chat_session import ChatMessage, ChatSession
 from .session_summary_service import SessionSummaryService
 
 logger = logging.getLogger(__name__)
-_active_sessions: dict[str, str] = {}
+_active_sessions: dict[str, ObjectId] = {}
 
 
 class ChatSessionService:
@@ -30,7 +31,7 @@ class ChatSessionService:
         )
 
         await session.insert()
-        _active_sessions[session_id] = str(session.id)
+        _active_sessions[session_id] = session.id
         logger.info("User session initialized: %s", session)
 
     def get_active_sessions(self) -> dict[str, str]:
@@ -63,7 +64,8 @@ class ChatSessionService:
         Returns the generated summary or an empty string.
         """
 
-        if id := _active_sessions.get(session_id) is None:
+        id = _active_sessions.get(session_id)
+        if id is None:
             return ""
 
         session = await ChatSession.find_one(ChatSession.id == id)

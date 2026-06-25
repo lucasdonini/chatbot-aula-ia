@@ -43,7 +43,7 @@ class SessionSummaryService:
         logger.info("Messages sumarized. Time: %s", end_time - start_time)
         return response.content.strip()
 
-    def _format_conversation(messages: List[ChatMessage]) -> str:
+    def _format_conversation(self, messages: List[ChatMessage]) -> str:
         """Formats message array for summary"""
         lines = [f"{msg.role}: {msg.content}" for msg in messages]
         return "\n".join(lines)
