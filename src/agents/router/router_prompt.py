@@ -1,20 +1,10 @@
 # ruff: noqa: E501
 
-import logging
-from typing import Any, Dict
-
-from langchain.agents import create_agent
-
-from src.model.graph_state import GraphState, GraphStateKeys
-
-from .agenda import AGENDA_NODE_NAME
-from .faq import FAQ_NODE_NAME
-from .financial import FINANCIAL_NODE_NAME
-from .general_persona import SYSTEM_PERSONA
-from .llms import fast_llm
-from .temporal_context import TEMPORAL_CONTEXT
-
-logger = logging.getLogger(__name__)
+from ..agenda import AGENDA_NODE_NAME
+from ..faq import FAQ_NODE_NAME
+from ..financial import FINANCIAL_NODE_NAME
+from ..general_persona import SYSTEM_PERSONA
+from ..temporal_context import TEMPORAL_CONTEXT
 
 SPECIALIST_ROUTES = {
     AGENDA_NODE_NAME,
@@ -22,12 +12,6 @@ SPECIALIST_ROUTES = {
     FINANCIAL_NODE_NAME,
 }
 
-
-# ==============================================================================
-# ROTEADOR
-# Responsabilidade: classificar a intenção e emitir o protocolo de
-# encaminhamento em texto puro. NÃO responde ao usuário.
-# ==============================================================================
 _BASE_PROMPT = f"""
 {SYSTEM_PERSONA}
 
@@ -101,7 +85,7 @@ _SHOTS_CUT = (
     "FIM DOS EXEMPLOS. Considere apenas as mensagens abaixo como contexto verdadeiro."
 )
 
-_PROMPT = (
+PROMPT = (
     _BASE_PROMPT
     + "\n\n"
     + _SHOTS_OPEN
@@ -118,16 +102,3 @@ _PROMPT = (
     + "\n\n"
     + _SHOTS_CUT
 )
-
-
-ROUTER_NODE_NAME = "router"
-router_agent = create_agent(model=fast_llm, system_prompt=_PROMPT)
-
-
-async def router_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
-    logger.info("Router called. State: %s", state)
-    response = await router_agent.ainvoke(state)
-    return {
-        GraphStateKeys.MESSAGES: response.get("messages") or [],
-        GraphStateKeys.CALLED_AGENTS: [ROUTER_NODE_NAME],
-    }

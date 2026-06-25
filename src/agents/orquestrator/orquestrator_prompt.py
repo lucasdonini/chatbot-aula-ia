@@ -1,24 +1,8 @@
 # ruff: noqa: E501
 
-import logging
-from typing import Any, Dict
+from ..general_persona import SYSTEM_PERSONA
+from ..temporal_context import TEMPORAL_CONTEXT
 
-from langchain.agents import create_agent
-
-from src.model.graph_state import GraphState, GraphStateKeys
-
-from .general_persona import SYSTEM_PERSONA
-from .llms import fast_llm
-from .temporal_context import TEMPORAL_CONTEXT
-
-logger = logging.getLogger(__name__)
-
-
-# ==============================================================================
-# ORQUESTRADOR
-# Entrada : JSON(s) dos agentes especialistas
-# Saída   : resposta final formatada para o usuário
-# ==============================================================================
 _BASE_PROMPT = f"""
 {SYSTEM_PERSONA}
 
@@ -91,7 +75,7 @@ _SHOTS_CUT = (
     "FIM DOS EXEMPLOS. Considere apenas as mensagens abaixo como contexto verdadeiro."
 )
 
-_PROMPT = (
+PROMPT = (
     _BASE_PROMPT
     + "\n\n"
     + _SHOTS_OPEN
@@ -104,15 +88,3 @@ _PROMPT = (
     + "\n\n"
     + _SHOTS_CUT
 )
-
-ORQUESTRATOR_NODE_NAME = "orquestrator"
-orquestrator_agent = create_agent(model=fast_llm, system_prompt=_PROMPT)
-
-
-async def orquestrator_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
-    logger.info("Orquestrator called. State: %s", state)
-    response = await orquestrator_agent.ainvoke(state)
-    return {
-        GraphStateKeys.MESSAGES: response.get("messages") or [],
-        GraphStateKeys.CALLED_AGENTS: [ORQUESTRATOR_NODE_NAME],
-    }
