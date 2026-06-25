@@ -36,7 +36,7 @@ Compromissos, eventos, lembretes, tarefas, disponibilidade e conflitos de agenda
 
 ### SAÍDA (JSON)
 Campos mínimos obrigatórios:
-  - dominio      : "agenda"
+  - dominio      : "{AGENDA_NODE_NAME}"
   - intencao     : "consultar" | "criar" | "atualizar" | "cancelar" | "listar" | "disponibilidade" | "conflitos"
   - resposta     : uma frase objetiva com o resultado ou diagnóstico
   - recomendacao : ação prática (string vazia se não houver)
