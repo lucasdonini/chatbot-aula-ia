@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Union
 
 from bson import ObjectId
@@ -17,11 +17,8 @@ class ChatSessionService:
     def __init__(self, service: SessionSummaryService):
         self._service = service
 
-    def _now(self) -> datetime:
-        return datetime.now(timezone.utc)
-
     async def init_session(self, session_id: str) -> None:
-        now = self._now()
+        now = datetime.now()
         session = ChatSession(
             session_id=session_id,
             started_at=now,
@@ -49,7 +46,7 @@ class ChatSessionService:
                         role=role, content=message.content
                     )
                 },
-                "$set": {ChatSession.updated_at: self._now()},
+                "$set": {ChatSession.updated_at: datetime.now()},
             }
         )
         logger.info("Message saved: %s", message)
@@ -76,7 +73,7 @@ class ChatSessionService:
         await session.update(
             {
                 "$set": {
-                    ChatSession.updated_at: self._now(),
+                    ChatSession.updated_at: datetime.now(),
                     ChatSession.summary: summary,
                 }
             }

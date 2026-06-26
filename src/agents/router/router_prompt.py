@@ -29,6 +29,8 @@ _BASE_PROMPT = f"""
 - Em fora_escopo: ofereça 1-2 sugestões práticas para voltar ao seu escopo.
 - Quando for caso de especialista, NÃO responder ao usuário; apenas encaminhar a mensagem ORIGINAL para o especialista.
 - Se o histórico indicar que o usuário está respondendo a uma clarificação anterior de um especialista, encaminhe para o mesmo domínio da última rota junto ao seu histórico.
+- Quando o usuário mencionar conversas anteriores, decisões prévias, preferências já definidas ou planos feitos antes, chame a tool `search_history` com uma busca curta sobre o assunto para recuperar o contexto relevante.
+- Use `search_history` SOMENTE para histórico de sessões anteriores; não a use para dados de saldo, transações ou eventos do banco, pois há outras tools para isso.
 - Perguntas sobre regras, políticas, termos de uso, responsabilidades, restrições, dúvidas gerais sobre o sistema ou o comportamento do Acessor.IA devem ir SEMPRE para o agente faq, NUNCA para fora_escopo ou financeiro/agenda
 
 

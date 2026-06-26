@@ -44,3 +44,11 @@ class ChatSession(Document):
 
     class Settings:
         name = "sessions"
+
+
+class ChatSessionSummarized(BaseModel):
+    """Beanie projection"""
+
+    session_id: str
+    summary: Optional[str]
+    started_at: datetime

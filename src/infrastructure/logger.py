@@ -55,6 +55,8 @@ def setup_logger(log_file: str = "logs/app.log", level: int = logging.DEBUG) -> 
         "markdown_it",
         "faiss",
         "asyncio",
+        "pymongo",
+        "google_genai",
     ]
     for logger_name in loggers_para_silenciar:
         lg = logging.getLogger(logger_name)

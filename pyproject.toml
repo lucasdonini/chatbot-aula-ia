@@ -14,9 +14,8 @@ dependencies = [
     "langchain-community>=0.4.1",
     "pypdf>=6.10.2",
     "rich>=15.0.0",
-    "beanie<=2.1.0",
-    "motor>=3.3.0,<3.5.0",
-    "pymongo<4.7.0",
+    "beanie>=2.1.0",
+    "pymongo>=4.9.0",
 ]
 
 [dependency-groups]

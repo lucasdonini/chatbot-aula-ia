@@ -5,14 +5,23 @@ from typing import Any, Dict
 from langchain.agents import create_agent
 
 from src.model.graph_state import GraphState, GraphStateKeys
+from src.services.chat_history_service import ChatHistoryService
 
 from ..llms import fast_llm
 from .router_prompt import PROMPT
+from .tools import SearchHistoryTool
 
 logger = logging.getLogger(__name__)
 
+history_service = ChatHistoryService()
+history_tool = SearchHistoryTool(service=history_service)
+
 ROUTER_NODE_NAME = "router"
-router_agent = create_agent(model=fast_llm, system_prompt=PROMPT)
+router_agent = create_agent(
+    model=fast_llm,
+    system_prompt=PROMPT,
+    tools=[history_tool],
+)
 
 
 async def router_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
