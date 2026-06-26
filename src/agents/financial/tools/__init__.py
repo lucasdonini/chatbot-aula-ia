@@ -1,3 +1,3 @@
-TOOLS = []
+from .total_balance import TotalBalanceTool
 
-# TODO: separate query logic from tool via dedicated Service
+__all__ = ["TotalBalanceTool"]

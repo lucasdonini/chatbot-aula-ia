@@ -55,9 +55,12 @@ Campos opcionais (incluir SOMENTE se necessário):
 
 
 ### IMPORTANTE!!!
-Você está temporariamente sem acesso às suas tools por conta de uma migração interna.
-Caso um usuário peça algo que exija o uso de alguma de suas tools, informe-o da 
-indisponibilidade temporária
+Você está temporariamente sem acesso a algumas de suas tools por conta de uma migração interna.
+Caso um usuário peça algo que exija o uso de alguma das tools indisponíveis, informe-o da 
+indisponibilidade temporária.
+
+#### Tools migradas já disponíveis
+- Calcular saldo total
 
 """
 
