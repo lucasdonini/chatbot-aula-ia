@@ -1,82 +1,93 @@
 # Chatbot Aula IA
 
-> Assistente das aulas de IA do Grilo, mas organizado em módulos e com pequenas modificações como cache do RAF do PDF e renderização de markdown rico no terminal
+Assistente modular para as aulas de IA — agentes principais em `src/agents/` e infraestrutura em `src/infrastructure/`.
 
-## Visão geral
+## Rápido (o essencial)
+- Requisitos: `python 3.12+`, `git`. Docker é opcional para execução em container.
+- Logs: `logs/`.
 
-Este projeto implementa um conjunto de agentes (FAQ, financeiro, guardrails) organizados em `src/agents/` e infraestrutura mínima em `src/infrastructure/`. Há suporte a ingestão de documentos (FAISS) e um banco inicial em `sql/init-db.sql`.
+## Como rodar (opções)
 
-## Pré-requisitos
+1) Usando `make` (recomendado quando disponível)
 
-- Python 3.12
-- UV (recomendado)
-- Git
-- Docker & Docker Compose (opcional, para execução em container)
-
-## Instalação (local)
-
-Crie e ative um ambiente virtual e instale as dependências:
-
-```bash
-uv sync
-```
-
-## Configuração inicial
-
-- Duplique o `.env.example` e renomeie a cópia como `.env`
-- Preencha as variáveis de ambiente faltantes
-- (Opcional) se quiser adicionar novas variáveis de ambiente, adicione a nova chave ao `.env` e atualize o arquivo `src/infrastructure/settings.py`
-
-## Executando localmente
-
-Execute o módulo principal a partir da raiz do repositório:
-
-```bash
-make run
-```
-
-ou
-
-```bash
-uv run src.main
-```
-
-Saída e logs ficam em `logs/` por padrão.
-
-## Executando com Docker
+- Preparar e rodar (constrói containers e inicia o app):
 
 ```bash
 make build
 ```
 
-A porta exposta depende da configuração interna — verifique `docker-compose.yml` e `Dockerfile`.
+- Rodar local (usa `.venv` se existir):
 
-## Estrutura do projeto (resumo)
+```bash
+make run
+```
 
-- `src/main.py` — ponto de entrada
-- `src/agents/` — agentes principais e submódulos (faq, financial, guardrails)
-- `src/infrastructure/` — conexão DB, store FAISS, logger e configurações
-- `data/` — dados e documentos usados para RAG
-- `sql/` — scripts SQL úteis (inclui `init-db.sql`)
+2) Usando `uv` (se instalado)
 
-## Uso rápido
+- Sincronizar dependências/ambiente:
 
-- Para testar o agente FAQ, verifique `src/agents/faq/faq_agent.py` e execute o `main`.
-- Para operações financeiras, revise `src/agents/financial/` e as ferramentas em `tools/`.
+```bash
+uv sync
+```
 
-## Troubleshooting
+- Executar o módulo principal:
 
-- Se faltar dependências, execute `pip install -r requirements.txt` ou revise `pyproject.toml`.
-- Logs: `logs/` para mensagens de execução.
-- Erros de DB: verifique `sql/init-db.sql` e a string de conexão em `src/infrastructure/db_connection.py`.
+```bash
+uv run src.main
+```
+
+3) Sem `make` e sem `uv` (manual, funciona em Windows/Unix)
+
+- Criar e ativar um venv (Unix/macOS):
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+python -m src.main
+```
+
+- Criar e ativar um venv (Windows PowerShell):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e .
+.\.venv\Scripts\python -m src.main
+```
+
+4) Somente Docker (sem instalar dependências locais)
+
+```bash
+docker compose up -d --build
+```
+
+Para acessar o banco (quando o serviço estiver ativo):
+
+```bash
+docker exec -it acessoria-sql psql -d acessoriadb
+```
+
+## Comandos úteis (Makefile)
+
+- `make build` — executa `uv sync`, sobe containers e inicia o app.
+- `make build-db` — `docker compose up -d --build` (apenas DB/infra).
+- `make run` — executa `python -m src.main` usando o `.venv`.
+- `make prepare-environment` — `uv sync` (sincroniza dependências).
+- `make access-db` — abre um shell psql no container do banco.
+
+## Como alterar o projeto
+
+- Código: `src/` — edite agentes em `src/agents/`.
+- Dependências: se possível, adicione e remova dependências via `uv add / remove`. Se não der, altere o `pyproject.toml` e rode `pip install -e .`
+- Banco: scripts em `sql/` (ex.: `sql/init-db.sql`). Para recriar a infra, use `docker compose up -d --build`.
+
+## Dicas rápidas
+
+- Se não tiver `uv`: use o fluxo de venv + `python -m src.main`.
+- Se não tiver `make`: use `uv` ou os comandos manuais acima.
+- Para trocar o Python usado pelo projeto, ative o venv desejado antes de rodar.
 
 ## Contribuição
 
-Sinta-se livre para abrir issues ou pull requests. Sugerimos seguir o padrão de commits e criar uma branch por feature.
-
----
-
-Se quiser, posso:
-- adicionar exemplos de comandos para cada agente;
-- documentar variáveis de ambiente usadas;
-- criar um `requirements.txt` baseado em `pyproject.toml`.
+- Abra issues e PRs. Crie uma branch por feature e escreva commits pequenos.
