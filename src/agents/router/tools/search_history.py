@@ -1,10 +1,10 @@
 import logging
-import time
 from typing import List
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from src.infrastructure.execution_time_logger import log_execution_time
 from src.model.chat_session import ChatSession
 from src.services.chat_history_service import ChatHistoryService
 
@@ -37,9 +37,8 @@ class SearchHistoryTool(BaseTool):
     def _run(self, *args, **kwargs) -> str:
         raise NotImplementedError("This tool is stricktly assyncronal. Use _arun.")
 
+    @log_execution_time
     async def _arun(self, search: str) -> str:
-        start_time = time.perf_counter()
-
         logger.info("%s tool called (search: %s)", self.name, search)
         try:
             history = await self.service.fetch_history(search=search, limit=3)
@@ -52,9 +51,3 @@ class SearchHistoryTool(BaseTool):
         except Exception as e:
             logger.exception("Failed to search history", e)
             return f"Erro ao buscar as mensagens: {str(e)}"
-
-        finally:
-            end_time = time.perf_counter()
-            logger.debug(
-                "%s tool took %s seconds to answer", self.name, end_time - start_time
-            )

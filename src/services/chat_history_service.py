@@ -1,14 +1,15 @@
 import logging
 import re
-import time
 from typing import List
 
+from src.infrastructure.execution_time_logger import log_execution_time
 from src.model.chat_session import ChatMessage, ChatSession, ChatSessionSummarized
 
 logger = logging.getLogger(__name__)
 
 
 class ChatHistoryService:
+    @log_execution_time
     async def fetch_history(
         self, search: str = "", limit: int = 3
     ) -> List[ChatSessionSummarized]:
@@ -22,7 +23,6 @@ class ChatHistoryService:
         search      : optional term to filter relevant summaries
         limit     : maximum number of sessions returned (most recent first)
         """
-        start_time = time.perf_counter()
         logger.info("Searching history: (search: %s, limit: %s)", search, limit)
 
         filter = {}
@@ -30,30 +30,21 @@ class ChatHistoryService:
             pattern = re.compile(search, re.IGNORECASE)
             filter[ChatSession.summary] = pattern
 
-        result: List[ChatSessionSummarized] = await (
+        return await (
             ChatSession.find(filter)
             .project(ChatSessionSummarized)
             .sort((ChatSession.started_at, 1))
             .to_list()
         )
 
-        end_time = time.perf_counter()
-        logger.debug(
-            "Returning %s results. Took %s seconds", len(result), end_time - start_time
-        )
-        return result
-
+    @log_execution_time
     async def fetch_messages(self, session_id: str) -> List[ChatMessage]:
-        start_time = time.perf_counter()
-
         logger.info("Fetching messages from session with id %s", session_id)
         session = await ChatSession.find_one(ChatSession.session_id == session_id)
         messages = session.messages if session else []
 
-        end_time = time.perf_counter()
         logger.debug(
-            "Returning %s messages. Tool %s seconds.",
+            "Returning %s messages.",
             len(messages),
-            end_time - start_time,
         )
         return messages

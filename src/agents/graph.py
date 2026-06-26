@@ -1,5 +1,4 @@
 import logging
-import time
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
@@ -73,7 +72,6 @@ agent_flux = graph.compile(checkpointer=memory)
 
 
 async def execute_agent_flux(user_input: HumanMessage, session_id: str) -> AIMessage:
-    start_time = time.perf_counter()
     logger.info("Question made: %s", user_input.content)
 
     initial_state: GraphState = {
@@ -87,7 +85,5 @@ async def execute_agent_flux(user_input: HumanMessage, session_id: str) -> AIMes
         initial_state, config={"configurable": {"thread_id": session_id}}
     )
 
-    end_time = time.perf_counter()
     logger.debug("Called agents: %s", final_state["called_agents"])
-    logger.info("Question answered. Time: %s", end_time - start_time)
     return final_state["messages"][-1]

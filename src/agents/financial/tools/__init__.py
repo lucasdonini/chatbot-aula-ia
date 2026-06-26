@@ -11,3 +11,5 @@ TOOLS = [
     search_transactions,
     update_transaction,
 ]
+
+# TODO: separate query logic from tool via dedicated Service

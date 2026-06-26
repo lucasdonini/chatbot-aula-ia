@@ -1,9 +1,9 @@
 import logging
-import time
 from typing import List
 
 from langchain_groq import ChatGroq
 
+from src.infrastructure.execution_time_logger import log_execution_time
 from src.infrastructure.settings import settings
 from src.model.chat_session import ChatMessage
 
@@ -31,16 +31,14 @@ class SessionSummaryService:
             api_key=settings.groq_api_key,
         )
 
+    @log_execution_time
     def sumarize(self, messages: List[ChatMessage]) -> str:
         """Calls llm for summary"""
         logger.info("Sumarizing messages...")
-        start_time = time.perf_counter()
 
         conversation = self._format_conversation(messages)
         response = self._llm.invoke(_SUMMARY_PROMPT.format(conversa=conversation))
 
-        end_time = time.perf_counter()
-        logger.info("Messages sumarized. Time: %s", end_time - start_time)
         return response.content.strip()
 
     def _format_conversation(self, messages: List[ChatMessage]) -> str:

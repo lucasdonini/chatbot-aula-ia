@@ -5,6 +5,8 @@ from langchain_community.vectorstores import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+from src.infrastructure.execution_time_logger import log_execution_time
+
 from .paths import FAQ_INDEX, FAQ_PDF
 from .settings import settings
 
@@ -33,6 +35,7 @@ def _build_db() -> FAISS:
     return db
 
 
+@log_execution_time
 def get_faq_db() -> FAISS:
     pdf_mtime = FAQ_PDF.stat().st_mtime
     mtime_file = FAQ_INDEX / "mtime.txt"

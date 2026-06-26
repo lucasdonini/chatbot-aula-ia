@@ -1,11 +1,11 @@
 import logging
 import re
-import time
 from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
 from langgraph.graph import END
 
+from src.infrastructure.execution_time_logger import log_execution_time
 from src.model.graph_state import GraphState, GraphStateKeys
 from src.model.guardrail_result import GuardrailResult
 
@@ -18,6 +18,7 @@ from .guardrails_prompts import CLASSIFIER_PROMPT
 logger = logging.getLogger(__name__)
 
 
+@log_execution_time
 def _input_guardrail(input: str) -> GuardrailResult:
     """Run input checks in ascendent cost order:
     Deterministic first, then LLM only if needed.
@@ -64,14 +65,10 @@ INPUT_GUARDRAIL_NODE_NAME = "input_guardrail"
 
 
 def input_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
-    start_time = time.perf_counter()
     logger.info("Input Guardrail called. State: %s", state)
     user_input = state["messages"][-1]
     anonymized, pii_map = anonymize_input(user_input.text)
     result = _input_guardrail(anonymized)
-
-    end_time = time.perf_counter()
-    logger.info("Input Guardrail node finished. Time: %s", end_time - start_time)
 
     if result.blocked:
         return {
