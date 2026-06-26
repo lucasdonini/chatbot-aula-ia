@@ -2,42 +2,27 @@ import logging
 from contextlib import contextmanager
 from typing import Generator
 
-import psycopg2
-from psycopg2.extensions import connection, cursor
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from .settings import settings
 
 logger = logging.getLogger(__name__)
 
+engine = create_engine(settings.pg_url, pool_pre_ping=True)
+SessionLocal = sessionmaker(bind=engine, autoflush=False)
+
 
 @contextmanager
-def get_connection() -> Generator[connection, None, None]:
-    conn: connection = psycopg2.connect(settings.pg_url)
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    logger.debug("Postgres session opened")
     try:
-        logger.info("Connection opened")
-        yield conn
-
-        conn.commit()
-        logger.info("Connection commited")
-
+        yield db
     except Exception:
-        conn.rollback()
-        logger.exception("Connection rolled-back")
+        db.rollback()
+        logger.exception("Postgres session rolled back due to an error")
         raise
-
     finally:
-        conn.close()
-        logger.info("Connection closed")
-
-
-@contextmanager
-def get_cursor() -> Generator[cursor, None, None]:
-    with get_connection() as conn:
-        cur: cursor = conn.cursor()
-        try:
-            logger.info("Cursor created")
-            yield cur
-
-        finally:
-            cur.close()
-            logger.info("Cursor closed")
+        db.close()
+        logger.debug("Postgres session closed")

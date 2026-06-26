@@ -53,6 +53,12 @@ Campos opcionais (incluir SOMENTE se necessário):
   - janela_tempo   : {{"de":"YYYY-MM-DD","ate":"YYYY-MM-DD","rotulo":"ex.: mês passado"}}
   - indicadores    : {{chaves livres e numéricas úteis ao log}}
 
+
+### IMPORTANTE!!!
+Você está temporariamente sem acesso às suas tools por conta de uma migração interna.
+Caso um usuário peça algo que exija o uso de alguma de suas tools, informe-o da 
+indisponibilidade temporária
+
 """
 
 _SHOTS_OPEN = (

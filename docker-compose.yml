@@ -3,7 +3,7 @@ volumes:
 
 services:
   postgresql:
-    container_name: acessoria-sql
+    container_name: assessoria-sql
     restart: unless-stopped
     build: .
     tty: true
