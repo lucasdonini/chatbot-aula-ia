@@ -10,14 +10,15 @@ from src.services.transaction_service import TransactionService
 
 from ..llms import specialist_llm
 from .financial_prompt import FINANCIAL_NODE_NAME, PROMPT
-from .tools import TotalBalanceTool
+from .tools import DailyBalanceTool, TotalBalanceTool
 
 logger = logging.getLogger(__name__)
 
 transaction_service = TransactionService(session_factory=get_db)
 total_balance = TotalBalanceTool(service=transaction_service)
+daily_balance = DailyBalanceTool(service=transaction_service)
 
-TOOLS = [total_balance]
+TOOLS = [total_balance, daily_balance]
 
 
 financial_agent = create_agent(model=specialist_llm, system_prompt=PROMPT, tools=TOOLS)

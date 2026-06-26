@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import date, datetime, time
 from typing import Callable, ContextManager, Literal, Optional
 
 from sqlalchemy import func, select
@@ -15,15 +15,15 @@ class TransactionService:
     def __init__(self, session_factory: Callable[[], ContextManager[Session]]):
         self._session_factory = session_factory
 
-    def _sum_amounts_by_type(
+    def _sum_amounts_by_transaction_type_name(
         self,
         session: Session,
-        type: Literal["INCOME", "EXPENSES", "TRANSFER"],
+        type_name: Literal["INCOME", "EXPENSES", "TRANSFER"],
         period_start: Optional[datetime] = None,
         period_end: Optional[datetime] = None,
     ) -> float:
         stmt = select(func.coalesce(func.sum(Transaction.amount), 0)).where(
-            Transaction.transaction_type.has(TransactionType.name == type)
+            Transaction.transaction_type.has(TransactionType.name == type_name)
         )
 
         if period_start:
@@ -37,6 +37,22 @@ class TransactionService:
     @log_execution_time
     def calculate_total_balance(self) -> float:
         with self._session_factory() as session:
-            income = self._sum_amounts_by_type(session, "INCOME")
-            expenses = self._sum_amounts_by_type(session, "EXPENSES")
+            income = self._sum_amounts_by_transaction_type_name(
+                session=session, type_name="INCOME"
+            )
+            expenses = self._sum_amounts_by_transaction_type_name(
+                session=session, type_name="EXPENSES"
+            )
+        return income - expenses
+
+    @log_execution_time
+    def calculate_daily_balance(self, day: date) -> float:
+        day_datetime = datetime.combine(day, time.max)
+        with self._session_factory() as session:
+            income = self._sum_amounts_by_transaction_type_name(
+                session=session, type_name="INCOME", period_end=day_datetime
+            )
+            expenses = self._sum_amounts_by_transaction_type_name(
+                session=session, type_name="EXPENSES", period_end=day_datetime
+            )
         return income - expenses

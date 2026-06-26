@@ -61,6 +61,7 @@ indisponibilidade temporária.
 
 #### Tools migradas já disponíveis
 - Calcular saldo total
+- Calcular saldo em data arbitrária
 
 """
 
