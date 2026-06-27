@@ -9,7 +9,7 @@ from .settings import settings
 
 logger = logging.getLogger(__name__)
 
-engine = create_engine(settings.pg_url, pool_pre_ping=True)
+engine = create_engine(settings.postgres_url, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
 
 

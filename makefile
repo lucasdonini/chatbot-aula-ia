@@ -5,10 +5,10 @@ else
 endif
 
 help:
-	@echo First, run `make prepare-environment`
-	@echo Then, run `make build-db`
-	@echo Wait a few seconds, then run `make upgrade-db`
-	@echo Now you're ready to run with `make run`
+	@echo 'First, run `make prepare-environment`'
+	@echo 'Then, run `make build-db`'
+	@echo 'Wait a few seconds, then run `make upgrade-db`'
+	@echo 'Now you are ready to run with `make run`'
 
 build-db:
 	docker compose up -d --build
@@ -22,7 +22,7 @@ run:
 
 prepare-environment:
 	uv sync
-	@echo Remember to activate your venv before running
+	@echo 'Remember to activate your venv before running'
 
 access-db:
 	docker exec -it assessoria-sql psql -d assessoriadb
