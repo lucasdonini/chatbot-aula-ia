@@ -6,6 +6,7 @@ from src.agents.financial.financial_prompt import FINANCIAL_NODE_NAME
 from src.model.graph_state import GraphState
 
 pytestmark = [
+    pytest.mark.integration,
     pytest.mark.usefixtures("apply_migrations"),
 ]
 

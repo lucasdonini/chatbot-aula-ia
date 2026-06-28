@@ -33,7 +33,7 @@ def db_url(postgres_container: PostgresContainer) -> str:
     return postgres_container.get_connection_url()
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def apply_migrations(db_url: str) -> Generator[None, None, None]:
     with patch("src.infrastructure.settings.settings.postgres_url", db_url):
         upgrade(ALEMBIC_CFG, "head")
