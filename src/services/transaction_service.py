@@ -41,3 +41,7 @@ class TransactionService:
     def search_transactions(self, params: TransactionQueryParams) -> List[Transaction]:
         logger.info("Searching Transactions. Params: %s", params)
         return self._repository.find(params)
+
+    @log_execution_time
+    def add_transaction(self, transaction: Transaction) -> Transaction:
+        return self._repository.add_transaction(transaction)

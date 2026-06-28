@@ -79,3 +79,11 @@ class TransactionRepository:
             result = [self._orm_to_model(doc) for doc in docs]
         logger.info("Transaction search successful. Result size: %s", len(result))
         return result
+
+    def add_transaction(self, transaction: Transaction) -> Transaction:
+        orm = self._model_to_orm(transaction)
+        with self._session_factory() as session:
+            session.add(orm)
+            session.commit()
+            session.refresh(orm)
+        return self._orm_to_model(orm)

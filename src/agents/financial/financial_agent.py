@@ -11,7 +11,12 @@ from src.services.transaction_service import TransactionService
 
 from ..llms import specialist_llm
 from .financial_prompt import FINANCIAL_NODE_NAME, PROMPT
-from .tools import DailyBalanceTool, SearchTransactionsTool, TotalBalanceTool
+from .tools import (
+    AddTransactionTool,
+    DailyBalanceTool,
+    SearchTransactionsTool,
+    TotalBalanceTool,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +26,9 @@ transaction_service = TransactionService(repository=transaction_repository)
 total_balance = TotalBalanceTool(service=transaction_service)
 daily_balance = DailyBalanceTool(service=transaction_service)
 search_transactions = SearchTransactionsTool(service=transaction_service)
+add_transaction = AddTransactionTool(service=transaction_service)
 
-TOOLS = [total_balance, daily_balance, search_transactions]
+TOOLS = [total_balance, daily_balance, search_transactions, add_transaction]
 
 
 financial_agent = create_agent(model=specialist_llm, system_prompt=PROMPT, tools=TOOLS)

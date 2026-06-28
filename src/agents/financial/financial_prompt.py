@@ -63,6 +63,7 @@ indisponibilidade temporária.
 - Calcular saldo total
 - Calcular saldo em data arbitrária
 - Buscar transação
+- Adicionar transação
 
 """
 
