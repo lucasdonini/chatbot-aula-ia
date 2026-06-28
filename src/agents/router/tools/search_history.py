@@ -24,9 +24,9 @@ class SearchHistoryTool(BaseTool):
         "Consulta conversas ANTERIORES do usuário (sessões já encerradas).\n\n"
         "Use SOMENTE quando a resposta depende de algo dito numa conversa passada"
         "— preferências, decisões ou planos que o usuário mencionou antes."
-        "NÃO use para dados que estão no banco (gastos, saldos, eventos): para isso"
-        "já existem as tools de consulta específicas como query_transactions, "
-        "total_balance, daily_balance."
+        "NÃO use para dados que estão no banco (gastos, saldos, eventos): isso é "
+        "responsabilidade dos agentes especialistas que têm acesso a tools mais "
+        "específicas para isso."
     )
 
     service: ChatHistoryService = Field(exclude=True)
