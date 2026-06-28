@@ -2,10 +2,15 @@ import inspect
 import time
 from functools import wraps
 from logging import Logger, getLogger
-from typing import Callable, Optional
+from typing import Callable, Optional, ParamSpec, TypeVar
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
-def log_execution_time(function: Callable, logger: Optional[Logger] = None) -> None:
+def log_execution_time(
+    function: Callable[P, R], logger: Optional[Logger] = None
+) -> Callable[P, R]:
     """
     Decorator to track and log execution time of
     IO functions (like database accesses) or LLM calls.
@@ -15,7 +20,7 @@ def log_execution_time(function: Callable, logger: Optional[Logger] = None) -> N
     if inspect.iscoroutinefunction(function):
 
         @wraps(function)
-        async def wrapper_async(*args, **kwargs):
+        async def wrapper_async(*args: P.args, **kwargs: P.kwargs) -> R:
             start_time = time.perf_counter()
             try:
                 result = await function(*args, **kwargs)
@@ -32,7 +37,7 @@ def log_execution_time(function: Callable, logger: Optional[Logger] = None) -> N
     else:
 
         @wraps(function)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             start_time = time.perf_counter()
             try:
                 result = function(*args, **kwargs)
