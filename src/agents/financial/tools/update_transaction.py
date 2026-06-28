@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class UpdateTransactionTool(BaseTool):
-    name: str = ("update_transaction",)
+    name: str = "update_transaction"
     args_schema: type[BaseModel] = UpdateTransactionParams
     description: str = """
 Atualiza uma transação existente.
