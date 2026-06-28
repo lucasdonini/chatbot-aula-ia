@@ -2,14 +2,15 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Category(str, Enum):
     """
-    Contains default values used in the database.
-    If you change any value, update the latest migration
+    Contains default categories used in the database.
+    If you change any key, create a new migration
     so that the database and the enum keep consistent.
+    This has to be made manually, alembic does not handle that.
     """
 
     FOOD = "comida"
@@ -28,9 +29,10 @@ class Category(str, Enum):
 
 class TransactionType(str, Enum):
     """
-    Contains default values used in the database.
-    If you change any value, update the latest migration
+    Contains default types used in the database.
+    If you change any key, create a new migration
     so that the database and the enum keep consistent.
+    This has to be made manually, alembic does not handle that.
     """
 
     INCOME = "INCOME"
@@ -39,6 +41,8 @@ class TransactionType(str, Enum):
 
 
 class Transaction(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     amount: float = Field(..., description="Valor da transação (use positivo).")
 
     category: Category = Field(
