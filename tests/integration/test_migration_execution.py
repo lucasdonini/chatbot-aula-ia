@@ -2,6 +2,7 @@ import pytest
 from sqlalchemy import inspect, text
 
 pytestmark = [
+    pytest.mark.integration,
     pytest.mark.usefixtures("apply_migrations"),
 ]
 

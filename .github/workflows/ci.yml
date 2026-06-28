@@ -3,24 +3,43 @@ name: CI
 on:
     pull_request:
         branches: [ main ]
+    push:
+        branches: [ dev ]
 
 jobs:
-    test-and-lint:
+    lint-and-unit:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
 
             - name: Install uv
               uses: astral-sh/setup-uv@v5
-            
+
             - name: Set up Python
               run: uv python install 3.12
 
             - name: Install dependencies
               run: uv sync
-            
+
             - name: Run Ruff
               run: uv run ruff check .
 
             - name: Run Pytest
               run: uv run pytest
+
+    integration:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install uv
+              uses: astral-sh/setup-uv@v5
+
+            - name: Set up Python
+              run: uv python install 3.12
+
+            - name: Install dependencies
+              run: uv sync
+
+            - name: Run integration tests
+              run: uv run pytest -m integration

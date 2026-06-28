@@ -12,6 +12,7 @@ from src.model.transaction_query_params import TransactionQueryParams
 from src.model.update_transaction_params import UpdateTransactionParams
 
 pytestmark = [
+    pytest.mark.integration,
     pytest.mark.usefixtures("apply_migrations"),
 ]
 

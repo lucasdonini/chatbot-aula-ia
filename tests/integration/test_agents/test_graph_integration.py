@@ -4,6 +4,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from src.agents import execute_agent_flux
 
 pytestmark = [
+    pytest.mark.integration,
     pytest.mark.usefixtures("apply_migrations"),
 ]
 
