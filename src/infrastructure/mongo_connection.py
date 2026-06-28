@@ -17,7 +17,14 @@ from .settings import settings
 logger = logging.getLogger(__name__)
 
 
-IGNORED_COMMANDS = {"ismaster", "ping", "hello", "buildinfo"}
+IGNORED_COMMANDS = {
+    "ismaster",
+    "ping",
+    "hello",
+    "buildinfo",
+    "saslstart",
+    "saslcontinue",
+}
 
 
 class LoggingMongoCommandListener(CommandListener):
