@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 @log_execution_time
-def _output_guardrail(
+async def _output_guardrail(
     output: str, pii_map: dict, restaurar_pii: bool = False
 ) -> GuardrailResult:
     """
@@ -35,7 +35,9 @@ def _output_guardrail(
     output = deanonymize_output(output, pii_map, restore=restaurar_pii)
 
     # 3. Revisão de compliance financeiro
-    result = fast_llm.invoke(COMPLIANCE_PROMPT.format(resposta=output)).content.strip()
+    result = (
+        await fast_llm.ainvoke(COMPLIANCE_PROMPT.format(resposta=output))
+    ).content.strip()
     if "RESPOSTA:" in result:
         output = result.split("RESPOSTA:", 1)[1].strip() or output
 
@@ -46,10 +48,10 @@ def _output_guardrail(
 OUTPUT_GUARDRAIL_NODE_NAME = "output_guardrail"
 
 
-def output_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
+async def output_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
     logger.info("─" * 50)
     logger.info(" [NODE] OUTPUT GUARDRAIL ")
-    result = _output_guardrail(state["messages"][-1].text, state["pii_map"])
+    result = await _output_guardrail(state["messages"][-1].text, state["pii_map"])
     logger.info(" Input: (sanitized)")
     logger.info(" Output: %s", result.message[:500])
     logger.info("─" * 50)

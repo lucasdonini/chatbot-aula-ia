@@ -58,7 +58,7 @@ class TestChatSessionService:
 
     @pytest.mark.asyncio
     async def test_finalize_session_with_summary(self, service, summary_service):
-        summary_service.sumarize.return_value = "Resumo da sessão"
+        summary_service.sumarize = AsyncMock(return_value="Resumo da sessão")
 
         with patch("src.services.chat_session_service.ChatSession") as mock_chat:
             chat_session_service._active_sessions["session-123"] = "doc-id"

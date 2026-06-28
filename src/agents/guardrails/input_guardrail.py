@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 @log_execution_time
-def _input_guardrail(input: str) -> GuardrailResult:
+async def _input_guardrail(input: str) -> GuardrailResult:
     """Run input checks in ascendent cost order:
     Deterministic first, then LLM only if needed.
     """
@@ -45,7 +45,9 @@ def _input_guardrail(input: str) -> GuardrailResult:
             )
 
     # 3. Classificação semântica via LLM
-    resposta = fast_llm.invoke(CLASSIFIER_PROMPT.format(mensagem=input)).content
+    resposta = (
+        await fast_llm.ainvoke(CLASSIFIER_PROMPT.format(mensagem=input))
+    ).content
 
     categoria = "APROVADO"
     for linha in resposta.splitlines():
@@ -64,13 +66,13 @@ def _input_guardrail(input: str) -> GuardrailResult:
 INPUT_GUARDRAIL_NODE_NAME = "input_guardrail"
 
 
-def input_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
+async def input_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
     logger.info("─" * 50)
     logger.info(" [NODE] INPUT GUARDRAIL ")
     user_input = state["messages"][-1]
     anonymized, pii_map = anonymize_input(user_input.text)
     logger.info(" Input: %s", anonymized)
-    result = _input_guardrail(anonymized)
+    result = await _input_guardrail(anonymized)
 
     if result.blocked:
         logger.info(" Output: BLOCKED (%s)", result.blocked)
