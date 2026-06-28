@@ -62,7 +62,7 @@ class TransactionQueryParams(BaseModel):
         ),
     )
 
-    category: Optional[str] = Field(
+    category: Optional[Category] = Field(
         default=None,
         description=(
             f"Nome da categoria: {' | '.join(Category)}"
