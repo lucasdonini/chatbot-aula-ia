@@ -16,7 +16,7 @@ class UpdateTransactionParams(BaseModel):
         ),
     )
 
-    match_text: str = Field(
+    match_text: Optional[str] = Field(
         default=None,
         description=(
             "Texto para localizar transação quando id não "
