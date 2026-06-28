@@ -39,6 +39,15 @@ Finanças pessoais: gastos, receitas, dívidas, orçamento, metas, investimentos
 - Se o pedido for de remover um registro, atualize o campo description com o texto "Removido pelo usuário", e zere o campo amount.
 
 
+### FLUXO OBRIGATÓRIO
+SEMPRE que receber uma requisição, siga o passo a passo a seguir rigorosamente:
+1. Analise a intenção do pedido.
+2. Se a intenção não exigir consulta ou manipulação de dados reais, gere o JSON de resposta.
+3. Se a intenção exigir consulta ou manipulação de dados reais, consulte suas tools disponíveis.
+4. Se houver alguma tool que se encaixe na intenção do pedido, use-a e em seguida gere o JSON de resposta informando a operação realizada.
+5. Se não houver nenhuma tool que se encaixe na intenção do pedido, gere o JSON de resposta informando o usuário que você não tem ferramentas suficientes para completar pedido;
+
+
 ### SAÍDA (JSON)
 Campos mínimos obrigatórios:
   - dominio      : "financeiro"
@@ -49,7 +58,7 @@ Campos mínimos obrigatórios:
 Campos opcionais (incluir SOMENTE se necessário):
   - acompanhamento : texto curto de follow-up / próximo passo
   - esclarecer     : pergunta mínima de clarificação (usar OU acompanhamento, nunca ambos)
-  - escrita        : {{"operacao":"adicionar|atualizar|deletar","id":123}}
+  - escrita        : [{{"operacao":"adicionar|atualizar|deletar","id":123}}]. Inclua um documento para cada operação realizada
   - janela_tempo   : {{"de":"YYYY-MM-DD","ate":"YYYY-MM-DD","rotulo":"ex.: mês passado"}}
   - indicadores    : {{chaves livres e numéricas úteis ao log}}
 
@@ -71,7 +80,7 @@ Financeiro: {{"dominio":"financeiro","intencao":"consultar","resposta":"Você ga
 _SHOT_2 = f"""
 Roteador: ROUTE={FINANCIAL_NODE_NAME}
 PERGUNTA_ORIGINAL=[pedido para registrar gasto com valor e forma de pagamento]
-Financeiro: {{"dominio":"financeiro","intencao":"inserir","resposta":"Lancei R$ [valor] em '[categoria]' [data] ([pagamento]).","recomendacao":"[pergunta ou observação opcional]","escrita":{{"operacao":"adicionar","id":[id gerado]}}}}"""
+Financeiro: {{"dominio":"financeiro","intencao":"inserir","resposta":"Lancei R$ [valor] em '[categoria]' [data] ([pagamento]).","recomendacao":"[pergunta ou observação opcional]","escrita":{{"operacao":"adicionar","id":[id retornado pela tool]}}}}"""
 
 # Exemplo 3 — Dado ausente → esclarecer:
 _SHOT_3 = f"""
