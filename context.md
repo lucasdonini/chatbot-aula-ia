@@ -41,6 +41,7 @@ Estou aprendendo ainda, então a rigorosidade da arquitetura está em aprimorame
 - `/data`: Assets estáticos da applicação, como PDFs
 - `/sql`: Scripts SQL de configuração do banco local
 - `/logs`: Logs de execução do app
+- `/tests`: Testes unitários (173) e de integração (62)
 
 ## 3.2. Arquitetura e Organização de Pastas (do professor)
 Projeto praticamente monolítico, contendo apenas arquivos soltos na raiz dividos por funcionalidade no nível mais macro possível, como `main.py` para o grafo, agentes e interação com usuário; `pg_tools.py` com conexão e interação com banco PostgreSQL e tools de agentes; `faq_tools.py` para tools do agente leitor de FAQ contendo toda a lógica desde a criação da tool até os embeddings; e assim por diante.
@@ -51,13 +52,52 @@ Podem ser consultadas no `makefile`, mas para contexto:
 - Gerir dependências: `uv [add|remove|sync]`
 - Rodar o linter: `ruff check [--fix]; ruff format`
 - Gerar migrações: `alembic revision --autogenerate -m "mensagem"`
-- Rodar testes: `pytest` (a ser implementado)
+- Rodar testes unitários: `pytest`
+- Rodar testes de integração: `pytest -m integration`
+- Rodar todos os testes: `pytest && pytest -m integration`
+- Workflow CI: `.github/workflows/ci.yml` — roda em PRs para `main` e pushes para `dev`
 
-## 5. Estado Atual e Problemas Mapeados
+## 5. Estado Atual
 
-### Problemas por implementação errada
-1. **Paradigmas de Arquitetura mal aplicados:** Por estar aprendendo, muitas vezes eu não consigo organizar o código da forma correta, e com o tempo esses erros começam a ficar perseptíveis.
-2. **Falta de padronização de logs e comentários:** Eu tentei manter um padrão lógico, mas não deu 100% certo. Comentários excessivos em certos lugares, faltantes em outros, além de logs mal posicionados existem e estão começando a me confundir.
+### Problemas por implementação errada (ainda pendentes)
+1. **Paradigmas de Arquitetura mal aplicados:** Por estar aprendendo, muitas vezes eu não consigo organizar o código da forma correta, e com o tempo esses erros começam a ficar perceptíveis.
+2. **Falta de padronização de logs e comentários:** Comentários excessivos em certos lugares, faltantes em outros. Logs foram reorganizados recentemente, mas podem precisar de mais ajustes.
 
-### Problemas por falta de implementação
-1. **Falta de testes:** Hoje, não existe nenhum teste de nenhum tipo, e com o crescimento do projeto e migrações recentes, testes estão ficando cada vez mais necessários.
+### Problemas resolvidos
+1. ~~**Falta de testes:**~~ Agora existem **235 testes** (173 unitários + 62 de integração). Testes unitários rodam sem Docker; testes de integração sobem PostgreSQL via testcontainers. CI no GitHub Actions executa ambos em jobs paralelos.
+2. ~~**Chamadas síncronas a LLMs:**~~ Guardrails e serviços de sumarização agora usam `ainvoke` (assíncrono), eliminando bloqueios e permitindo mocks via `AsyncMock`.
+3. ~~**Vazamento de PII em logs:**~~ Output guardrail só loga o texto após sanitização. Input guardrail recebe texto anônimo.
+
+## 6. Funcionalidades Implementadas Recentemente
+
+### Logging
+- Logs multi-linha permitidos (removido `InlineMessageFormatter`)
+- Prefixo `[INT N]` para correlacionar logs de uma mesma interação do usuário
+- Bloco visual `─── NODE ─── Input / Output` para cada agente no grafo
+- Logs rotineiros de tools e services rebaixados para `debug` (menos ruído)
+- Filtro `HideConsoleTracebackFilter` para não expor tracebacks no console
+- MongoDB `saslStart`/`saslContinue` silenciados
+
+### CI/CD
+- Workflow GitHub Actions com dois jobs paralelos: `lint-and-unit` e `integration`
+- Lint com Ruff, testes unitários sem dependências externas
+- Testes de integração sobem PostgreSQL via testcontainers (Docker built-in no runner)
+- `.env.example` copiado para `.env` durante o CI
+
+### Isolamento de Testes
+- Testes de integração marcados com `@pytest.mark.integration`
+- `apply_migrations` não é mais `autouse` — apenas testes que explicitamente usam a fixture disparam o container
+- `pytest` padrão roda só unitários; `pytest -m integration` roda os de integração
+
+### Router
+- Filtro de `tool_calls` de outros agentes para evitar que o router tente chamar tools que não possui
+
+### Async LLM
+- Guardrails (`input_guardrail.py`, `output_guardrail.py`) convertidos de `invoke` para `ainvoke`
+- `SessionSummaryService.sumarize` convertido para `async def`
+
+## 7. Próximos Passos
+- Add transaction category 'SALARY'
+- Pass errors during the session to the summary agent so the session history understands some operations went wrong
+- Fix layer separation
+- Improve type safety
