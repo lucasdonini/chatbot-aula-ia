@@ -23,7 +23,7 @@ class ChatHistoryService:
         search      : optional term to filter relevant summaries
         limit     : maximum number of sessions returned (most recent first)
         """
-        logger.info("Searching history: (search: %s, limit: %s)", search, limit)
+        logger.debug("Searching history: (search: %s, limit: %s)", search, limit)
 
         filter = {}
         if search:
@@ -39,7 +39,7 @@ class ChatHistoryService:
 
     @log_execution_time
     async def fetch_messages(self, session_id: str) -> List[ChatMessage]:
-        logger.info("Fetching messages from session with id %s", session_id)
+        logger.debug("Fetching messages from session with id %s", session_id)
         session = await ChatSession.find_one(ChatSession.session_id == session_id)
         messages = session.messages if session else []
 

@@ -2,14 +2,18 @@ import logging
 import sys
 from pathlib import Path
 
+_INTERACTION_COUNTER: int = 0
 
-class InlineMessageFormatter(logging.Formatter):
-    def format(self, record: logging.LogRecord) -> str:
-        if record.exc_info:
-            return super().format(record)
 
-        log_line = super().format(record)
-        return log_line.replace("\n", "\\n")
+def increment_interaction() -> None:
+    global _INTERACTION_COUNTER
+    _INTERACTION_COUNTER += 1
+
+
+class InteractionFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.interaction = _INTERACTION_COUNTER
+        return True
 
 
 class HideConsoleTracebackFilter(logging.Filter):
@@ -25,14 +29,18 @@ def setup_logger(log_file: str = "logs/app.log", level: int = logging.DEBUG) -> 
     root.setLevel(level)
     root.handlers.clear()
 
-    file_fmt = InlineMessageFormatter(
-        fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    file_fmt = logging.Formatter(
+        fmt=(
+            "%(asctime)s | [INT %(interaction)d] |"
+            " %(levelname)-8s | %(name)s | %(message)s"
+        ),
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     Path(log_file).parent.mkdir(parents=True, exist_ok=True)
     file_handler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
     file_handler.setFormatter(file_fmt)
+    file_handler.addFilter(InteractionFilter())
     root.addHandler(file_handler)
 
     console_fmt = logging.Formatter(fmt="%(levelname)s: %(message)s")

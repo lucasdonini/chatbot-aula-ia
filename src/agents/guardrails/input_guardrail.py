@@ -24,7 +24,7 @@ def _input_guardrail(input: str) -> GuardrailResult:
     Deterministic first, then LLM only if needed.
     """
 
-    logger.info("Verifying input compliance...")
+    logger.debug("Verifying input compliance...")
 
     # 1. Prompt injection
     for pattern in INJECTION_PATTERNS:
@@ -65,18 +65,24 @@ INPUT_GUARDRAIL_NODE_NAME = "input_guardrail"
 
 
 def input_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
-    logger.info("Input Guardrail called. State: %s", state)
+    logger.info("─" * 50)
+    logger.info(" [NODE] INPUT GUARDRAIL ")
     user_input = state["messages"][-1]
     anonymized, pii_map = anonymize_input(user_input.text)
+    logger.info(" Input: %s", anonymized)
     result = _input_guardrail(anonymized)
 
     if result.blocked:
+        logger.info(" Output: BLOCKED (%s)", result.blocked)
+        logger.info("─" * 50)
         return {
             GraphStateKeys.ROUTE: END,
             GraphStateKeys.CALLED_AGENTS: [INPUT_GUARDRAIL_NODE_NAME],
             GraphStateKeys.MESSAGES: [AIMessage(content=result.message)],
         }
 
+    logger.info(" Output: APPROVED")
+    logger.info("─" * 50)
     return {
         GraphStateKeys.ROUTE: ROUTER_NODE_NAME,
         GraphStateKeys.CALLED_AGENTS: [INPUT_GUARDRAIL_NODE_NAME],

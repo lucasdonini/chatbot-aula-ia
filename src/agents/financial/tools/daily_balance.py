@@ -35,10 +35,10 @@ class DailyBalanceTool(BaseTool):
     service: TransactionService = Field(exclude=True)
 
     def _run(self, target_date: date, *args, **kwargs) -> ToolResponse:
-        logger.info("%s tool called: (target_date=%s)", self.name, target_date)
+        logger.debug("%s tool called: (target_date=%s)", self.name, target_date)
         try:
             balance = self.service.calculate_daily_balance(target_date)
-            logger.info("Daily balance retreived successfully: %s", balance)
+            logger.debug("Daily balance retreived successfully: %s", balance)
             return ToolResponse.ok({"saldo_diario": balance})
         except Exception as e:
             logger.exception("Exception raised while retreiving daily balance")

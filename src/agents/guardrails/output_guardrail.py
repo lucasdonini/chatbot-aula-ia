@@ -25,7 +25,7 @@ def _output_guardrail(
     Nunca bloqueia — sempre retorna o texto revisado em 'conteudo'.
     """
 
-    logger.info("Verifying output compliance...")
+    logger.debug("Verifying output compliance...")
 
     # 1. Remove PII que o modelo tenha gerado
     for type, pattern in PII:
@@ -47,8 +47,12 @@ OUTPUT_GUARDRAIL_NODE_NAME = "output_guardrail"
 
 
 def output_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
-    logger.info("Output Guardrail called. State: %s", state)
+    logger.info("─" * 50)
+    logger.info(" [NODE] OUTPUT GUARDRAIL ")
     result = _output_guardrail(state["messages"][-1].text, state["pii_map"])
+    logger.info(" Input: (sanitized)")
+    logger.info(" Output: %s", result.message[:500])
+    logger.info("─" * 50)
     return {
         GraphStateKeys.MESSAGES: [AIMessage(content=result.message)],
         GraphStateKeys.CALLED_AGENTS: [OUTPUT_GUARDRAIL_NODE_NAME],

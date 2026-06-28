@@ -29,7 +29,7 @@ class ChatSessionService:
 
         await session.insert()
         _active_sessions[session_id] = session.id
-        logger.info("User session initialized: %s", session)
+        logger.debug("User session initialized: %s", session)
 
     def get_active_sessions(self) -> dict[str, str]:
         return _active_sessions.copy()
@@ -49,7 +49,7 @@ class ChatSessionService:
                 "$set": {ChatSession.updated_at: datetime.now()},
             }
         )
-        logger.info("Message saved: %s", message)
+        logger.debug("Message saved: %s", message)
 
     async def finalize_session(self, session_id: str) -> str:
         """
@@ -80,5 +80,5 @@ class ChatSessionService:
         )
 
         _active_sessions.pop(session_id)
-        logger.info("Session finalized: %s", session)
+        logger.debug("Session finalized: %s", session)
         return summary

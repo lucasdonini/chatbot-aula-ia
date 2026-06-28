@@ -19,10 +19,10 @@ class TotalBalanceTool(BaseTool):
     service: TransactionService = Field(exclude=True)
 
     def _run(self, *args, **kwargs) -> ToolResponse:
-        logger.info("%s tool called.", self.name)
+        logger.debug("%s tool called.", self.name)
         try:
             balance = self.service.calculate_total_balance()
-            logger.info("Total balance retreived successfully: %s", balance)
+            logger.debug("Total balance retreived successfully: %s", balance)
             return ToolResponse.ok({"saldo": balance})
         except Exception as e:
             logger.exception("Exception raised white retreiving total balance")

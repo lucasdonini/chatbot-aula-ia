@@ -19,7 +19,7 @@ class AddTransactionTool(BaseTool):
 
     def _run(self, *args, **kwargs) -> ToolResponse:
         transaction = args[0] if args else Transaction(**kwargs)
-        logger.info("%s tool called. Transaction: %s", self.name, transaction)
+        logger.debug("%s tool called. Transaction: %s", self.name, transaction)
         try:
             added = self.service.add_transaction(transaction)
             logger.debug("Transaction added successfully: %s", added)

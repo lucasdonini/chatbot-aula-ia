@@ -34,7 +34,7 @@ class SessionSummaryService:
     @log_execution_time
     def sumarize(self, messages: List[ChatMessage]) -> str:
         """Calls llm for summary"""
-        logger.info("Sumarizing messages...")
+        logger.debug("Sumarizing messages...")
 
         conversation = self._format_conversation(messages)
         response = self._llm.invoke(_SUMMARY_PROMPT.format(conversa=conversation))

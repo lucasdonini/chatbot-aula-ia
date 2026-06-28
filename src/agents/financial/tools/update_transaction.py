@@ -27,7 +27,7 @@ Retorna o registro atualizado.
 
     def _run(self, *args, **kwargs) -> ToolResponse:
         params = args[0] if args else UpdateTransactionParams(**kwargs)
-        logger.info("%s tool called. params %s", self.name, params)
+        logger.debug("%s tool called. params %s", self.name, params)
         try:
             if updated := self.service.update_transaction(params):
                 logger.debug("Transcation updated successfully")

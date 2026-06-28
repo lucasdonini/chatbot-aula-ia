@@ -39,7 +39,7 @@ class SearchHistoryTool(BaseTool):
 
     @log_execution_time
     async def _arun(self, search: str) -> str:
-        logger.info("%s tool called (search: %s)", self.name, search)
+        logger.debug("%s tool called (search: %s)", self.name, search)
         try:
             history = await self.service.fetch_history(search=search, limit=3)
             return (

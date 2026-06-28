@@ -38,8 +38,14 @@ financial_agent.ainvoke = log_execution_time(financial_agent.ainvoke, logger=log
 
 
 async def financial_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
-    logger.info("Financial specialist called. State: %s", state)
+    logger.info("─" * 50)
+    logger.info(" [NODE] FINANCIAL ")
+    logger.info(" Input: %s", state["messages"][-1].content[:500])
     response = await financial_agent.ainvoke(state)
+    last = (response.get("messages") or [None])[-1]
+    output = last.content[:500] if last and last.content else "(tool call)"
+    logger.info(" Output: %s", output)
+    logger.info("─" * 50)
     return {
         GraphStateKeys.MESSAGES: response.get("messages") or [],
         GraphStateKeys.CALLED_AGENTS: [FINANCIAL_NODE_NAME],

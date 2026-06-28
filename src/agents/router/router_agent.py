@@ -59,14 +59,17 @@ def _filter_messages_for_router(messages: List[AnyMessage]) -> List[AnyMessage]:
 
 
 async def router_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
-    logger.info("Router called. State: %s", state)
-    logger.debug("Filtering state to avoid confusions about tools...")
+    logger.info("─" * 50)
+    logger.info(" [NODE] ROUTER ")
+    logger.info(" Input: %s", state["messages"][-1].content[:500])
     filtered_state = {
         **state,
         "messages": _filter_messages_for_router(state["messages"]),
     }
-    logger.debug("Filtered state: %s", filtered_state)
     response = await router_agent.ainvoke(filtered_state)
+    output = response["messages"][-1].content[:500] if response.get("messages") else ""
+    logger.info(" Output: %s", output or "(tool call)")
+    logger.info("─" * 50)
     return {
         GraphStateKeys.MESSAGES: response.get("messages") or [],
         GraphStateKeys.CALLED_AGENTS: [ROUTER_NODE_NAME],

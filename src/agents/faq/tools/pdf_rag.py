@@ -17,6 +17,6 @@ class GetFAQAnswerArgsSchema(BaseModel):
 @tool(args_schema=GetFAQAnswerArgsSchema)
 def faq_retriever(question: str) -> List[Document]:
     """Busca no FAQ oficial os trechos mais relevantes para responder a pergunta."""
-    logger.info("faq_retriever tool called")
+    logger.debug("faq_retriever tool called")
     db = get_faq_db()
     return db.similarity_search(question, k=6)
