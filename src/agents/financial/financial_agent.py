@@ -16,6 +16,7 @@ from .tools import (
     DailyBalanceTool,
     SearchTransactionsTool,
     TotalBalanceTool,
+    UpdateTransactionTool,
 )
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ total_balance = TotalBalanceTool(service=transaction_service)
 daily_balance = DailyBalanceTool(service=transaction_service)
 search_transactions = SearchTransactionsTool(service=transaction_service)
 add_transaction = AddTransactionTool(service=transaction_service)
+update_transaction = UpdateTransactionTool(service=transaction_service)
 
 TOOLS = [total_balance, daily_balance, search_transactions, add_transaction]
 

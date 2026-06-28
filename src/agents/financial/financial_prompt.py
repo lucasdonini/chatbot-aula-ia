@@ -53,18 +53,6 @@ Campos opcionais (incluir SOMENTE se necessário):
   - janela_tempo   : {{"de":"YYYY-MM-DD","ate":"YYYY-MM-DD","rotulo":"ex.: mês passado"}}
   - indicadores    : {{chaves livres e numéricas úteis ao log}}
 
-
-### IMPORTANTE!!!
-Você está temporariamente sem acesso a algumas de suas tools por conta de uma migração interna.
-Caso um usuário peça algo que exija o uso de alguma das tools indisponíveis, informe-o da 
-indisponibilidade temporária.
-
-#### Tools migradas já disponíveis
-- Calcular saldo total
-- Calcular saldo em data arbitrária
-- Buscar transação
-- Adicionar transação
-
 """
 
 _SHOTS_OPEN = (

@@ -1,11 +1,12 @@
 import logging
 from datetime import date, datetime, time, timedelta
-from typing import List
+from typing import List, Optional
 
-from model.transaction_query_params import TransactionQueryParams
+from model.update_transaction_params import UpdateTransactionParams
 from src.infrastructure.execution_time_logger import log_execution_time
 from src.infrastructure.repositories.transaction_repository import TransactionRepository
 from src.model.transaction import Transaction, TransactionType
+from src.model.transaction_query_params import TransactionQueryParams
 
 logger = logging.getLogger(__name__)
 
@@ -44,4 +45,12 @@ class TransactionService:
 
     @log_execution_time
     def add_transaction(self, transaction: Transaction) -> Transaction:
+        logger.info("Adding Transaction: %s", transaction)
         return self._repository.add_transaction(transaction)
+
+    @log_execution_time
+    def update_transaction(
+        self, params: UpdateTransactionParams
+    ) -> Optional[Transaction]:
+        logger.info("Updating transaction: %s", params)
+        return self._repository.update_transaction(params)

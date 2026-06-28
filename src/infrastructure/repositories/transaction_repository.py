@@ -1,12 +1,13 @@
 import logging
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from typing import Callable, ContextManager, List, Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
-from model.transaction_query_params import TransactionQueryParams
 from src.model.transaction import Transaction, TransactionType
+from src.model.transaction_query_params import TransactionQueryParams
+from src.model.update_transaction_params import UpdateTransactionParams
 
 from ..postgres.entities.transaction import TransactionORM
 
@@ -87,3 +88,57 @@ class TransactionRepository:
             session.commit()
             session.refresh(orm)
         return self._orm_to_model(orm)
+
+    def update_transaction(
+        self, params: UpdateTransactionParams
+    ) -> Optional[Transaction]:
+        logger.info("Updating transaction. Params: %s", params)
+
+        if not params.has_update:
+            logger.warning("Nothing to update.")
+            return None
+
+        if not (params.id and params.match_text and params.date_local):
+            logger.error("Update called without any reference.")
+            raise ValueError(
+                "You cannot update without a reference. "
+                "Please inform either the id or both match_text and date_local"
+            )
+
+        period_start = datetime.combine(params.date_local, time.min)
+        period_end = datetime.combine(params.date_local + timedelta(days=1), time.min)
+        to_update = params.model_dump(
+            exclude_none=True,
+            exclude=[
+                UpdateTransactionParams.id,
+                UpdateTransactionParams.match_text,
+                UpdateTransactionParams.date_local,
+            ],
+        )
+        stmt = (
+            select(TransactionORM)
+            .where(
+                (TransactionORM.id == params.id)
+                if params.id
+                else and_(
+                    or_(
+                        TransactionORM.source_text.ilike(f"%{params.match_text}%"),
+                        TransactionORM.description.ilike(f"%{params.match_text}%"),
+                    ),
+                    TransactionORM.occurred_at >= period_start,
+                    TransactionORM.occurred_at < period_end,
+                )
+            )
+            .order_by(TransactionORM.occurred_at)
+            .limit(1)
+        )
+
+        logger.debug("Locate update target query: %s", str(stmt))
+        with self._session_factory() as session:
+            target = session.scalar(stmt)
+            for attr, val in to_update:
+                setattr(target, attr, val)
+            session.commit()
+
+            logger.debug("Updated: %s", target)
+            return self._orm_to_model(target)
