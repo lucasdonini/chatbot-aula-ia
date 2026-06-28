@@ -40,6 +40,7 @@ Estou aprendendo ainda, então a rigorosidade da arquitetura está em aprimorame
 - `/migrations`: Migrações Alembic autogeradas e configurações.
 - `/data`: Assets estáticos da applicação, como PDFs
 - `/sql`: Scripts SQL de configuração do banco local
+- `/logs`: Logs de execução do app
 
 ## 3.2. Arquitetura e Organização de Pastas (do professor)
 Projeto praticamente monolítico, contendo apenas arquivos soltos na raiz dividos por funcionalidade no nível mais macro possível, como `main.py` para o grafo, agentes e interação com usuário; `pg_tools.py` com conexão e interação com banco PostgreSQL e tools de agentes; `faq_tools.py` para tools do agente leitor de FAQ contendo toda a lógica desde a criação da tool até os embeddings; e assim por diante.
