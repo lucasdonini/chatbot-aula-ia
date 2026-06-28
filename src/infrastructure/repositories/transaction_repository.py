@@ -31,10 +31,14 @@ class TransactionRepository:
         period_start: Optional[datetime] = None,
         period_end: Optional[datetime] = None,
     ) -> float:
+        conditions = [TransactionORM.transaction_type == transaction_type]
+        if period_start is not None:
+            conditions.append(TransactionORM.occurred_at >= period_start)
+        if period_end is not None:
+            conditions.append(TransactionORM.occurred_at < period_end)
+
         stmt = select(func.coalesce(func.sum(TransactionORM.amount), 0)).where(
-            TransactionORM.transaction_type == transaction_type,
-            period_start and TransactionORM.occurred_at >= period_start,
-            period_end and TransactionORM.occurred_at < period_end,
+            *conditions
         )
 
         with self._session_factory() as session:
@@ -98,7 +102,7 @@ class TransactionRepository:
             logger.warning("Nothing to update.")
             return None
 
-        if not (params.id and params.match_text and params.date_local):
+        if not (params.id or (params.match_text and params.date_local)):
             logger.error("Update called without any reference.")
             raise ValueError(
                 "You cannot update without a reference. "
@@ -109,11 +113,7 @@ class TransactionRepository:
         period_end = datetime.combine(params.date_local + timedelta(days=1), time.min)
         to_update = params.model_dump(
             exclude_none=True,
-            exclude=[
-                UpdateTransactionParams.id,
-                UpdateTransactionParams.match_text,
-                UpdateTransactionParams.date_local,
-            ],
+            exclude={"id", "match_text", "date_local"},
         )
         stmt = (
             select(TransactionORM)
@@ -136,7 +136,7 @@ class TransactionRepository:
         logger.debug("Locate update target query: %s", str(stmt))
         with self._session_factory() as session:
             target = session.scalar(stmt)
-            for attr, val in to_update:
+            for attr, val in to_update.items():
                 setattr(target, attr, val)
             session.commit()
 

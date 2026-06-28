@@ -17,7 +17,8 @@ class AddTransactionTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, transaction: TransactionService, *args, **kwargs) -> ToolResponse:
+    def _run(self, *args, **kwargs) -> ToolResponse:
+        transaction = args[0] if args else Transaction(**kwargs)
         logger.info("%s tool called. Transaction: %s", self.name, transaction)
         try:
             added = self.service.add_transaction(transaction)

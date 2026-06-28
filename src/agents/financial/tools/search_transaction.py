@@ -29,7 +29,8 @@ class SearchTransactionsTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, params: TransactionQueryParams, *args, **kwargs) -> ToolResponse:
+    def _run(self, *args, **kwargs) -> ToolResponse:
+        params = args[0] if args else TransactionQueryParams(**kwargs)
         logger.info("%s tool called. Params: %s", self.name, params)
         try:
             result = self.service.search_transactions(params)

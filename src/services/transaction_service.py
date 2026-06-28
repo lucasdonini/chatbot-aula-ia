@@ -2,11 +2,11 @@ import logging
 from datetime import date, datetime, time, timedelta
 from typing import List, Optional
 
-from model.update_transaction_params import UpdateTransactionParams
 from src.infrastructure.execution_time_logger import log_execution_time
 from src.infrastructure.repositories.transaction_repository import TransactionRepository
 from src.model.transaction import Transaction, TransactionType
 from src.model.transaction_query_params import TransactionQueryParams
+from src.model.update_transaction_params import UpdateTransactionParams
 
 logger = logging.getLogger(__name__)
 

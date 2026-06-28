@@ -3,8 +3,8 @@ import logging
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from model.update_transaction_params import UpdateTransactionParams
 from src.model.tool_response import ToolResponse
+from src.model.update_transaction_params import UpdateTransactionParams
 from src.services.transaction_service import TransactionService
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,8 @@ Retorna o registro atualizado.
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, params: UpdateTransactionParams, *args, **kwargs) -> ToolResponse:
+    def _run(self, *args, **kwargs) -> ToolResponse:
+        params = args[0] if args else UpdateTransactionParams(**kwargs)
         logger.info("%s tool called. params %s", self.name, params)
         try:
             if updated := self.service.update_transaction(params):
