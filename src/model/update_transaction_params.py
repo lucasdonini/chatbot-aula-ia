@@ -1,8 +1,8 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from .transaction import Category, TransactionType
 
@@ -48,11 +48,11 @@ class UpdateTransactionParams(BaseModel):
         default=None, description="Novo meio de pagamento."
     )
 
-    occurred_at: Optional[str] = Field(
+    occurred_at: Optional[datetime] = Field(
         default=None, description="Timestamp ISO 8601 da nova data de ocorrência."
     )
 
-    updated_at: Optional[str] = Field(
+    updated_at: Optional[datetime] = Field(
         default=None,
         description=(
             "Timestamp ISO 8601 da data da atualização mais recente da transação. "
@@ -61,6 +61,20 @@ class UpdateTransactionParams(BaseModel):
             "automaticamente pelo banco de dados ao atualizar."
         ),
     )
+
+    @field_validator("occurred_at", "updated_at", mode="before")
+    @classmethod
+    def coerce_datetime(cls, v) -> Optional[datetime]:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return datetime.fromisoformat(v)
+        if isinstance(v, datetime):
+            return v
+        raise ValidationError(
+            "Invalid type for date. "
+            f"Espected str or datetime, received: {type(v).__name__!r}"
+        )
 
     @property
     def has_update(self) -> bool:

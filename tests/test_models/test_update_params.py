@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from uuid import uuid4
 
 from src.model.transaction import Category, TransactionType
@@ -94,6 +94,14 @@ class TestUpdateTransactionParams:
             amount=0.0,
         )
         assert params.has_update is False
+
+    def test_updated_at_str_coerces_to_datetime(self):
+        params = UpdateTransactionParams(updated_at="2026-06-28")
+        assert params.updated_at == datetime(year=2026, month=6, day=28)
+
+    def test_occurred_at_str_coerces_to_datetime(self):
+        params = UpdateTransactionParams(occurred_at="2026-06-28")
+        assert params.occurred_at == datetime(year=2026, month=6, day=28)
 
     def test_model_dump_excludes_none(self, sample_update_params_by_id):
         data = sample_update_params_by_id.model_dump(exclude_none=True)
