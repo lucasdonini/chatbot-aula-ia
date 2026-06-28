@@ -69,7 +69,7 @@ class ChatSessionService:
         if not session or not session.messages:
             return ""
 
-        summary = self._service.sumarize(session.messages)
+        summary = await self._service.sumarize(session.messages)
         await session.update(
             {
                 "$set": {
