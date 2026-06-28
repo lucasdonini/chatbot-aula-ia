@@ -3,8 +3,9 @@ from typing import Any, Dict
 
 from langchain.agents import create_agent
 
+from infrastructure.postgres.pg_connection import get_db
 from src.infrastructure.execution_time_logger import log_execution_time
-from src.infrastructure.pg_connection import get_db
+from src.infrastructure.repositories.transaction_repository import TransactionRepository
 from src.model.graph_state import GraphState, GraphStateKeys
 from src.services.transaction_service import TransactionService
 
@@ -14,7 +15,9 @@ from .tools import DailyBalanceTool, SearchTransactionsTool, TotalBalanceTool
 
 logger = logging.getLogger(__name__)
 
-transaction_service = TransactionService(session_factory=get_db)
+
+transaction_repository = TransactionRepository(session_factory=get_db)
+transaction_service = TransactionService(repository=transaction_repository)
 total_balance = TotalBalanceTool(service=transaction_service)
 daily_balance = DailyBalanceTool(service=transaction_service)
 search_transactions = SearchTransactionsTool(service=transaction_service)

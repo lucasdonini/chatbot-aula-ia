@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src"
 sys.path.insert(0, str(SRC))
 
-import src.model as models  # noqa: E402
-from src.infrastructure.settings import settings  # noqa: E402
+import infrastructure.postgres.entities as models
+from src.infrastructure.settings import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

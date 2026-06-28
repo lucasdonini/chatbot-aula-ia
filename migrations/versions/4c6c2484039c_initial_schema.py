@@ -5,11 +5,19 @@ Revises:
 Create Date: 2026-06-26 17:43:56.494292
 
 """
+import sys
 from typing import Sequence, Union
+from pathlib import Path
 
 import sqlalchemy as sa
 
 from alembic import op
+
+ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / "src"
+sys.path.insert(0, str(SRC))
+
+from src.model.transaction import Category, TransactionType
 
 # revision identifiers, used by Alembic.
 revision: str = '4c6c2484039c'
@@ -35,46 +43,24 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
     sa.Column('amount', sa.Numeric(precision=14, scale=2), nullable=False),
     sa.Column('category_id', sa.Integer(), nullable=False),
-    sa.Column('type_id', sa.Integer(), nullable=False),
+    sa.Column('transaction_type_id', sa.Integer(), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('payment_method', sa.String(length=32), nullable=True),
-    sa.Column('occurred_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('occurred_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('source_text', sa.Text(), nullable=False),
     sa.ForeignKeyConstraint(['category_id'], ['categories.id'], ),
-    sa.ForeignKeyConstraint(['type_id'], ['transaction_types.id'], ),
+    sa.ForeignKeyConstraint(['transaction_type_id'], ['transaction_types.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index('idx_transactions_category_time', 'transactions', ['category_id', 'occurred_at'], unique=False)
     op.create_index('idx_transactions_occurred_at', 'transactions', ['occurred_at'], unique=False)
     op.create_index(op.f('ix_transactions_category_id'), 'transactions', ['category_id'], unique=False)
-    op.create_index(op.f('ix_transactions_type_id'), 'transactions', ['type_id'], unique=False)
+    op.create_index(op.f('ix_transactions_type_id'), 'transactions', ['transaction_type_id'], unique=False)
     # ### end Alembic commands ###
     
-    op.bulk_insert(
-        transaction_types, [{"name": val} for val in ("INCOME", "EXPENSES", "TRANSFER")]
-    )
-
-    op.bulk_insert(
-        categories,
-        [
-            {"name": val}
-            for val in (
-                "comida",
-                "besteira",
-                "estudo",
-                "férias",
-                "transporte",
-                "moradia",
-                "saúde",
-                "lazer",
-                "contas",
-                "investimento",
-                "presente",
-                "outros",
-            )
-        ],
-    )
+    op.bulk_insert(transaction_types, [{"name": val} for val in TransactionType])
+    op.bulk_insert(categories, [{"name": val} for val in Category])
 
 
 def downgrade() -> None:

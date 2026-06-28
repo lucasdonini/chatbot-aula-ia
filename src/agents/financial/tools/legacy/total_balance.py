@@ -1,8 +1,8 @@
 import logging
 
 from langchain.tools import tool
-
 from src.infrastructure.pg_connection import get_cursor
+
 from src.model.tool_response import ToolResponse
 
 logger = logging.getLogger(__name__)

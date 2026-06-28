@@ -1,118 +1,79 @@
 from datetime import datetime
-from typing import List
-from uuid import UUID, uuid4
+from enum import Enum
+from typing import Optional
 
-from sqlalchemy import (
-    DateTime,
-    ForeignKey,
-    Index,
-    Numeric,
-    String,
-    Text,
-    func,
-)
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from .declarative_base import Base
+from pydantic import BaseModel, Field
 
 
-class Category(Base):
-    __tablename__ = "categories"
+class Category(str, Enum):
+    """
+    Contains default values used in the database.
+    If you change any value, update the latest migration
+    so that the database and the enum keep consistent.
+    """
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    FOOD = "comida"
+    JUNK = "besteira"
+    STUDIES = "estudo"
+    VACATION = "férias"
+    TRANSPORTATION = "transporte"
+    HOUSING = "moradia"
+    HEALTH = "saúde"
+    LIESURE = "lazer"
+    BILLS = "contas"
+    INVESTMENT = "investimento"
+    GIFTS = "presente"
+    OTHER = "outros"
 
-    name: Mapped[str] = mapped_column(
-        String(64),
-        nullable=False,
+
+class TransactionType(str, Enum):
+    """
+    Contains default values used in the database.
+    If you change any value, update the latest migration
+    so that the database and the enum keep consistent.
+    """
+
+    INCOME = "INCOME"
+    EXPENSE = "EXPENSE"
+    TRANSFER = "TRANSFER"
+
+
+class Transaction(BaseModel):
+    amount: float = Field(..., description="Valor da transação (use positivo).")
+
+    category: Category = Field(
+        default=Category.OTHER, description=f"Nome da categoria: {' | '.join(Category)}"
     )
 
-    transactions: Mapped[List["Transaction"]] = relationship(
-        back_populates="category",
+    transaction_type: TransactionType = Field(
+        default=TransactionType.EXPENSE,
+        description=f"Tipo da transação: {' | '.join(TransactionType)}",
     )
 
-
-class TransactionType(Base):
-    __tablename__ = "transaction_types"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-
-    name: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
+    description: Optional[str] = Field(
+        default=None, description="Descrição (opcional)."
     )
 
-    transactions: Mapped[List["Transaction"]] = relationship(
-        back_populates="transaction_type",
+    payment_method: Optional[str] = Field(
+        default=None, description="Forma de pagamento (opcional)."
     )
 
-
-class Transaction(Base):
-    __tablename__ = "transactions"
-
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4,
-        server_default=func.gen_random_uuid(),
-    )
-
-    amount: Mapped[float] = mapped_column(
-        Numeric(14, 2),
-        nullable=False,
-    )
-
-    category_id: Mapped[int] = mapped_column(
-        ForeignKey("categories.id"),
-        nullable=False,
-        index=True,
-    )
-
-    category: Mapped["Category"] = relationship(
-        back_populates="transactions",
-    )
-
-    type_id: Mapped[int] = mapped_column(
-        ForeignKey("transaction_types.id"),
-        nullable=False,
-        index=True,
-    )
-
-    transaction_type: Mapped["TransactionType"] = relationship(
-        back_populates="transactions",
-    )
-
-    description: Mapped[str | None] = mapped_column(Text)
-
-    payment_method: Mapped[str | None] = mapped_column(
-        String(32),
-    )
-
-    occurred_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-    )
-
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-        server_onupdate=func.now(),
-    )
-
-    source_text: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )
-
-    __table_args__ = (
-        Index(
-            "idx_transactions_occurred_at",
-            "occurred_at",
-        ),
-        Index(
-            "idx_transactions_category_time",
-            "category_id",
-            "occurred_at",
+    occurred_at: Optional[datetime] = Field(
+        default=None,
+        description=(
+            "Data da transação segundo o prompt do usuário; "
+            "se ausente, usa NOW() no banco."
         ),
     )
+
+    updated_at: Optional[datetime] = Field(
+        default=None,
+        description=(
+            "Data da útlima modificação do registro. "
+            "Default None porque o banco é responsável por preencher."
+            "Preencha somente se tiver um motivo claro para querer um "
+            "valor diferente da data real de modificação no banco"
+        ),
+    )
+
+    source_text: str = Field(..., description="Texto original do usuário.")
