@@ -87,13 +87,13 @@ class TestUpdateTransactionParams:
         assert params.match_text is None
         assert params.amount == 100.0
 
-    def test_amount_zero_has_update_false(self):
+    def test_amount_zero_has_update_true(self):
         params = UpdateTransactionParams(
             match_text="teste",
             date_local=date(2026, 1, 1),
             amount=0.0,
         )
-        assert params.has_update is False
+        assert params.has_update is True
 
     def test_updated_at_str_coerces_to_datetime(self):
         params = UpdateTransactionParams(updated_at="2026-06-28")

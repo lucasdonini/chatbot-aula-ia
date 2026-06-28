@@ -79,13 +79,14 @@ class UpdateTransactionParams(BaseModel):
     @property
     def has_update(self) -> bool:
         return any(
-            [
-                self.amount,
-                self.transaction_type,
-                self.category,
-                self.description,
-                self.payment_method,
-                self.occurred_at,
-                self.updated_at,
+            getattr(self, field) is not None
+            for field in [
+                "amount",
+                "transaction_type",
+                "category",
+                "description",
+                "payment_method",
+                "occurred_at",
+                "updated_at",
             ]
         )
