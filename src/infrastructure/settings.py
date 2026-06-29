@@ -6,7 +6,9 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr = SecretStr("No key provided")
     groq_api_key: SecretStr = SecretStr("No key provided")
 
-    postgres_url: SecretStr = SecretStr("")
+    postgres_url: SecretStr = SecretStr(
+        "postgresql://postgres:postgres@localhost:5432/acessoriadb"
+    )
 
     mongodb_uri: SecretStr = SecretStr("mongodb://localhost:27017")
     mongodb_dbname: SecretStr = SecretStr("assessoria")
