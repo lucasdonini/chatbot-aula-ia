@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 from alembic.command import downgrade, upgrade
 from alembic.config import Config as AlembicConfig
+from pydantic import SecretStr
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from testcontainers.postgres import PostgresContainer
@@ -35,7 +36,7 @@ def db_url(postgres_container: PostgresContainer) -> str:
 
 @pytest.fixture(scope="session")
 def apply_migrations(db_url: str) -> Generator[None, None, None]:
-    with patch("src.infrastructure.settings.settings.postgres_url", db_url):
+    with patch("src.infrastructure.settings.settings.postgres_url", SecretStr(db_url)):
         upgrade(ALEMBIC_CFG, "head")
         yield
         downgrade(ALEMBIC_CFG, "base")
