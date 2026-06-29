@@ -33,7 +33,7 @@ class ChatHistoryService:
         return await (
             ChatSession.find(filter)
             .project(ChatSessionSummarized)
-            .sort((ChatSession.started_at, 1))
+            .sort(ChatSession.started_at)  # type: ignore[arg-type]
             .to_list()
         )
 

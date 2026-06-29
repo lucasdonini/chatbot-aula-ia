@@ -1,5 +1,6 @@
 import logging
 from datetime import date
+from typing import Any
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -34,7 +35,7 @@ class DailyBalanceTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, target_date: date, *args, **kwargs) -> ToolResponse:
+    def _run(self, target_date: date, *args: Any, **kwargs: Any) -> ToolResponse:
         logger.debug("%s tool called: (target_date=%s)", self.name, target_date)
         try:
             balance = self.service.calculate_daily_balance(target_date)

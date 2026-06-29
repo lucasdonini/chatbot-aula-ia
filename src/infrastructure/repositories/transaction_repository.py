@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, time, timedelta
 from typing import Callable, ContextManager, List, Optional
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from src.model.transaction import Transaction, TransactionType
@@ -31,15 +31,15 @@ class TransactionRepository:
         period_start: Optional[datetime] = None,
         period_end: Optional[datetime] = None,
     ) -> float:
-        conditions = [TransactionORM.transaction_type == transaction_type]
-        if period_start is not None:
-            conditions.append(TransactionORM.occurred_at >= period_start)
-        if period_end is not None:
-            conditions.append(TransactionORM.occurred_at < period_end)
-
         stmt = select(func.coalesce(func.sum(TransactionORM.amount), 0)).where(
-            *conditions
+            TransactionORM.transaction_type == transaction_type
         )
+
+        if period_start:
+            stmt = stmt.where(TransactionORM.occurred_at >= period_start)
+
+        if period_end:
+            stmt = stmt.where(TransactionORM.occurred_at < period_end)
 
         with self._session_factory() as session:
             return float(session.scalar(stmt))
@@ -47,35 +47,40 @@ class TransactionRepository:
     def find(self, params: TransactionQueryParams) -> List[Transaction]:
         logger.info("Searching Transactions. Params: %s", params)
 
-        if params.limit <= 0:
+        if params.limit is not None and params.limit <= 0:
             return []
 
-        stmt = (
-            select(TransactionORM)
-            .where(
-                (not params.source_text)
-                or TransactionORM.source_text.ilike(f"%{params.source_text}%"),
-                (not params.description)
-                or TransactionORM.description.ilike(f"%{params.description}%"),
-                (not params.occurred_at_start)
-                or TransactionORM.occurred_at >= params.occurred_at_start,
-                (not params.occurred_at_end)
-                or TransactionORM.occurred_at < params.occurred_at_end,
-                (not params.updated_at_start)
-                or TransactionORM.updated_at >= params.updated_at_start,
-                (not params.updated_at_end)
-                or TransactionORM.updated_at < params.updated_at_end,
-                (not params.category) or TransactionORM.category == params.category,
-                (not params.transaction_type)
-                or TransactionORM.transaction_type == params.transaction_type,
+        stmt = select(TransactionORM)
+        if params.source_text:
+            stmt = stmt.where(
+                TransactionORM.source_text.ilike(f"%{params.source_text}%")
             )
-            .order_by(
-                TransactionORM.occurred_at.asc()
-                if params.occurred_at_start or params.occurred_at_end
-                else TransactionORM.occurred_at.desc()
+        if params.description:
+            stmt = stmt.where(
+                TransactionORM.description.ilike(f"%{params.description}%")
             )
-            .limit(params.limit)
+        if params.occurred_at_start:
+            stmt = stmt.where(TransactionORM.occurred_at >= params.occurred_at_start)
+        if params.occurred_at_end:
+            stmt = stmt.where(TransactionORM.occurred_at < params.occurred_at_end)
+        if params.updated_at_start:
+            stmt = stmt.where(TransactionORM.updated_at >= params.updated_at_start)
+        if params.updated_at_end:
+            stmt = stmt.where(TransactionORM.updated_at < params.updated_at_end)
+        if params.category:
+            stmt = stmt.where(TransactionORM.category == params.category)
+        if params.transaction_type:
+            stmt = stmt.where(
+                TransactionORM.transaction_type == params.transaction_type
+            )
+        stmt = stmt.order_by(
+            TransactionORM.occurred_at.asc()
+            if params.occurred_at_start or params.occurred_at_end
+            else TransactionORM.occurred_at.desc()
         )
+
+        if params.limit is not None:
+            stmt = stmt.limit(params.limit)
 
         logger.debug("Searching query: %s", str(stmt))
         result: List[Transaction]
@@ -102,35 +107,33 @@ class TransactionRepository:
             logger.warning("Nothing to update.")
             return None
 
-        if not (params.id or (params.match_text and params.date_local)):
+        stmt = select(TransactionORM)
+        if params.id:
+            stmt = stmt.where(TransactionORM.id == params.id)
+        elif params.match_text and params.date_local:
+            period_start = datetime.combine(params.date_local, time.min)
+            period_end = datetime.combine(
+                params.date_local + timedelta(days=1), time.min
+            )
+            stmt = stmt.where(
+                or_(
+                    TransactionORM.source_text.ilike(f"%{params.match_text}%"),
+                    TransactionORM.description.ilike(f"%{params.match_text}%"),
+                ),
+                TransactionORM.occurred_at >= period_start,
+                TransactionORM.occurred_at < period_end,
+            )
+        else:
             logger.error("Update called without any reference.")
             raise ValueError(
                 "You cannot update without a reference. "
                 "Please inform either the id or both match_text and date_local"
             )
 
-        period_start = datetime.combine(params.date_local, time.min)
-        period_end = datetime.combine(params.date_local + timedelta(days=1), time.min)
+        stmt = stmt.order_by(TransactionORM.occurred_at).limit(1)
         to_update = params.model_dump(
             exclude_none=True,
             exclude={"id", "match_text", "date_local"},
-        )
-        stmt = (
-            select(TransactionORM)
-            .where(
-                (TransactionORM.id == params.id)
-                if params.id
-                else and_(
-                    or_(
-                        TransactionORM.source_text.ilike(f"%{params.match_text}%"),
-                        TransactionORM.description.ilike(f"%{params.match_text}%"),
-                    ),
-                    TransactionORM.occurred_at >= period_start,
-                    TransactionORM.occurred_at < period_end,
-                )
-            )
-            .order_by(TransactionORM.occurred_at)
-            .limit(1)
         )
 
         logger.debug("Locate update target query: %s", str(stmt))
@@ -139,6 +142,9 @@ class TransactionRepository:
             for attr, val in to_update.items():
                 setattr(target, attr, val)
             session.commit()
+
+            if not target:
+                return None
 
             logger.debug("Updated: %s", target)
             return self._orm_to_model(target)

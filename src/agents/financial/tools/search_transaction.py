@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -29,7 +30,7 @@ class SearchTransactionsTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, *args, **kwargs) -> ToolResponse:
+    def _run(self, *args: Any, **kwargs: Any) -> ToolResponse:
         params = args[0] if args else TransactionQueryParams(**kwargs)
         logger.debug("%s tool called. Params: %s", self.name, params)
         try:

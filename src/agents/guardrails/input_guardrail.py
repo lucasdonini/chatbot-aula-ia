@@ -45,19 +45,24 @@ async def _input_guardrail(input: str) -> GuardrailResult:
             )
 
     # 3. Classificação semântica via LLM
-    resposta = (
+    response = (
         await fast_llm.ainvoke(CLASSIFIER_PROMPT.format(mensagem=input))
     ).content
 
-    categoria = "APROVADO"
-    for linha in resposta.splitlines():
-        if linha.strip().upper().startswith("CATEGORIA:"):
-            categoria = linha.split(":", 1)[1].strip().upper()
+    if not isinstance(response, str):
+        raise TypeError(
+            f"Classifier returned non-text content: {type(response).__name__!r}"
+        )
+
+    category = "APROVADO"
+    for line in response.splitlines():
+        if line.strip().upper().startswith("CATEGORIA:"):
+            category = line.split(":", 1)[1].strip().upper()
             break
 
-    if categoria in BLOCK_RESPONSES:
-        motivo, mensagem = BLOCK_RESPONSES[categoria]
-        return GuardrailResult.block(motivo, mensagem)
+    if category in BLOCK_RESPONSES:
+        reason, message = BLOCK_RESPONSES[category]
+        return GuardrailResult.block(reason, message)
 
     logger.debug("Input aproved: %s", input)
     return GuardrailResult.input_aproved(input)
@@ -70,6 +75,8 @@ async def input_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
     logger.info("─" * 50)
     logger.info(" [NODE] INPUT GUARDRAIL ")
     user_input = state["messages"][-1]
+    assert user_input.id is not None
+
     anonymized, pii_map = anonymize_input(user_input.text)
     logger.info(" Input: %s", anonymized)
     result = await _input_guardrail(anonymized)

@@ -1,4 +1,5 @@
 import logging
+from typing import cast
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
@@ -83,9 +84,16 @@ async def execute_agent_flux(user_input: HumanMessage, session_id: str) -> AIMes
         "pii_map": {},
     }
 
-    final_state: GraphState = await agent_flux.ainvoke(
+    final_state_raw = await agent_flux.ainvoke(
         initial_state, config={"configurable": {"thread_id": session_id}}
     )
+    final_state = cast(GraphState, final_state_raw)
 
     logger.info("[CALLED] %s", " → ".join(final_state["called_agents"]))
-    return final_state["messages"][-1]
+
+    last = final_state["messages"][-1]
+    if not isinstance(last, AIMessage):
+        raise ValueError(
+            f"Expected last message to be AIMessage, received {type(last).__name__!r}"
+        )
+    return last

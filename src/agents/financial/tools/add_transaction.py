@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -17,7 +18,7 @@ class AddTransactionTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, *args, **kwargs) -> ToolResponse:
+    def _run(self, *args: Any, **kwargs: Any) -> ToolResponse:
         transaction = args[0] if args else Transaction(**kwargs)
         logger.debug("%s tool called. Transaction: %s", self.name, transaction)
         try:
