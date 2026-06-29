@@ -27,6 +27,7 @@ dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.25.0",
     "testcontainers>=4.0",
+    "mypy>=2.1.0",
 ]
 
 [tool.pytest.ini_options]
@@ -48,3 +49,12 @@ skip-magic-trailing-comma = false
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+explicit_package_bases = true
+namespace_packages = true
+exclude = ["migrations/", "tests/"]

@@ -11,15 +11,22 @@ from .agenda_prompt import AGENDA_NODE_NAME, PROMPT
 
 logger = logging.getLogger(__name__)
 
-agenda_agent = create_agent(model=specialist_llm, system_prompt=PROMPT)
-agenda_agent.ainvoke = log_execution_time(agenda_agent.ainvoke, logger=logger)
+agenda_agent = create_agent(
+    model=specialist_llm,  # type: ignore[arg-type]
+    system_prompt=PROMPT,
+)
+
+agenda_agent.ainvoke = log_execution_time(  # type: ignore[assignment]
+    agenda_agent.ainvoke,  # type: ignore[arg-type]
+    logger=logger,
+)
 
 
 async def agenda_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
     logger.info("─" * 50)
     logger.info(" [NODE] AGENDA ")
     logger.info(" Input: %s", state["messages"][-1].content[:500])
-    response = await agenda_agent.ainvoke(state)
+    response = await agenda_agent.ainvoke(state)  # type: ignore[arg-type]
     last = (response.get("messages") or [None])[-1]
     output = last.content[:500] if last and last.content else "(tool call)"
     logger.info(" Output: %s", output)

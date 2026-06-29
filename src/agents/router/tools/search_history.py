@@ -1,11 +1,11 @@
 import logging
-from typing import List
+from typing import Any, List
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
 from src.infrastructure.execution_time_logger import log_execution_time
-from src.model.chat_session import ChatSession
+from src.model.chat_session import ChatSessionSummarized
 from src.services.chat_history_service import ChatHistoryService
 
 logger = logging.getLogger(__name__)
@@ -31,10 +31,10 @@ class SearchHistoryTool(BaseTool):
 
     service: ChatHistoryService = Field(exclude=True)
 
-    def _format_history(self, history: List[ChatSession]) -> str:
+    def _format_history(self, history: List[ChatSessionSummarized]) -> str:
         return "\n\n".join(f"[{h.started_at:%d/%m/%Y}] {h.summary}" for h in history)
 
-    def _run(self, *args, **kwargs) -> str:
+    def _run(self, *args: Any, **kwargs: Any) -> str:
         raise NotImplementedError("This tool is stricktly assyncronal. Use _arun.")
 
     @log_execution_time

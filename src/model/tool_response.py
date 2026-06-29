@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import Any, NoReturn, Optional
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, ValidatorFunctionWrapHandler, model_validator
 
 
 class ToolResponse(BaseModel):
@@ -10,7 +10,9 @@ class ToolResponse(BaseModel):
 
     @model_validator(mode="wrap")
     @classmethod
-    def _block_direct(cls, value, handler):
+    def _block_direct(
+        cls, value: Any, handler: ValidatorFunctionWrapHandler
+    ) -> NoReturn:
         raise TypeError(
             "Direct instantiation is not allowed. "
             "Use DatabaseToolResponse[.ok()/.error()/.exception()] instead."

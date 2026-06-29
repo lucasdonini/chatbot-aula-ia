@@ -1,4 +1,6 @@
-from pydantic import BaseModel, model_validator
+from typing import Any, NoReturn
+
+from pydantic import BaseModel, ValidatorFunctionWrapHandler, model_validator
 
 
 class GuardrailResult(BaseModel):
@@ -9,7 +11,9 @@ class GuardrailResult(BaseModel):
 
     @model_validator(mode="wrap")
     @classmethod
-    def _block_direct(cls, value, handler):
+    def _block_direct(
+        cls, value: Any, handler: ValidatorFunctionWrapHandler
+    ) -> NoReturn:
         raise TypeError("Direct Instantiation is not allowed")
 
     @classmethod

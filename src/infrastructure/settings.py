@@ -1,14 +1,15 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    gemini_api_key: str = ""
-    groq_api_key: str = ""
+    gemini_api_key: SecretStr = SecretStr("")
+    groq_api_key: SecretStr = SecretStr("")
 
-    postgres_url: str = ""
+    postgres_url: SecretStr = SecretStr("")
 
-    mongodb_uri: str = "mongodb://localhost:27017"
-    mongodb_dbname: str = "assessoria"
+    mongodb_uri: SecretStr = SecretStr("mongodb://localhost:27017")
+    mongodb_dbname: SecretStr = SecretStr("assessoria")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

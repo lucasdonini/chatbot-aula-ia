@@ -81,7 +81,7 @@ class TransactionQueryParams(BaseModel):
     limit: Optional[int] = Field(
         default=50,
         description=(
-            "Número máximo de transações. Use 0 para sem limite. "
-            "Para perguntas sobre 'maior' ou 'menor', use 0 ou um valor alto."
+            "Número máximo de transações. None para sem limite. "
+            "Para perguntas sobre 'maior' ou 'menor', use None ou um valor alto."
         ),
     )

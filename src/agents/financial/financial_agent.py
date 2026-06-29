@@ -33,15 +33,23 @@ update_transaction = UpdateTransactionTool(service=transaction_service)
 TOOLS = [total_balance, daily_balance, search_transactions, add_transaction]
 
 
-financial_agent = create_agent(model=specialist_llm, system_prompt=PROMPT, tools=TOOLS)
-financial_agent.ainvoke = log_execution_time(financial_agent.ainvoke, logger=logger)
+financial_agent = create_agent(
+    model=specialist_llm,  # type: ignore[arg-type]
+    system_prompt=PROMPT,
+    tools=TOOLS,
+)
+
+financial_agent.ainvoke = log_execution_time(  # type: ignore[assignment]
+    financial_agent.ainvoke,  # type: ignore[arg-type]
+    logger=logger,
+)
 
 
 async def financial_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
     logger.info("─" * 50)
     logger.info(" [NODE] FINANCIAL ")
     logger.info(" Input: %s", state["messages"][-1].content[:500])
-    response = await financial_agent.ainvoke(state)
+    response = await financial_agent.ainvoke(state)  # type: ignore[arg-type]
     last = (response.get("messages") or [None])[-1]
     output = last.content[:500] if last and last.content else "(tool call)"
     logger.info(" Output: %s", output)

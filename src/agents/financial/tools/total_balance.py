@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from langchain_core.tools import BaseTool
 from pydantic import Field
@@ -18,7 +19,7 @@ class TotalBalanceTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, *args, **kwargs) -> ToolResponse:
+    def _run(self, *args: Any, **kwargs: Any) -> ToolResponse:
         logger.debug("%s tool called.", self.name)
         try:
             balance = self.service.calculate_total_balance()

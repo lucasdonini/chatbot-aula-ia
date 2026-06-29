@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, ValidationError, field_validator
@@ -64,7 +64,7 @@ class UpdateTransactionParams(BaseModel):
 
     @field_validator("occurred_at", "updated_at", mode="before")
     @classmethod
-    def coerce_datetime(cls, v) -> Optional[datetime]:
+    def coerce_datetime(cls, v: Any) -> Optional[datetime]:
         if v is None:
             return None
         if isinstance(v, str):

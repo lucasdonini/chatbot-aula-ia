@@ -24,7 +24,7 @@ def log_execution_time(
             start_time = time.perf_counter()
             try:
                 result = await function(*args, **kwargs)
-                return result
+                return result  # type: ignore[no-any-return]
             finally:
                 end_time = time.perf_counter()
                 exec_time = end_time - start_time
@@ -33,7 +33,7 @@ def log_execution_time(
                     f"finished in {exec_time:.4f} seconds."
                 )
 
-        return wrapper_async
+        return wrapper_async  # type: ignore[return-value]
     else:
 
         @wraps(function)

@@ -28,16 +28,21 @@ async def _output_guardrail(
     logger.debug("Verifying output compliance...")
 
     # 1. Remove PII que o modelo tenha gerado
-    for type, pattern in PII:
-        output = re.sub(pattern, f"[{type} OMITIDO]", output)
+    for pii_type, pattern in PII:
+        output = re.sub(pattern, f"[{pii_type} OMITIDO]", output)
 
     # 2. Resolve tokens de PII da entrada
     output = deanonymize_output(output, pii_map, restore=restaurar_pii)
 
     # 3. Revisão de compliance financeiro
-    result = (
-        await fast_llm.ainvoke(COMPLIANCE_PROMPT.format(resposta=output))
-    ).content.strip()
+    result = (await fast_llm.ainvoke(COMPLIANCE_PROMPT.format(resposta=output))).content
+
+    if not isinstance(result, str):
+        raise TypeError(
+            f"Guardrail returned non-text content: {type(result).__name__!r}"
+        )
+    result = result.strip()
+
     if "RESPOSTA:" in result:
         output = result.split("RESPOSTA:", 1)[1].strip() or output
 

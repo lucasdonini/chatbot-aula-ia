@@ -22,12 +22,15 @@ TOOLS = [history_tool]
 
 ROUTER_NODE_NAME = "router"
 router_agent = create_agent(
-    model=fast_llm,
+    model=fast_llm,  # type: ignore[arg-type]
     system_prompt=PROMPT,
     tools=TOOLS,
 )
 
-router_agent.ainvoke = log_execution_time(router_agent.ainvoke, logger=logger)
+router_agent.ainvoke = log_execution_time(  # type: ignore[assignment]
+    router_agent.ainvoke,  # type: ignore[arg-type]
+    logger=logger,
+)
 
 
 def _filter_messages_for_router(messages: List[AnyMessage]) -> List[AnyMessage]:
@@ -43,8 +46,8 @@ def _filter_messages_for_router(messages: List[AnyMessage]) -> List[AnyMessage]:
         if isinstance(msg, AIMessage) and msg.tool_calls:
             msg = copy.deepcopy(msg)
             for tc in msg.tool_calls:
-                if tc["name"] not in allowed_tools:
-                    tool_ids_to_skip.add(tc["id"])
+                if tc["name"] not in allowed_tools and (id := tc["id"]):
+                    tool_ids_to_skip.add(id)
             msg.tool_calls = [
                 tc for tc in msg.tool_calls if tc["name"] in allowed_tools
             ]
@@ -66,7 +69,7 @@ async def router_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
         **state,
         "messages": _filter_messages_for_router(state["messages"]),
     }
-    response = await router_agent.ainvoke(filtered_state)
+    response = await router_agent.ainvoke(filtered_state)  # type: ignore[call-overload]
     output = response["messages"][-1].content[:500] if response.get("messages") else ""
     logger.info(" Output: %s", output or "(tool call)")
     logger.info("─" * 50)

@@ -43,7 +43,7 @@ async def _execute_interaction_loop(
             print("Encerrando a conversa")
             break
 
-        question = HumanMessage(content=user_input)
+        question = HumanMessage(id=str(uuid.uuid4()), content=user_input)
         await service.save_message(session_id=session_id, message=question)
         response = await execute_agent_flux(question, session_id)
         await service.save_message(session_id=session_id, message=response)

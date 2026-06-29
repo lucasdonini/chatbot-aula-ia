@@ -24,7 +24,7 @@ Conversa:
 
 
 class SessionSummaryService:
-    def __init__(self):
+    def __init__(self) -> None:
         self._llm = ChatGroq(
             model="llama-3.3-70b-versatile",
             temperature=0.0,
@@ -37,11 +37,16 @@ class SessionSummaryService:
         logger.debug("Sumarizing messages...")
 
         conversation = self._format_conversation(messages)
-        response = await self._llm.ainvoke(
-            _SUMMARY_PROMPT.format(conversa=conversation)
-        )
+        response = (
+            await self._llm.ainvoke(_SUMMARY_PROMPT.format(conversa=conversation))
+        ).content
 
-        return response.content.strip()
+        if not isinstance(response, str):
+            raise TypeError(
+                f"Summarizer returned non-text content: {type(response).__name__!r}"
+            )
+
+        return response.strip()
 
     def _format_conversation(self, messages: List[ChatMessage]) -> str:
         """Formats message array for summary"""

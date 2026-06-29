@@ -1,8 +1,7 @@
 import logging
 from datetime import datetime
-from typing import Union
+from typing import Literal, Union
 
-from bson import ObjectId
 from langchain_core.messages import AIMessage, HumanMessage
 
 from src.model.chat_session import ChatMessage, ChatSession
@@ -10,7 +9,7 @@ from src.model.chat_session import ChatMessage, ChatSession
 from .session_summary_service import SessionSummaryService
 
 logger = logging.getLogger(__name__)
-_active_sessions: dict[str, ObjectId] = {}
+_active_sessions: dict[str, str] = {}
 
 
 class ChatSessionService:
@@ -28,7 +27,7 @@ class ChatSessionService:
         )
 
         await session.insert()
-        _active_sessions[session_id] = session.id
+        _active_sessions[session_id] = str(session.id)
         logger.debug("User session initialized: %s", session)
 
     def get_active_sessions(self) -> dict[str, str]:
@@ -38,13 +37,18 @@ class ChatSessionService:
         self, session_id: str, message: Union[AIMessage, HumanMessage]
     ) -> None:
         id = _active_sessions[session_id]
-        role = "human" if isinstance(message, HumanMessage) else "assistant"
+        role: Literal["human", "assistant"] = (
+            "human" if isinstance(message, HumanMessage) else "assistant"
+        )
+        if not isinstance((content := message.content), str):
+            raise TypeError(
+                f"Received message with non-text content: {type(content).__name__!r}"
+            )
+
         await ChatSession.find_one(ChatSession.id == id).update(
             {
                 "$push": {
-                    ChatSession.messages: ChatMessage(
-                        role=role, content=message.content
-                    )
+                    ChatSession.messages: ChatMessage(role=role, content=content)
                 },
                 "$set": {ChatSession.updated_at: datetime.now()},
             }

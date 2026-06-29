@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
@@ -33,7 +34,7 @@ class LoggingMongoCommandListener(CommandListener):
     mongo database to improve maintanability
     """
 
-    def started(self, event: CommandStartedEvent):
+    def started(self, event: CommandStartedEvent) -> None:
         if event.command_name.lower() not in IGNORED_COMMANDS:
             logger.debug(
                 f"MONGO QUERY EXECUTED [{event.command_name}] - "
@@ -41,7 +42,7 @@ class LoggingMongoCommandListener(CommandListener):
                 f"Query: {event.command}"
             )
 
-    def succeeded(self, event: CommandSucceededEvent):
+    def succeeded(self, event: CommandSucceededEvent) -> None:
         if event.command_name.lower() not in IGNORED_COMMANDS:
             logger.debug(
                 f"MONGO QUERY SUCCEEDED [{event.command_name}] - "
@@ -49,7 +50,7 @@ class LoggingMongoCommandListener(CommandListener):
                 f"Execution time: {event.duration_micros / 1_000} s"
             )
 
-    def failed(self, event: CommandFailedEvent):
+    def failed(self, event: CommandFailedEvent) -> None:
         if event.command_name.lower() not in IGNORED_COMMANDS:
             logger.debug(
                 f"MONGO QUERY EXECUTED [{event.command_name}] - "
@@ -62,15 +63,15 @@ register(LoggingMongoCommandListener())
 
 
 class MongoManager:
-    _client = None
+    _client: Optional[AsyncMongoClient] = None
 
     @classmethod
-    async def init_database(cls):
+    async def init_database(cls) -> None:
         """Initialize connection and map classes"""
         if cls._client is None:
-            cls._client = AsyncMongoClient(settings.mongodb_uri)
+            cls._client = AsyncMongoClient(settings.mongodb_uri.get_secret_value())
             await init_beanie(
-                database=cls._client[settings.mongodb_dbname],
+                database=cls._client[settings.mongodb_dbname.get_secret_value()],
                 document_models=[ChatSession],
             )
             logger.info("MongoDB Beanie initialized successfully")
