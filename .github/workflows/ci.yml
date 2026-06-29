@@ -1,63 +1,80 @@
 name: CI
 
 on:
-    pull_request:
-        branches: [ main ]
+  pull_request:
+    branches: [main]
 
 jobs:
-    lint:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Install uv
-              uses: astral-sh/setup-uv@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
-            - name: Set up Python
-              run: uv python install 3.12
+      - name: Set up Python
+        run: uv python install 3.12
 
-            - name: Install dependencies
-              run: uv sync
+      - name: Install dependencies
+        run: uv sync
 
-            - name: Run Ruff
-              run: uv run ruff check .
+      - name: Run Ruff
+        run: uv run ruff check .
 
-    unit-tests:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Install uv
-              uses: astral-sh/setup-uv@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
-            - name: Set up Python
-              run: uv python install 3.12
+      - name: Set up Python
+        run: uv python install 3.12
 
-            - name: Install dependencies
-              run: uv sync
+      - name: Install dependencies
+        run: uv sync
 
-            - name: Create .env for tests
-              run: cp .env.example .env
+      - name: Create .env for tests
+        run: cp .env.example .env
 
-            - name: Run Pytest
-              run: uv run pytest
+      - name: Run Pytest
+        run: uv run pytest
 
-    integration-tests:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Install uv
-              uses: astral-sh/setup-uv@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
-            - name: Set up Python
-              run: uv python install 3.12
+      - name: Set up Python
+        run: uv python install 3.12
 
-            - name: Install dependencies
-              run: uv sync
+      - name: Install dependencies
+        run: uv sync
 
-            - name: Create .env for tests
-              run: cp .env.example .env
+      - name: Create .env for tests
+        run: cp .env.example .env
 
-            - name: Run integration tests
-              run: uv run pytest -m integration
+      - name: Run integration tests
+        run: uv run pytest -m integration
+
+  type-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run MyPy
+        run: uv run mypy .
