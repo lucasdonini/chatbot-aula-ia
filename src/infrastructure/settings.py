@@ -3,10 +3,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    gemini_api_key: SecretStr = SecretStr("")
-    groq_api_key: SecretStr = SecretStr("")
+    gemini_api_key: SecretStr = SecretStr("No key provided")
+    groq_api_key: SecretStr = SecretStr("No key provided")
 
-    postgres_url: SecretStr = SecretStr("")
+    postgres_url: SecretStr = SecretStr("No URL provided")
 
     mongodb_uri: SecretStr = SecretStr("mongodb://localhost:27017")
     mongodb_dbname: SecretStr = SecretStr("assessoria")
