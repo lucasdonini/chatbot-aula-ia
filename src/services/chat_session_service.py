@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from typing import Literal, Union
 
+from beanie import PydanticObjectId
 from langchain_core.messages import AIMessage, HumanMessage
 
 from src.model.chat_session import ChatMessage, ChatSession
@@ -9,7 +10,7 @@ from src.model.chat_session import ChatMessage, ChatSession
 from .session_summary_service import SessionSummaryService
 
 logger = logging.getLogger(__name__)
-_active_sessions: dict[str, str] = {}
+_active_sessions: dict[str, PydanticObjectId] = {}
 
 
 class ChatSessionService:
@@ -27,7 +28,7 @@ class ChatSessionService:
         )
 
         await session.insert()
-        _active_sessions[session_id] = str(session.id)
+        _active_sessions[session_id] = session.id
         logger.debug("User session initialized: %s", session)
 
     def get_active_sessions(self) -> dict[str, str]:
@@ -55,7 +56,7 @@ class ChatSessionService:
         )
         logger.debug("Message saved: %s", message)
 
-    async def finalize_session(self, session_id: str) -> str:
+    async def finalize_session(self, session_id: str) -> None:
         """
         Finalizes the active session:
             1. Load messages from MongoDB
@@ -67,11 +68,11 @@ class ChatSessionService:
 
         id = _active_sessions.get(session_id)
         if id is None:
-            return ""
+            return
 
         session = await ChatSession.find_one(ChatSession.id == id)
         if not session or not session.messages:
-            return ""
+            return
 
         summary = await self._service.sumarize(session.messages)
         await session.update(
@@ -85,4 +86,3 @@ class ChatSessionService:
 
         _active_sessions.pop(session_id)
         logger.debug("Session finalized: %s", session)
-        return summary
