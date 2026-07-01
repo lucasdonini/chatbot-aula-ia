@@ -1,6 +1,5 @@
 import logging
 from datetime import date
-from typing import Any
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -11,7 +10,7 @@ from src.services.transaction_service import TransactionService
 logger = logging.getLogger(__name__)
 
 
-class DailyBalanceArgsSchema(BaseModel):
+class _DailyBalanceArgsSchema(BaseModel):
     target_date: date = Field(
         ...,
         description=(
@@ -27,7 +26,7 @@ class DailyBalanceArgsSchema(BaseModel):
 
 class DailyBalanceTool(BaseTool):
     name: str = "daily_balance"
-    args_schema: type[BaseModel] = DailyBalanceArgsSchema
+    args_schema: type[BaseModel] = _DailyBalanceArgsSchema
     description: str = (
         "Retorna o saldo (INCOME - EXPENSES) do dia local informado "
         "em America/Sao_Paulo. Ignora TRANSFER (type=3)"
@@ -35,7 +34,7 @@ class DailyBalanceTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, target_date: date, *args: Any, **kwargs: Any) -> ToolResponse:
+    def _run(self, target_date: date) -> ToolResponse:
         logger.debug("%s tool called: (target_date=%s)", self.name, target_date)
         try:
             balance = self.service.calculate_daily_balance(target_date)

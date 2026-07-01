@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -11,15 +10,18 @@ from src.services.transaction_service import TransactionService
 logger = logging.getLogger(__name__)
 
 
+class _AddTransactionArgsSchema(BaseModel):
+    transaction: Transaction
+
+
 class AddTransactionTool(BaseTool):
     name: str = "add_transaction"
-    args_schema: type[BaseModel] = Transaction
+    args_schema: type[BaseModel] = _AddTransactionArgsSchema
     description: str = "Insere uma transação financeira no banco de dados PosthreSQL."
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, *args: Any, **kwargs: Any) -> ToolResponse:
-        transaction = args[0] if args else Transaction(**kwargs)
+    def _run(self, transaction: Transaction) -> ToolResponse:
         logger.debug("%s tool called. Transaction: %s", self.name, transaction)
         try:
             added = self.service.add_transaction(transaction)
