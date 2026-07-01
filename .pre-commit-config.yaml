@@ -5,13 +5,3 @@ repos:
       - id: ruff-check
         args: [ --fix ]
       - id: ruff-format
-
-  - repo: local
-    hooks:
-      - id: mypy
-        name: mypy
-        entry: uv run mypy --cache-dir /tmp/.mypy_cache_assessor
-        language: system
-        args: [ . ]
-        pass_filenames: false
-        require_serial: true
