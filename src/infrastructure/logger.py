@@ -27,7 +27,7 @@ class HideConsoleTracebackFilter(logging.Filter):
 class NewLineNormalizingFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         line = super().format(record)
-        return line.replace("\n", "\n\t\t")
+        return line.replace("\n", "\n\t")
 
 
 def setup_logger(log_file: str = "logs/app.log", level: int = logging.DEBUG) -> None:
