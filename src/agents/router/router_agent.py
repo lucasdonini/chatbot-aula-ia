@@ -1,6 +1,7 @@
 import copy
+import json
 import logging
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Set, cast
 
 from langchain.agents import create_agent
 from langchain_core.messages import AIMessage, AnyMessage, ToolMessage
@@ -33,6 +34,22 @@ router_agent.ainvoke = log_execution_time(  # type: ignore[assignment]
 )
 
 
+SPECIALIST_JSON_KEYS = {"dominio"}
+
+
+def _is_specialist_json(content: Any) -> bool:
+    if not isinstance(content, str):
+        return False
+    text = content.strip()
+    if not (text.startswith("{") and text.endswith("}")):
+        return False
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return False
+    return isinstance(data, dict) and bool(SPECIALIST_JSON_KEYS & data.keys())
+
+
 def _filter_messages_for_router(messages: List[AnyMessage]) -> List[AnyMessage]:
     """
     Remove tool calls/results from other agents so that
@@ -44,16 +61,32 @@ def _filter_messages_for_router(messages: List[AnyMessage]) -> List[AnyMessage]:
 
     for msg in messages:
         if isinstance(msg, AIMessage) and msg.tool_calls:
-            msg = copy.deepcopy(msg)
-            for tc in msg.tool_calls:
-                if tc["name"] not in allowed_tools and (id := tc["id"]):
-                    tool_ids_to_skip.add(id)
-            msg.tool_calls = [
-                tc for tc in msg.tool_calls if tc["name"] in allowed_tools
-            ]
-            msg.invalid_tool_calls = []
+            foreign_ids = {
+                cast(str, tc["id"])
+                for tc in msg.tool_calls
+                if tc["name"] not in allowed_tools and tc.get("id")
+            }
+            if foreign_ids:
+                tool_ids_to_skip.update(foreign_ids)
 
-        if isinstance(msg, ToolMessage) and msg.tool_call_id in tool_ids_to_skip:
+            own_calls = [tc for tc in msg.tool_calls if tc["name"] in allowed_tools]
+            if not own_calls:
+                continue
+
+            msg = copy.deepcopy(msg)
+            msg.tool_calls = own_calls
+            msg.invalid_tool_calls = []
+            filtered.append(msg)
+            continue
+
+        if isinstance(msg, ToolMessage):
+            if msg.tool_call_id not in tool_ids_to_skip:
+                filtered.append(msg)
+            continue
+
+        if isinstance(msg, AIMessage):
+            if not _is_specialist_json(msg.content):
+                filtered.append(msg)
             continue
 
         filtered.append(msg)

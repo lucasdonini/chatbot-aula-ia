@@ -10,6 +10,8 @@ from src.services.chat_history_service import ChatHistoryService
 
 logger = logging.getLogger(__name__)
 
+TOOL_NAME = "search_history"
+
 
 class SearchHistoryArgsSchema(BaseModel):
     search: str = Field(
@@ -19,7 +21,7 @@ class SearchHistoryArgsSchema(BaseModel):
 
 class SearchHistoryTool(BaseTool):
     args_schema: type[BaseModel] = SearchHistoryArgsSchema
-    name: str = "search_history"
+    name: str = TOOL_NAME
     description: str = (
         "Consulta conversas ANTERIORES do usuário (sessões já encerradas).\n\n"
         "Use SOMENTE quando a resposta depende de algo dito numa conversa passada"

@@ -5,6 +5,7 @@ from ..faq import FAQ_NODE_NAME
 from ..financial import FINANCIAL_NODE_NAME
 from ..general_persona import SYSTEM_PERSONA
 from ..temporal_context import TEMPORAL_CONTEXT
+from .tools import SEARCH_HISTORY_TOOL_NAME
 
 SPECIALIST_ROUTES = {
     AGENDA_NODE_NAME,
@@ -30,7 +31,7 @@ _BASE_PROMPT = f"""
 - Quando for caso de especialista, NÃO responder ao usuário; apenas encaminhar a mensagem ORIGINAL para o especialista.
 - Se o histórico indicar que o usuário está respondendo a uma clarificação anterior de um especialista, encaminhe para o mesmo domínio da última rota junto ao seu histórico.
 - Quando o usuário mencionar conversas anteriores, decisões prévias, preferências já definidas ou planos feitos antes, chame a tool `search_history` com uma busca curta sobre o assunto para recuperar o contexto relevante.
-- Use `search_history` SOMENTE para histórico de sessões anteriores; não a use para dados de saldo, transações ou eventos do banco, pois isso é responsabilidade dos agentes especialistas que têm outras tools para isso.
+- Use `{SEARCH_HISTORY_TOOL_NAME}` SOMENTE para histórico de sessões anteriores; não a use para dados de saldo, transações ou eventos do banco, pois isso é responsabilidade dos agentes especialistas que têm outras tools para isso.
 - Perguntas sobre regras, políticas, termos de uso, responsabilidades, restrições, dúvidas gerais sobre o sistema ou o comportamento do Acessor.IA devem ir SEMPRE para o agente faq, NUNCA para fora_escopo ou financeiro/agenda
 
 
@@ -43,6 +44,19 @@ _BASE_PROMPT = f"""
 ### PROTOCOLO DE ENCAMINHAMENTO 
 ROUTE={SPECIALIST_ROUTES}
 PERGUNTA_ORIGINAL=[mensagem completa do usuário, sem edições]
+
+
+### FLUXO OBRIGATÓRIO
+1. A partir do input, descubra a intenção do usuário;
+2. Procure um especialista que se enquadre na intenção do usuário;
+3. Se encontrar, encaminhe para o especialista encontrado;
+4. Se não, tente responder ao usuário sem sair do seu escopo.
+
+
+### REGRAS
+- NUNCA execute ações fora do seu contexto
+- NUNCA responda perguntas que deveriam ser encaminhadas a especialistas
+
 
 """
 
