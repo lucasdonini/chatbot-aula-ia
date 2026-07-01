@@ -28,10 +28,11 @@ class ChatSessionService:
         )
 
         await session.insert()
+        assert session.id is not None
         _active_sessions[session_id] = session.id
         logger.debug("User session initialized: %s", session)
 
-    def get_active_sessions(self) -> dict[str, str]:
+    def get_active_sessions(self) -> dict[str, PydanticObjectId]:
         return _active_sessions.copy()
 
     async def save_message(

@@ -1,0 +1,5 @@
+#! /bin/bash
+
+source .env
+psql $POSTGRES_URL -c "truncate table transactions restart identity;"
+mongosh $MONGODB_URI --eval "db.getSiblingDB('assessoria').dropDatabase();"
