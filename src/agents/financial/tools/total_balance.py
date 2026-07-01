@@ -1,8 +1,7 @@
 import logging
-from typing import Any
 
 from langchain_core.tools import BaseTool
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from src.model.tool_response import ToolResponse
 from src.services.transaction_service import TransactionService
@@ -10,8 +9,13 @@ from src.services.transaction_service import TransactionService
 logger = logging.getLogger(__name__)
 
 
+class _TotalBalanceArgsSchema(BaseModel):
+    pass
+
+
 class TotalBalanceTool(BaseTool):
     name: str = "total_balance"
+    args_schema: type[BaseModel] = _TotalBalanceArgsSchema
     description: str = (
         "Recupera do banco de dados o saldo atual "
         "a partir de todas as transações registradas"
@@ -19,7 +23,7 @@ class TotalBalanceTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, *args: Any, **kwargs: Any) -> ToolResponse:
+    def _run(self) -> ToolResponse:
         logger.debug("%s tool called.", self.name)
         try:
             balance = self.service.calculate_total_balance()

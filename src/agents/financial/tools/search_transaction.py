@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -11,9 +10,13 @@ from src.services.transaction_service import TransactionService
 logger = logging.getLogger(__name__)
 
 
+class _SearchTransactionsArgsSchema(BaseModel):
+    params: TransactionQueryParams
+
+
 class SearchTransactionsTool(BaseTool):
     name: str = "search_transactions"
-    args_schema: type[BaseModel] = TransactionQueryParams
+    args_schema: type[BaseModel] = _SearchTransactionsArgsSchema
     description: str = (
         "Busca no banco de dados uma transação de acordo com os parâmetros passados. "
         "Caso nenhum parâmetro seja passado, retorna as útlimas 10 transações. "
@@ -30,8 +33,7 @@ class SearchTransactionsTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, *args: Any, **kwargs: Any) -> ToolResponse:
-        params = args[0] if args else TransactionQueryParams(**kwargs)
+    def _run(self, params: TransactionQueryParams) -> ToolResponse:
         logger.debug("%s tool called. Params: %s", self.name, params)
         try:
             result = self.service.search_transactions(params)
