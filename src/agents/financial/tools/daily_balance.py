@@ -24,8 +24,11 @@ class _DailyBalanceArgsSchema(BaseModel):
     )
 
 
+TOOL_NAME = "daily_balance"
+
+
 class DailyBalanceTool(BaseTool):
-    name: str = "daily_balance"
+    name: str = TOOL_NAME
     args_schema: type[BaseModel] = _DailyBalanceArgsSchema
     description: str = (
         "Retorna o saldo (INCOME - EXPENSES) do dia local informado "

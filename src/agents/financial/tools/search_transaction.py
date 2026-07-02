@@ -14,8 +14,11 @@ class _SearchTransactionsArgsSchema(BaseModel):
     params: TransactionQueryParams
 
 
+TOOL_NAME = "search_transactions"
+
+
 class SearchTransactionsTool(BaseTool):
-    name: str = "search_transactions"
+    name: str = TOOL_NAME
     args_schema: type[BaseModel] = _SearchTransactionsArgsSchema
     description: str = (
         "Busca no banco de dados uma transação de acordo com os parâmetros passados. "

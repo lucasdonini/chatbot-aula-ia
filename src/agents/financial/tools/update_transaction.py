@@ -14,8 +14,11 @@ class _UpdateTransactionArgsSchema(BaseModel):
     params: UpdateTransactionParams
 
 
+TOOL_NAME = "update_transaction"
+
+
 class UpdateTransactionTool(BaseTool):
-    name: str = "update_transaction"
+    name: str = TOOL_NAME
     args_schema: type[BaseModel] = _UpdateTransactionArgsSchema
     description: str = (
         "Atualiza uma transação existente.\n"

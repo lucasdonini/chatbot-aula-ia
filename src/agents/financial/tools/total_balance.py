@@ -13,8 +13,11 @@ class _TotalBalanceArgsSchema(BaseModel):
     pass
 
 
+TOOL_NAME = "total_balance"
+
+
 class TotalBalanceTool(BaseTool):
-    name: str = "total_balance"
+    name: str = TOOL_NAME
     args_schema: type[BaseModel] = _TotalBalanceArgsSchema
     description: str = (
         "Recupera do banco de dados o saldo atual "
