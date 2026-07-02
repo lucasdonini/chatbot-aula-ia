@@ -108,17 +108,17 @@ class TransactionRepository:
             return None
 
         stmt = select(TransactionORM)
-        if params.id:
-            stmt = stmt.where(TransactionORM.id == params.id)
-        elif params.match_text and params.date_local:
-            period_start = datetime.combine(params.date_local, time.min)
-            period_end = datetime.combine(
-                params.date_local + timedelta(days=1), time.min
-            )
+        if id := params.query.id:
+            stmt = stmt.where(TransactionORM.id == id)
+        elif (match_text := params.query.match_text) and (
+            date_local := params.query.date_local
+        ):
+            period_start = datetime.combine(date_local, time.min)
+            period_end = datetime.combine(date_local + timedelta(days=1), time.min)
             stmt = stmt.where(
                 or_(
-                    TransactionORM.source_text.ilike(f"%{params.match_text}%"),
-                    TransactionORM.description.ilike(f"%{params.match_text}%"),
+                    TransactionORM.source_text.ilike(f"%{match_text}%"),
+                    TransactionORM.description.ilike(f"%{match_text}%"),
                 ),
                 TransactionORM.occurred_at >= period_start,
                 TransactionORM.occurred_at < period_end,
@@ -133,18 +133,20 @@ class TransactionRepository:
         stmt = stmt.order_by(TransactionORM.occurred_at).limit(1)
         to_update = params.model_dump(
             exclude_none=True,
-            exclude={"id", "match_text", "date_local"},
+            exclude={"query"},
         )
 
         logger.debug("Locate update target query: %s", str(stmt))
         with self._session_factory() as session:
             target = session.scalar(stmt)
-            for attr, val in to_update.items():
-                setattr(target, attr, val)
-            session.commit()
 
             if not target:
                 return None
+
+            for attr, val in to_update.items():
+                setattr(target, attr, val)
+            session.commit()
+            session.refresh(target)
 
             logger.debug("Updated: %s", target)
             return self._orm_to_model(target)
