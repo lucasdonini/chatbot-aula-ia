@@ -14,8 +14,11 @@ class _AddTransactionArgsSchema(BaseModel):
     transaction: Transaction
 
 
+TOOL_NAME = "add_transaction"
+
+
 class AddTransactionTool(BaseTool):
-    name: str = "add_transaction"
+    name: str = TOOL_NAME
     args_schema: type[BaseModel] = _AddTransactionArgsSchema
     description: str = "Insere uma transação financeira no banco de dados PosthreSQL."
 
