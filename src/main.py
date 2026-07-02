@@ -1,11 +1,11 @@
 import asyncio
 import logging
-import os
 import uuid
 
 from langchain_core.messages import HumanMessage
 
 from .agents import execute_agent_flux
+from .infrastructure.console_utils import clear_console
 from .infrastructure.logger import setup_logger
 from .infrastructure.md_console import print
 from .infrastructure.mongo_connection import MongoManager
@@ -34,7 +34,7 @@ async def main() -> None:
 async def _execute_interaction_loop(
     service: ChatSessionService, session_id: str
 ) -> None:
-    os.system("cls")
+    clear_console()
     print("\n# Bem vindo! Converse hoje mesmo com o Assessor.IA!!\n")
 
     while True:
