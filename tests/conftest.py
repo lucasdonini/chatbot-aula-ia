@@ -43,7 +43,10 @@ from src.infrastructure.repositories.transaction_repository import (  # noqa: E4
 )
 from src.model.transaction import Category, Transaction, TransactionType  # noqa: E402
 from src.model.transaction_query_params import TransactionQueryParams  # noqa: E402
-from src.model.update_transaction_params import UpdateTransactionParams  # noqa: E402
+from src.model.update_transaction_params import (  # noqa: E402
+    UpdateTransactionParams,
+    UpdateTransactionQuery,
+)
 from src.services.transaction_service import TransactionService  # noqa: E402
 
 
@@ -83,7 +86,7 @@ def sample_query_params() -> TransactionQueryParams:
 @pytest.fixture
 def sample_update_params_by_id() -> UpdateTransactionParams:
     return UpdateTransactionParams(
-        id=uuid4(),
+        query=UpdateTransactionQuery(id=uuid4()),
         amount=200.00,
         description="Atualizado",
     )
@@ -92,8 +95,10 @@ def sample_update_params_by_id() -> UpdateTransactionParams:
 @pytest.fixture
 def sample_update_params_by_match() -> UpdateTransactionParams:
     return UpdateTransactionParams(
-        match_text="almoço",
-        date_local=date(2026, 6, 1),
+        query=UpdateTransactionQuery(
+            match_text="almoço",
+            date_local=date(2026, 6, 1),
+        ),
         amount=200.00,
     )
 
@@ -101,8 +106,10 @@ def sample_update_params_by_match() -> UpdateTransactionParams:
 @pytest.fixture
 def sample_update_params_empty() -> UpdateTransactionParams:
     return UpdateTransactionParams(
-        match_text="almoço",
-        date_local=date(2026, 6, 1),
+        query=UpdateTransactionQuery(
+            match_text="almoço",
+            date_local=date(2026, 6, 1),
+        ),
     )
 
 

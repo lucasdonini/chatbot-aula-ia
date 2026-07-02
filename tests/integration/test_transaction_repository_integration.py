@@ -5,7 +5,10 @@ import pytest
 from src.infrastructure.postgres.entities.transaction import TransactionORM
 from src.model.transaction import Category, Transaction, TransactionType
 from src.model.transaction_query_params import TransactionQueryParams
-from src.model.update_transaction_params import UpdateTransactionParams
+from src.model.update_transaction_params import (
+    UpdateTransactionParams,
+    UpdateTransactionQuery,
+)
 
 pytestmark = [
     pytest.mark.integration,
@@ -185,9 +188,7 @@ class TestUpdateTransaction:
     def test_update_by_id(self, transaction_repository, db_session, seed_transactions):
         target = seed_transactions[0]
         params = UpdateTransactionParams(
-            id=target.id,
-            match_text="target",
-            date_local=date(2026, 6, 1),
+            query=UpdateTransactionQuery(id=target.id),
             amount=5500.00,
             description="Salário atualizado",
         )
@@ -203,9 +204,10 @@ class TestUpdateTransaction:
         self, transaction_repository, db_session, seed_transactions
     ):
         params = UpdateTransactionParams(
-            id=seed_transactions[0].id,
-            match_text="almoço",
-            date_local=date(2026, 6, 1),
+            query=UpdateTransactionQuery(
+                match_text="almoço",
+                date_local=date(2026, 6, 1),
+            ),
             amount=175.00,
         )
         result = transaction_repository.update_transaction(params)
@@ -215,15 +217,20 @@ class TestUpdateTransaction:
 
     def test_update_nothing_to_update(self, transaction_repository, seed_transactions):
         params = UpdateTransactionParams(
-            match_text="almoço",
-            date_local=date(2026, 6, 1),
+            query=UpdateTransactionQuery(
+                match_text="almoço",
+                date_local=date(2026, 6, 1),
+            ),
         )
         result = transaction_repository.update_transaction(params)
 
         assert result is None
 
     def test_update_no_reference_raises(self, transaction_repository):
-        params = UpdateTransactionParams(amount=100.00)
+        params = UpdateTransactionParams(
+            query=UpdateTransactionQuery(),
+            amount=100.00,
+        )
 
         with pytest.raises(ValueError, match="reference"):
             transaction_repository.update_transaction(params)

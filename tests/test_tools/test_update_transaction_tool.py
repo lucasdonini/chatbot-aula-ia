@@ -6,7 +6,10 @@ import pytest
 from src.agents.financial.tools.update_transaction import UpdateTransactionTool
 from src.model.tool_response import ToolResponse
 from src.model.transaction import Category, Transaction, TransactionType
-from src.model.update_transaction_params import UpdateTransactionParams
+from src.model.update_transaction_params import (
+    UpdateTransactionParams,
+    UpdateTransactionQuery,
+)
 from src.services.transaction_service import TransactionService
 
 
@@ -19,7 +22,9 @@ class TestUpdateTransactionTool:
 
     def test_updates_and_returns_ok(self, tool):
         params = UpdateTransactionParams(
-            id=uuid4(), amount=200.0, category=Category.FOOD
+            query=UpdateTransactionQuery(id=uuid4()),
+            amount=200.0,
+            category=Category.FOOD,
         )
         updated = Transaction(
             amount=200.0,
@@ -37,7 +42,9 @@ class TestUpdateTransactionTool:
 
     def test_nothing_to_update(self, tool):
         params = UpdateTransactionParams(
-            match_text="teste", date_local=date(2026, 1, 1)
+            query=UpdateTransactionQuery(
+                match_text="teste", date_local=date(2026, 1, 1)
+            ),
         )
         tool.service.update_transaction = lambda p: None
 
@@ -52,7 +59,10 @@ class TestUpdateTransactionTool:
 
         tool.service.update_transaction = raise_error
 
-        params = UpdateTransactionParams(id=uuid4(), amount=200.0)
+        params = UpdateTransactionParams(
+            query=UpdateTransactionQuery(id=uuid4()),
+            amount=200.0,
+        )
         result = tool._run(params)
 
         assert result.status == "error"
