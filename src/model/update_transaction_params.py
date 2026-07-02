@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 from .transaction import Category, TransactionType
 
 
-class UpdateTransactionParams(BaseModel):
+class UpdateTransactionQuery(BaseModel):
     id: Optional[UUID] = Field(
         default=None,
         description=(
@@ -31,6 +31,10 @@ class UpdateTransactionParams(BaseModel):
             "com match_text quando id ausente."
         ),
     )
+
+
+class UpdateTransactionParams(BaseModel):
+    query: UpdateTransactionQuery
 
     amount: Optional[float] = Field(default=None, description="Novo valor.")
 
