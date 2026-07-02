@@ -6,7 +6,10 @@ import pytest
 
 from src.model.transaction import Category, Transaction, TransactionType
 from src.model.transaction_query_params import TransactionQueryParams
-from src.model.update_transaction_params import UpdateTransactionParams
+from src.model.update_transaction_params import (
+    UpdateTransactionParams,
+    UpdateTransactionQuery,
+)
 
 
 class TestSumAmountsByTransactionType:
@@ -156,9 +159,7 @@ class TestUpdateTransaction:
     def test_update_by_id(self, repository, mock_session):
         target_id = uuid4()
         params = UpdateTransactionParams(
-            id=target_id,
-            match_text="target",
-            date_local=date(2026, 6, 1),
+            query=UpdateTransactionQuery(id=target_id),
             amount=200.0,
             category=Category.HEALTH,
         )
@@ -174,16 +175,20 @@ class TestUpdateTransaction:
         mock_orm.updated_at = datetime.now(timezone.utc)
         mock_session.scalar.return_value = mock_orm
         mock_session.commit.return_value = None
+        mock_session.refresh.return_value = None
 
         result = repository.update_transaction(params)
 
         assert result is not None
         assert isinstance(result, Transaction)
         mock_session.commit.assert_called_once()
+        mock_session.refresh.assert_called_once()
 
     def test_update_nothing_to_update(self, repository, mock_session):
         params = UpdateTransactionParams(
-            match_text="teste", date_local=date(2026, 1, 1)
+            query=UpdateTransactionQuery(
+                match_text="teste", date_local=date(2026, 1, 1)
+            ),
         )
 
         result = repository.update_transaction(params)
@@ -193,15 +198,17 @@ class TestUpdateTransaction:
         mock_session.commit.assert_not_called()
 
     def test_update_no_reference_raises(self, repository, mock_session):
-        params = UpdateTransactionParams(amount=100.0)
+        params = UpdateTransactionParams(query=UpdateTransactionQuery(), amount=100.0)
 
         with pytest.raises(ValueError, match="reference"):
             repository.update_transaction(params)
 
     def test_update_by_match_text(self, repository, mock_session):
         params = UpdateTransactionParams(
-            match_text="almoço",
-            date_local=date(2026, 6, 1),
+            query=UpdateTransactionQuery(
+                match_text="almoço",
+                date_local=date(2026, 6, 1),
+            ),
             amount=150.0,
         )
         mock_orm = MagicMock()
@@ -216,8 +223,22 @@ class TestUpdateTransaction:
         mock_orm.updated_at = datetime.now(timezone.utc)
         mock_session.scalar.return_value = mock_orm
         mock_session.commit.return_value = None
+        mock_session.refresh.return_value = None
 
         result = repository.update_transaction(params)
 
         assert result is not None
         mock_session.commit.assert_called_once()
+        mock_session.refresh.assert_called_once()
+
+    def test_update_not_found_returns_none(self, repository, mock_session):
+        params = UpdateTransactionParams(
+            query=UpdateTransactionQuery(id=uuid4()),
+            amount=200.0,
+        )
+        mock_session.scalar.return_value = None
+
+        result = repository.update_transaction(params)
+
+        assert result is None
+        mock_session.commit.assert_not_called()

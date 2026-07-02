@@ -72,14 +72,14 @@ class TestChatSessionService:
 
             result = await service.finalize_session("session-123")
 
-            assert result == "Resumo da sessão"
+            assert result is None
             assert "session-123" not in chat_session_service._active_sessions
             summary_service.sumarize.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_finalize_session_no_active(self, service, summary_service):
         result = await service.finalize_session("unknown")
-        assert result == ""
+        assert result is None
 
     @pytest.mark.asyncio
     async def test_finalize_no_messages(self, service, summary_service):
@@ -95,7 +95,7 @@ class TestChatSessionService:
 
             result = await service.finalize_session("session-123")
 
-            assert result == ""
+            assert result is None
 
     def test_get_active_sessions_returns_copy(self, service, summary_service):
         chat_session_service._active_sessions["s1"] = "d1"

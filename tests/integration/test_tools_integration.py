@@ -4,12 +4,16 @@ import pytest
 
 from src.agents.financial.tools.add_transaction import AddTransactionTool
 from src.agents.financial.tools.daily_balance import DailyBalanceTool
+from src.agents.financial.tools.delete_transaction import DeleteTransactionTool
 from src.agents.financial.tools.search_transaction import SearchTransactionsTool
 from src.agents.financial.tools.total_balance import TotalBalanceTool
 from src.agents.financial.tools.update_transaction import UpdateTransactionTool
 from src.model.transaction import Category, Transaction, TransactionType
 from src.model.transaction_query_params import TransactionQueryParams
-from src.model.update_transaction_params import UpdateTransactionParams
+from src.model.update_transaction_params import (
+    UpdateTransactionParams,
+    UpdateTransactionQuery,
+)
 
 pytestmark = [
     pytest.mark.integration,
@@ -40,6 +44,11 @@ def add_tool(transaction_service):
 @pytest.fixture
 def update_tool(transaction_service):
     return UpdateTransactionTool(service=transaction_service)
+
+
+@pytest.fixture
+def delete_tool(transaction_service):
+    return DeleteTransactionTool(service=transaction_service)
 
 
 class TestTotalBalanceTool:
@@ -115,9 +124,7 @@ class TestUpdateTransactionTool:
     def test_update_by_id(self, update_tool, seed_transactions):
         target = seed_transactions[0]
         params = UpdateTransactionParams(
-            id=target.id,
-            match_text="target",
-            date_local=date(2026, 6, 1),
+            query=UpdateTransactionQuery(id=target.id),
             amount=6000.00,
             description="Atualizado via tool",
         )
@@ -127,9 +134,28 @@ class TestUpdateTransactionTool:
 
     def test_nothing_to_update(self, update_tool, seed_transactions):
         params = UpdateTransactionParams(
-            match_text="almoço",
-            date_local=date(2026, 6, 1),
+            query=UpdateTransactionQuery(
+                match_text="almoço",
+                date_local=date(2026, 6, 1),
+            ),
         )
         result = update_tool._run(params)
         assert result.status == "ok"
         assert result.data["updated"] == "Nothing to update"
+
+
+class TestDeleteTransactionTool:
+    def test_delete_by_id(self, delete_tool, seed_transactions):
+        target = seed_transactions[0]
+        query = UpdateTransactionQuery(id=target.id)
+        result = delete_tool._run(query)
+        assert result.status == "ok"
+        assert result.data["deleted"] is True
+
+    def test_delete_not_found(self, delete_tool, seed_transactions):
+        from uuid import uuid4
+
+        query = UpdateTransactionQuery(id=uuid4())
+        result = delete_tool._run(query)
+        assert result.status == "ok"
+        assert result.data["deleted"] is False

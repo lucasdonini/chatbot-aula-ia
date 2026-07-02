@@ -4,7 +4,10 @@ import pytest
 
 from src.model.transaction import Category, Transaction, TransactionType
 from src.model.transaction_query_params import TransactionQueryParams
-from src.model.update_transaction_params import UpdateTransactionParams
+from src.model.update_transaction_params import (
+    UpdateTransactionParams,
+    UpdateTransactionQuery,
+)
 
 pytestmark = [
     pytest.mark.integration,
@@ -78,9 +81,7 @@ class TestUpdateTransaction:
     def test_update(self, transaction_service, seed_transactions):
         target = seed_transactions[0]
         params = UpdateTransactionParams(
-            id=target.id,
-            match_text="target",
-            date_local=date(2026, 6, 1),
+            query=UpdateTransactionQuery(id=target.id),
             amount=5200.00,
         )
         result = transaction_service.update_transaction(params)
@@ -90,14 +91,19 @@ class TestUpdateTransaction:
 
     def test_update_no_match(self, transaction_service, seed_transactions):
         params = UpdateTransactionParams(
-            match_text="inexistente",
-            date_local=date(2026, 6, 1),
+            query=UpdateTransactionQuery(
+                match_text="inexistente",
+                date_local=date(2026, 6, 1),
+            ),
         )
         assert params.has_update is False
         result = transaction_service.update_transaction(params)
         assert result is None
 
     def test_update_no_reference(self, transaction_service):
-        params = UpdateTransactionParams(amount=100.00)
+        params = UpdateTransactionParams(
+            query=UpdateTransactionQuery(),
+            amount=100.00,
+        )
         with pytest.raises(ValueError):
             transaction_service.update_transaction(params)
