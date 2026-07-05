@@ -78,6 +78,16 @@ class TransactionQueryParams(BaseModel):
         ),
     )
 
+    is_canceled: Optional[bool] = Field(
+        default=False,
+        description=(
+            "Indica se a transação foi cancelada para o usuário ou não. "
+            "Equivalente a excluir a transação se verdadeiro. "
+            "Use False como default. Passe explicitamente None se quiser "
+            "ver todas ou True se quiser as canceladas."
+        ),
+    )
+
     limit: Optional[int] = Field(
         default=50,
         description=(

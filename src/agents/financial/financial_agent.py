@@ -16,6 +16,7 @@ from .tools import (
     AddTransactionTool,
     DailyBalanceTool,
     DeleteTransactionTool,
+    RestoreTransactionTool,
     SearchTransactionsTool,
     TotalBalanceTool,
     UpdateTransactionTool,
@@ -32,6 +33,7 @@ search_transactions = SearchTransactionsTool(service=transaction_service)
 add_transaction = AddTransactionTool(service=transaction_service)
 update_transaction = UpdateTransactionTool(service=transaction_service)
 delete_transaction = DeleteTransactionTool(service=transaction_service)
+restore_transaction = RestoreTransactionTool(service=transaction_service)
 
 TOOLS = [
     total_balance,
@@ -40,6 +42,7 @@ TOOLS = [
     add_transaction,
     update_transaction,
     delete_transaction,
+    restore_transaction,
 ]
 
 

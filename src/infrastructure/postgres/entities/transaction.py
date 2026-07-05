@@ -54,6 +54,10 @@ class TransactionORM(Base):
 
     source_text: Mapped[str] = mapped_column(sa.Text, nullable=False)
 
+    is_canceled: Mapped[bool] = mapped_column(
+        sa.Boolean, nullable=False, server_default=sa.false()
+    )
+
     __table_args__ = (
         sa.Index(
             "idx_transactions_occurred_at",

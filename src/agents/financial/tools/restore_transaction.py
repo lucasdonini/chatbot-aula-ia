@@ -13,38 +13,38 @@ from src.services.transaction_service import TransactionService
 logger = logging.getLogger(__name__)
 
 
-class _DeleteTransactionArgsSchema(BaseModel):
+class _RestoreTransactionArgsSchema(BaseModel):
     query: UpdateTransactionQuery
 
 
-TOOL_NAME = "delete_transaction"
+TOOL_NAME = "restore_transaction"
 
 
-class DeleteTransactionTool(BaseTool):
+class RestoreTransactionTool(BaseTool):
     name: str = TOOL_NAME
-    args_schema: type[BaseModel] = _DeleteTransactionArgsSchema
+    args_schema: type[BaseModel] = _RestoreTransactionArgsSchema
     description: str = (
-        "Deleta / cancela uma transação existente.\n"
+        "Restaura uma transação deletada / cancelada.\n"
         "Estratégias:\n"
-        "\t- Se 'id' for informado: deleta diretamente por ID.\n"
+        "\t- Se 'id' for informado: restaura diretamente por ID.\n"
         "\t- Caso contrário: localiza a transação mais recente que combine "
         "(match_text em source_text/description) "
-        "E (date_local em America/Sao_Paulo), então deleta.\n"
-        "Retorna verdadeiro se deletou algo, falso caso contrário"
+        "E (date_local em America/Sao_Paulo), então restaura.\n"
+        "Retorna verdadeiro se restaurou algo, falso caso contrário"
     )
 
     service: TransactionService = Field(exclude=True)
 
     def _run(self, query: UpdateTransactionQuery) -> ToolResponse:
         logger.debug("%s tool called. query %s", self.name, query)
-        params = UpdateTransactionParams(query=query, is_canceled=True)
+        params = UpdateTransactionParams(query=query, is_canceled=False)
         try:
             if self.service.update_transaction(params):
-                logger.debug("Transcation deleted successfully")
-                return ToolResponse.ok({"deleted": True})
+                logger.debug("Transcation restored successfully")
+                return ToolResponse.ok({"restored": True})
             else:
-                logger.debug("No transaction deleted.")
-                return ToolResponse.ok({"deleted": False})
+                logger.debug("No transaction restored.")
+                return ToolResponse.ok({"restored": False})
         except Exception as e:
-            logger.exception("Exception rasied while deleting transaction")
+            logger.exception("Exception rasied while restoring transaction")
             return ToolResponse.exception(e)

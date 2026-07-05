@@ -81,3 +81,11 @@ class Transaction(BaseModel):
     )
 
     source_text: str = Field(..., description="Texto original do usuário.")
+
+    is_canceled: bool = Field(
+        default=False,
+        description=(
+            "Indica se a transação foi cancelada para o usuário ou não. "
+            "Equivalente a excluir a transação se verdadeiro."
+        ),
+    )
