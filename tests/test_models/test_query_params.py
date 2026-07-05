@@ -64,3 +64,21 @@ class TestTransactionQueryParams:
     def test_category_as_enum(self):
         params = TransactionQueryParams(category=Category.FOOD)
         assert params.category == Category.FOOD
+
+    def test_is_canceled_default_false(self):
+        params = TransactionQueryParams()
+        assert params.is_canceled is False
+
+    def test_is_canceled_explicit_true(self):
+        params = TransactionQueryParams(is_canceled=True)
+        assert params.is_canceled is True
+
+    def test_is_canceled_explicit_none(self):
+        params = TransactionQueryParams(is_canceled=None)
+        assert params.is_canceled is None
+
+    def test_is_canceled_model_dump_roundtrip(self):
+        params = TransactionQueryParams(is_canceled=True)
+        data = params.model_dump()
+        restored = TransactionQueryParams.model_validate(data)
+        assert restored.is_canceled is True

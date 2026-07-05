@@ -191,3 +191,41 @@ class TestUpdateTransactionParams:
             restored.query.date_local == sample_update_params_by_match.query.date_local
         )
         assert restored.amount == sample_update_params_by_match.amount
+
+    def test_has_update_true_with_is_canceled(self):
+        params = UpdateTransactionParams(
+            query=UpdateTransactionQuery(
+                match_text="teste",
+                date_local=date(2026, 1, 1),
+            ),
+            is_canceled=True,
+        )
+        assert params.has_update is True
+
+    def test_is_canceled_default_none(self):
+        params = UpdateTransactionParams(
+            query=UpdateTransactionQuery(id=uuid4()),
+        )
+        assert params.is_canceled is None
+
+    def test_is_canceled_explicit_true(self):
+        params = UpdateTransactionParams(
+            query=UpdateTransactionQuery(id=uuid4()),
+            is_canceled=True,
+        )
+        assert params.is_canceled is True
+
+    def test_is_canceled_explicit_false(self):
+        params = UpdateTransactionParams(
+            query=UpdateTransactionQuery(id=uuid4()),
+            is_canceled=False,
+        )
+        assert params.is_canceled is False
+
+    def test_model_dump_includes_is_canceled(self):
+        params = UpdateTransactionParams(
+            query=UpdateTransactionQuery(id=uuid4()),
+            is_canceled=True,
+        )
+        data = params.model_dump(exclude_none=True)
+        assert data["is_canceled"] is True

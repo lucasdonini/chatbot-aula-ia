@@ -5,6 +5,7 @@ import pytest
 from src.agents.financial.tools.add_transaction import AddTransactionTool
 from src.agents.financial.tools.daily_balance import DailyBalanceTool
 from src.agents.financial.tools.delete_transaction import DeleteTransactionTool
+from src.agents.financial.tools.restore_transaction import RestoreTransactionTool
 from src.agents.financial.tools.search_transaction import SearchTransactionsTool
 from src.agents.financial.tools.total_balance import TotalBalanceTool
 from src.agents.financial.tools.update_transaction import UpdateTransactionTool
@@ -49,6 +50,11 @@ def update_tool(transaction_service):
 @pytest.fixture
 def delete_tool(transaction_service):
     return DeleteTransactionTool(service=transaction_service)
+
+
+@pytest.fixture
+def restore_tool(transaction_service):
+    return RestoreTransactionTool(service=transaction_service)
 
 
 class TestTotalBalanceTool:
@@ -159,3 +165,33 @@ class TestDeleteTransactionTool:
         result = delete_tool._run(query)
         assert result.status == "ok"
         assert result.data["deleted"] is False
+
+
+class TestRestoreTransactionTool:
+    def test_restore_by_id(self, restore_tool, seed_transactions):
+        target = seed_transactions[0]
+        query = UpdateTransactionQuery(id=target.id)
+        result = restore_tool._run(query)
+        assert result.status == "ok"
+        assert result.data["restored"] is True
+
+    def test_restore_not_found(self, restore_tool, seed_transactions):
+        from uuid import uuid4
+
+        query = UpdateTransactionQuery(id=uuid4())
+        result = restore_tool._run(query)
+        assert result.status == "ok"
+        assert result.data["restored"] is False
+
+    def test_delete_then_restore_cycle(
+        self, restore_tool, delete_tool, seed_transactions
+    ):
+        target = seed_transactions[0]
+        delete_query = UpdateTransactionQuery(id=target.id)
+        delete_result = delete_tool._run(delete_query)
+        assert delete_result.status == "ok"
+        assert delete_result.data["deleted"] is True
+
+        restore_result = restore_tool._run(delete_query)
+        assert restore_result.status == "ok"
+        assert restore_result.data["restored"] is True

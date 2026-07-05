@@ -85,6 +85,7 @@ class TestTransactionModel:
             category=Category.FOOD,
             transaction_type=TransactionType.EXPENSE,
             source_text="Comprei comida",
+            is_canceled=False,
         )
         model = Transaction.model_validate(orm)
         assert model.amount == 99.90
