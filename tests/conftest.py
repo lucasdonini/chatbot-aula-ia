@@ -60,6 +60,7 @@ def sample_transaction() -> Transaction:
         payment_method="dinheiro",
         occurred_at=datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc),
         source_text="Gastei 150 reais com almoço",
+        is_canceled=False,
     )
 
 
