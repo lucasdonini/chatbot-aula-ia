@@ -16,7 +16,6 @@ from .guardrails_prompts import COMPLIANCE_PROMPT
 logger = logging.getLogger(__name__)
 
 
-@log_execution_time
 async def _output_guardrail(
     output: str, pii_map: dict, restaurar_pii: bool = False
 ) -> GuardrailResult:
@@ -53,6 +52,7 @@ async def _output_guardrail(
 OUTPUT_GUARDRAIL_NODE_NAME = "output_guardrail"
 
 
+@log_execution_time
 async def output_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
     logger.info("─" * 50)
     logger.info(" [NODE] OUTPUT GUARDRAIL ")

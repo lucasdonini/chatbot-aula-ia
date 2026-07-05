@@ -18,7 +18,6 @@ from .guardrails_prompts import CLASSIFIER_PROMPT
 logger = logging.getLogger(__name__)
 
 
-@log_execution_time
 async def _input_guardrail(input: str) -> GuardrailResult:
     """Run input checks in ascendent cost order:
     Deterministic first, then LLM only if needed.
@@ -71,6 +70,7 @@ async def _input_guardrail(input: str) -> GuardrailResult:
 INPUT_GUARDRAIL_NODE_NAME = "input_guardrail"
 
 
+@log_execution_time
 async def input_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
     logger.info("─" * 50)
     logger.info(" [NODE] INPUT GUARDRAIL ")
