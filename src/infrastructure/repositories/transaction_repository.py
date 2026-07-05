@@ -32,7 +32,8 @@ class TransactionRepository:
         period_end: Optional[datetime] = None,
     ) -> float:
         stmt = select(func.coalesce(func.sum(TransactionORM.amount), 0)).where(
-            TransactionORM.transaction_type == transaction_type
+            TransactionORM.transaction_type == transaction_type,
+            ~TransactionORM.is_canceled,
         )
 
         if period_start:
@@ -69,6 +70,8 @@ class TransactionRepository:
             stmt = stmt.where(TransactionORM.updated_at < params.updated_at_end)
         if params.category:
             stmt = stmt.where(TransactionORM.category == params.category)
+        if params.is_canceled is not None:
+            stmt = stmt.where(TransactionORM.is_canceled.is_(params.is_canceled))
         if params.transaction_type:
             stmt = stmt.where(
                 TransactionORM.transaction_type == params.transaction_type

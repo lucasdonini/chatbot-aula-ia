@@ -8,6 +8,7 @@ from .tools import (
     ADD_TRANSACTION_TOOL_NAME,
     DAILY_BALANCE_TOOL_NAME,
     DELETE_TRANSACTION_TOOL_NAME,
+    RESTORE_TRANSACTION_TOOL_NAME,
     SEARCH_TRANSACTIONS_TOOL_NAME,
     TOTAL_BALANCE_TOOL_NAME,
     UPDATE_TRANSACTION_TOOL_NAME,
@@ -33,6 +34,7 @@ Ferramentas disponíveis:
 - {ADD_TRANSACTION_TOOL_NAME}     : registra uma nova transação financeira.
 - {UPDATE_TRANSACTION_TOOL_NAME}  : altera descrição, valor ou categoria de uma transação.
 - {DELETE_TRANSACTION_TOOL_NAME}  : deleta ou cancela uma transação existente.
+- {RESTORE_TRANSACTION_TOOL_NAME} : restaura uma transação cancelada / deletada.
 
 
 ### MAPEAMENTO DE INTENÇÕES
@@ -42,6 +44,7 @@ Ferramentas disponíveis:
 - REGISTRAR / ADICIONAR gasto   → {ADD_TRANSACTION_TOOL_NAME}
 - ATUALIZAR / CORRIGIR          → {SEARCH_TRANSACTIONS_TOOL_NAME} + {UPDATE_TRANSACTION_TOOL_NAME}
 - DELETAR / CANCELAR / REMOVER  → {SEARCH_TRANSACTIONS_TOOL_NAME} + {DELETE_TRANSACTION_TOOL_NAME}
+- RESTAURAR / RECUPERAR         → {RESTORE_TRANSACTION_TOOL_NAME}
 
 
 ### REGRAS

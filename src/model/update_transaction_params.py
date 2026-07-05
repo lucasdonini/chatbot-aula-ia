@@ -66,6 +66,14 @@ class UpdateTransactionParams(BaseModel):
         ),
     )
 
+    is_canceled: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Indica se a transação foi cancelada para o usuário ou não. "
+            "Equivalente a excluir a transação se verdadeiro. "
+        ),
+    )
+
     @field_validator("occurred_at", "updated_at", mode="before")
     @classmethod
     def coerce_datetime(cls, v: Any) -> Optional[datetime]:
@@ -92,5 +100,6 @@ class UpdateTransactionParams(BaseModel):
                 "payment_method",
                 "occurred_at",
                 "updated_at",
+                "is_canceled",
             ]
         )
