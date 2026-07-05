@@ -28,11 +28,6 @@ router_agent = create_agent(
     tools=TOOLS,
 )
 
-router_agent.ainvoke = log_execution_time(  # type: ignore[assignment]
-    router_agent.ainvoke,  # type: ignore[arg-type]
-    logger=logger,
-)
-
 
 SPECIALIST_JSON_KEYS = {"dominio"}
 
@@ -94,6 +89,7 @@ def _filter_messages_for_router(messages: List[AnyMessage]) -> List[AnyMessage]:
     return filtered
 
 
+@log_execution_time
 async def router_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
     logger.info("─" * 50)
     logger.info(" [NODE] ROUTER ")

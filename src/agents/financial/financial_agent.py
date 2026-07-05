@@ -53,12 +53,8 @@ financial_agent = create_agent(
     response_format=FinancialOutput,
 )
 
-financial_agent.ainvoke = log_execution_time(  # type: ignore[assignment]
-    financial_agent.ainvoke,  # type: ignore[arg-type]
-    logger=logger,
-)
 
-
+@log_execution_time
 async def financial_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
     logger.info("─" * 50)
     logger.info(" [NODE] FINANCIAL ")

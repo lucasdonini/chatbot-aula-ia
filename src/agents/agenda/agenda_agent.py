@@ -18,12 +18,8 @@ agenda_agent = create_agent(
     response_format=AgendaOutput,
 )
 
-agenda_agent.ainvoke = log_execution_time(  # type: ignore[assignment]
-    agenda_agent.ainvoke,  # type: ignore[arg-type]
-    logger=logger,
-)
 
-
+@log_execution_time
 async def agenda_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
     logger.info("─" * 50)
     logger.info(" [NODE] AGENDA ")

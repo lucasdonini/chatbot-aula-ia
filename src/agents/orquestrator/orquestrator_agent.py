@@ -17,12 +17,8 @@ orquestrator_agent = create_agent(
     system_prompt=PROMPT,
 )
 
-orquestrator_agent.ainvoke = log_execution_time(  # type: ignore[assignment]
-    orquestrator_agent.ainvoke,  # type: ignore[arg-type]
-    logger=logger,
-)
 
-
+@log_execution_time
 async def orquestrator_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
     logger.info("─" * 50)
     logger.info(" [NODE] ORQUESTRATOR ")
