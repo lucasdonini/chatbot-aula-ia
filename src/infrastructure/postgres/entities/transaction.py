@@ -55,7 +55,7 @@ class TransactionORM(Base):
     source_text: Mapped[str] = mapped_column(sa.Text, nullable=False)
 
     is_canceled: Mapped[bool] = mapped_column(
-        sa.Boolean, nullable=False, server_default=sa.false()
+        sa.Boolean, nullable=False, default=False, server_default=sa.False_()
     )
 
     __table_args__ = (

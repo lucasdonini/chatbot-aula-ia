@@ -1,8 +1,8 @@
 """add 'is_canceled' column to 'transactions'
 
-Revision ID: 32b1ea15e347
+Revision ID: e1a128dd5d50
 Revises: 11fc23606c69
-Create Date: 2026-07-05 17:00:18.463987
+Create Date: 2026-07-05 18:42:42.662956
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '32b1ea15e347'
+revision: str = 'e1a128dd5d50'
 down_revision: Union[str, Sequence[str], None] = '11fc23606c69'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
