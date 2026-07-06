@@ -1,87 +1,53 @@
-from datetime import date, datetime
+from datetime import date
 
 import pytest
 
-from src.model.transaction import Category, TransactionType
+from src.model.transaction import Category
 from src.model.transaction_query_params import TransactionQueryParams
 
 
 class TestCalculateTotalBalance:
     def test_positive_balance(self, service, mock_repository):
-        def side_effect(tx_type, **kw):
-            return 5000.0 if tx_type == TransactionType.INCOME else 2000.0
-
-        mock_repository.sum_amounts_by_transaction_type.side_effect = side_effect
+        mock_repository.get_balance.return_value = 3000.0
 
         balance = service.calculate_total_balance()
 
         assert balance == 3000.0
-        mock_repository.sum_amounts_by_transaction_type.assert_any_call(
-            TransactionType.INCOME
-        )
-        mock_repository.sum_amounts_by_transaction_type.assert_any_call(
-            TransactionType.EXPENSE
-        )
+        mock_repository.get_balance.assert_called_once()
 
     def test_negative_balance(self, service, mock_repository):
-        def side_effect(tx_type, **kw):
-            return 1000.0 if tx_type == TransactionType.INCOME else 3000.0
-
-        mock_repository.sum_amounts_by_transaction_type.side_effect = side_effect
+        mock_repository.get_balance.return_value = -2000.0
 
         balance = service.calculate_total_balance()
 
         assert balance == -2000.0
 
     def test_zero_balance(self, service, mock_repository):
-        mock_repository.sum_amounts_by_transaction_type.return_value = 0.0
+        mock_repository.get_balance.return_value = 0.0
 
         balance = service.calculate_total_balance()
 
         assert balance == 0.0
 
-    def test_calls_repository_twice(self, service, mock_repository):
-        mock_repository.sum_amounts_by_transaction_type.return_value = 0.0
+    def test_calls_repository_once(self, service, mock_repository):
+        mock_repository.get_balance.return_value = 0.0
 
         service.calculate_total_balance()
 
-        assert mock_repository.sum_amounts_by_transaction_type.call_count == 2
+        mock_repository.get_balance.assert_called_once()
 
 
 class TestCalculateDailyBalance:
     def test_daily_balance(self, service, mock_repository):
-        mock_repository.sum_amounts_by_transaction_type.side_effect = (
-            lambda tx_type, **kw: 500.0 if tx_type == TransactionType.INCOME else 200.0
-        )
+        mock_repository.get_balance.return_value = 300.0
 
         balance = service.calculate_daily_balance(date(2026, 6, 1))
 
         assert balance == 300.0
-        assert mock_repository.sum_amounts_by_transaction_type.call_count == 2
-
-    def test_daily_balance_passes_period_end(self, service, mock_repository):
-        mock_repository.sum_amounts_by_transaction_type.return_value = 0.0
-
-        service.calculate_daily_balance(date(2026, 6, 1))
-
-        for call_args in mock_repository.sum_amounts_by_transaction_type.call_args_list:
-            kwargs = call_args[1]
-            assert "period_end" in kwargs
-            assert kwargs["period_end"] == datetime(2026, 6, 2, 0, 0, 0)
-
-    def test_daily_balance_no_period_start(self, service, mock_repository):
-        mock_repository.sum_amounts_by_transaction_type.return_value = 0.0
-
-        service.calculate_daily_balance(date(2026, 6, 1))
-
-        for call_args in mock_repository.sum_amounts_by_transaction_type.call_args_list:
-            kwargs = call_args[1]
-            assert "period_start" not in kwargs
+        mock_repository.get_balance.assert_called_once_with(date(2026, 6, 1))
 
     def test_daily_balance_negative(self, service, mock_repository):
-        mock_repository.sum_amounts_by_transaction_type.side_effect = (
-            lambda tx_type, **kw: 100.0 if tx_type == TransactionType.INCOME else 500.0
-        )
+        mock_repository.get_balance.return_value = -400.0
 
         balance = service.calculate_daily_balance(date(2026, 6, 1))
 

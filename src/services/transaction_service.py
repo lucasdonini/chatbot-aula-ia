@@ -1,10 +1,10 @@
 import logging
-from datetime import date, datetime, time, timedelta
+from datetime import date
 from typing import List, Optional
 
 from src.infrastructure.execution_time_logger import log_execution_time
 from src.infrastructure.repositories.transaction_repository import TransactionRepository
-from src.model.transaction import Transaction, TransactionType
+from src.model.transaction import Transaction
 from src.model.transaction_query_params import TransactionQueryParams
 from src.model.update_transaction_params import UpdateTransactionParams
 
@@ -18,13 +18,7 @@ class TransactionService:
     @log_execution_time
     def calculate_total_balance(self) -> float:
         logger.debug("Calculating total balance")
-        income = self._repository.sum_amounts_by_transaction_type(
-            TransactionType.INCOME
-        )
-        expenses = self._repository.sum_amounts_by_transaction_type(
-            TransactionType.EXPENSE
-        )
-        return income - expenses
+        return self._repository.get_balance()
 
     @log_execution_time
     def calculate_daily_balance(self, day: date) -> float:
@@ -32,14 +26,7 @@ class TransactionService:
             "Calculating daily balance",
             extra={"details": {"day": str(day)}},
         )
-        day_datetime = datetime.combine(day + timedelta(days=1), time.min)
-        income = self._repository.sum_amounts_by_transaction_type(
-            TransactionType.INCOME, period_end=day_datetime
-        )
-        expenses = self._repository.sum_amounts_by_transaction_type(
-            TransactionType.EXPENSE, period_end=day_datetime
-        )
-        return income - expenses
+        return self._repository.get_balance(day)
 
     @log_execution_time
     def search_transactions(self, params: TransactionQueryParams) -> List[Transaction]:
