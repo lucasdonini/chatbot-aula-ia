@@ -24,7 +24,10 @@ async def _output_guardrail(
     Nunca bloqueia — sempre retorna o texto revisado em 'conteudo'.
     """
 
-    logger.debug("Verifying output compliance...")
+    logger.debug(
+        "Verifying output compliance",
+        extra={"details": {"output_len": len(output)}},
+    )
 
     # 1. Remove PII que o modelo tenha gerado
     for pii_type, pattern in PII:
@@ -45,7 +48,10 @@ async def _output_guardrail(
     if "RESPOSTA:" in result:
         output = result.split("RESPOSTA:", 1)[1].strip() or output
 
-    logger.debug("Output aproved: %s", output)
+    logger.debug(
+        "Output approved",
+        extra={"details": {"output": output[:200]}},
+    )
     return GuardrailResult.output_aproved(output)
 
 
@@ -54,12 +60,20 @@ OUTPUT_GUARDRAIL_NODE_NAME = "output_guardrail"
 
 @log_execution_time
 async def output_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
-    logger.info("─" * 50)
-    logger.info(" [NODE] OUTPUT GUARDRAIL ")
+    logger.info(
+        "Agent called",
+        extra={"details": {"name": OUTPUT_GUARDRAIL_NODE_NAME, "input": "(sanitized)"}},
+    )
     result = await _output_guardrail(state["messages"][-1].text, state["pii_map"])
-    logger.info(" Input: (sanitized)")
-    logger.info(" Output: %s", result.message[:500])
-    logger.info("─" * 50)
+    logger.info(
+        "Agent response",
+        extra={
+            "details": {
+                "from": OUTPUT_GUARDRAIL_NODE_NAME,
+                "output": result.message[:500],
+            }
+        },
+    )
     return {
         GraphStateKeys.MESSAGES: [AIMessage(content=result.message)],
         GraphStateKeys.CALLED_AGENTS: [OUTPUT_GUARDRAIL_NODE_NAME],

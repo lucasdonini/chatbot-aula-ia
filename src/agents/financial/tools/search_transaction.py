@@ -37,13 +37,20 @@ class SearchTransactionsTool(BaseTool):
     service: TransactionService = Field(exclude=True)
 
     def _run(self, params: TransactionQueryParams) -> ToolResponse:
-        logger.debug("%s tool called. Params: %s", self.name, params)
+        logger.debug(
+            "Tool called",
+            extra={"details": {"tool": self.name, "params": params.model_dump()}},
+        )
         try:
             result = self.service.search_transactions(params)
             logger.debug(
-                "%s tool searched a total of %s transactions", self.name, len(result)
+                "Tool succeeded",
+                extra={"details": {"tool": self.name, "count": len(result)}},
             )
             return ToolResponse.ok({"transactions": [t.model_dump() for t in result]})
         except Exception as e:
-            logger.exception("Exception raised while searching transactions")
+            logger.exception(
+                "Tool failed",
+                extra={"details": {"tool": self.name}},
+            )
             return ToolResponse.exception(e)

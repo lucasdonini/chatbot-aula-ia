@@ -25,14 +25,25 @@ class AddTransactionTool(BaseTool):
     service: TransactionService = Field(exclude=True)
 
     def _run(self, transaction: Transaction) -> ToolResponse:
-        logger.debug("%s tool called. Transaction: %s", self.name, transaction)
+        logger.debug(
+            "Tool called",
+            extra={
+                "details": {
+                    "tool": self.name,
+                    "transaction": transaction.model_dump(),
+                }
+            },
+        )
         try:
             added = self.service.add_transaction(transaction)
-            logger.debug("Transaction added successfully: %s", added)
+            logger.debug(
+                "Tool succeeded",
+                extra={"details": {"tool": self.name, "added": added.model_dump()}},
+            )
             return ToolResponse.ok({"transaction": added})
         except Exception as e:
             logger.exception(
-                "Exception raised while trying to add trying to "
-                "add transaction to database"
+                "Tool failed",
+                extra={"details": {"tool": self.name}},
             )
             return ToolResponse.exception(e)

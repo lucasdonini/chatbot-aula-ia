@@ -6,7 +6,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 
-from src.infrastructure.logger import increment_interaction
+from src.infrastructure.logger import increment_interaction, set_trace_context
 from src.model.graph_state import GraphState
 
 from .agenda import AGENDA_NODE_NAME, agenda_node
@@ -75,7 +75,12 @@ agent_flux = graph.compile(checkpointer=memory)
 
 async def execute_agent_flux(user_input: HumanMessage, session_id: str) -> AIMessage:
     increment_interaction()
-    logger.info("[INPUT] %s", user_input.content)
+    trace_id = user_input.id or ""
+    set_trace_context(trace_id)
+    logger.info(
+        "User input received",
+        extra={"details": {"input": user_input.content}},
+    )
 
     initial_state: GraphState = {
         "messages": [user_input],
@@ -89,7 +94,10 @@ async def execute_agent_flux(user_input: HumanMessage, session_id: str) -> AIMes
     )
     final_state = cast(GraphState, final_state_raw)
 
-    logger.info("[CALLED] %s", " → ".join(final_state["called_agents"]))
+    logger.info(
+        "Agent chain completed",
+        extra={"details": {"chain": " → ".join(final_state["called_agents"])}},
+    )
 
     last = final_state["messages"][-1]
     if not isinstance(last, AIMessage):

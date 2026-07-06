@@ -56,14 +56,18 @@ financial_agent = create_agent(
 
 @log_execution_time
 async def financial_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
-    logger.info("─" * 50)
-    logger.info(" [NODE] FINANCIAL ")
-    logger.info(" Input: %s", state["messages"][-1].content[:500])
+    input_text = state["messages"][-1].content[:500]
+    logger.info(
+        "Agent called",
+        extra={"details": {"name": FINANCIAL_NODE_NAME, "input": input_text}},
+    )
     response = await financial_agent.ainvoke(state)  # type: ignore[arg-type]
     last = (response.get("messages") or [None])[-1]
     output = last.content[:500] if last and last.content else "(tool call)"
-    logger.info(" Output: %s", output)
-    logger.info("─" * 50)
+    logger.info(
+        "Agent response",
+        extra={"details": {"from": FINANCIAL_NODE_NAME, "output": output}},
+    )
     return {
         GraphStateKeys.MESSAGES: response.get("messages") or [],
         GraphStateKeys.CALLED_AGENTS: [FINANCIAL_NODE_NAME],

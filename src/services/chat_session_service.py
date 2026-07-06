@@ -30,7 +30,10 @@ class ChatSessionService:
         await session.insert()
         assert session.id is not None
         _active_sessions[session_id] = session.id
-        logger.debug("User session initialized: %s", session)
+        logger.debug(
+            "Session initialized",
+            extra={"details": {"session_id": session_id[:8]}},
+        )
 
     def get_active_sessions(self) -> dict[str, PydanticObjectId]:
         return _active_sessions.copy()
@@ -55,7 +58,10 @@ class ChatSessionService:
                 "$set": {ChatSession.updated_at: datetime.now()},
             }
         )
-        logger.debug("Message saved: %s", message)
+        logger.debug(
+            "Message saved",
+            extra={"details": {"role": role, "content": content[:100]}},
+        )
 
     async def finalize_session(self, session_id: str) -> None:
         """
@@ -86,4 +92,12 @@ class ChatSessionService:
         )
 
         _active_sessions.pop(session_id)
-        logger.debug("Session finalized: %s", session)
+        logger.debug(
+            "Session finalized",
+            extra={
+                "details": {
+                    "session_id": session_id[:8],
+                    "message_count": len(session.messages),
+                }
+            },
+        )

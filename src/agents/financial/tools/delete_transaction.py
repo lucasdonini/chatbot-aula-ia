@@ -36,15 +36,27 @@ class DeleteTransactionTool(BaseTool):
     service: TransactionService = Field(exclude=True)
 
     def _run(self, query: UpdateTransactionQuery) -> ToolResponse:
-        logger.debug("%s tool called. query %s", self.name, query)
+        logger.debug(
+            "Tool called",
+            extra={"details": {"tool": self.name, "query": query.model_dump()}},
+        )
         params = UpdateTransactionParams(query=query, is_canceled=True)
         try:
             if self.service.update_transaction(params):
-                logger.debug("Transcation deleted successfully")
+                logger.debug(
+                    "Tool succeeded",
+                    extra={"details": {"tool": self.name, "deleted": True}},
+                )
                 return ToolResponse.ok({"deleted": True})
             else:
-                logger.debug("No transaction deleted.")
+                logger.debug(
+                    "Tool succeeded",
+                    extra={"details": {"tool": self.name, "deleted": False}},
+                )
                 return ToolResponse.ok({"deleted": False})
         except Exception as e:
-            logger.exception("Exception rasied while deleting transaction")
+            logger.exception(
+                "Tool failed",
+                extra={"details": {"tool": self.name}},
+            )
             return ToolResponse.exception(e)

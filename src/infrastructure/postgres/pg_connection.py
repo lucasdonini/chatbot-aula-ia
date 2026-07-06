@@ -21,7 +21,7 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     except Exception:
         db.rollback()
-        logger.exception("Postgres session rolled back due to an error")
+        logger.exception("Postgres session rolled back")
         raise
     finally:
         db.close()

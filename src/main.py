@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage
 
 from .agents import execute_agent_flux
 from .infrastructure.console_utils import clear_console
-from .infrastructure.logger import setup_logger
+from .infrastructure.logger import set_session_context, setup_logger
 from .infrastructure.md_console import print
 from .infrastructure.mongo_connection import MongoManager
 from .services.chat_session_service import ChatSessionService
@@ -15,6 +15,7 @@ from .services.session_summary_service import SessionSummaryService
 
 async def main() -> None:
     session_id = str(uuid.uuid4())
+    set_session_context(session_id)
     summary_service = SessionSummaryService()
     session_service = ChatSessionService(summary_service)
     try:
@@ -23,8 +24,11 @@ async def main() -> None:
         await session_service.init_session(session_id)
         await _execute_interaction_loop(session_id=session_id, service=session_service)
 
-    except Exception as e:
-        logger.exception("Critical error: %s", e)
+    except Exception:
+        logger.exception(
+            "Unhandled error",
+            extra={"details": {"session": session_id[:8]}},
+        )
         print("**Unknow error ocurred! Try again later.**")
 
     finally:
@@ -53,6 +57,6 @@ async def _execute_interaction_loop(
 if __name__ == "__main__":
     setup_logger()
     logger = logging.getLogger(__name__)
-    logger.info("App started")
+    logger.info("App started", extra={"details": {"state": "booting"}})
     asyncio.run(main())
-    logger.info("App closed")
+    logger.info("App closed", extra={"details": {"state": "shutdown"}})

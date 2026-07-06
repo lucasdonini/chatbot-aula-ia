@@ -33,14 +33,31 @@ class UpdateTransactionTool(BaseTool):
     service: TransactionService = Field(exclude=True)
 
     def _run(self, params: UpdateTransactionParams) -> ToolResponse:
-        logger.debug("%s tool called. params %s", self.name, params)
+        logger.debug(
+            "Tool called",
+            extra={"details": {"tool": self.name, "params": params.model_dump()}},
+        )
         try:
             if updated := self.service.update_transaction(params):
-                logger.debug("Transcation updated successfully")
+                logger.debug(
+                    "Tool succeeded",
+                    extra={
+                        "details": {
+                            "tool": self.name,
+                            "updated": updated.model_dump(),
+                        }
+                    },
+                )
                 return ToolResponse.ok({"updated": updated})
             else:
-                logger.debug("No transaction updated.")
+                logger.debug(
+                    "Tool succeeded",
+                    extra={"details": {"tool": self.name, "updated": None}},
+                )
                 return ToolResponse.ok({"updated": "Nothing to update"})
         except Exception as e:
-            logger.exception("Exception rasied while updating transaction")
+            logger.exception(
+                "Tool failed",
+                extra={"details": {"tool": self.name}},
+            )
             return ToolResponse.exception(e)

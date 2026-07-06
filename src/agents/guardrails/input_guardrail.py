@@ -23,12 +23,18 @@ async def _input_guardrail(input: str) -> GuardrailResult:
     Deterministic first, then LLM only if needed.
     """
 
-    logger.debug("Verifying input compliance...")
+    logger.debug(
+        "Verifying input compliance",
+        extra={"details": {"input_len": len(input)}},
+    )
 
     # 1. Prompt injection
     for pattern in INJECTION_PATTERNS:
         if re.search(pattern, input, re.IGNORECASE):
-            logger.debug("Input blocked for prompt injection: %s", input)
+            logger.debug(
+                "Input blocked for prompt injection",
+                extra={"details": {"reason": "prompt_injection", "input": input}},
+            )
             return GuardrailResult.block(
                 "prompt_injection", "Não consigo processar essa solicitação."
             )
@@ -37,7 +43,10 @@ async def _input_guardrail(input: str) -> GuardrailResult:
     texto_lower = input.lower()
     for kw in INTERN_DATA_KEYWORDS:
         if kw in texto_lower:
-            logger.debug("Input blocked for PII.")
+            logger.debug(
+                "Input blocked for PII",
+                extra={"details": {"reason": "acesso_dados_internos"}},
+            )
             return GuardrailResult.block(
                 "acesso_dados_internos",
                 "Não tenho como compartilhar informações internas do sistema.",
@@ -63,7 +72,10 @@ async def _input_guardrail(input: str) -> GuardrailResult:
         reason, message = BLOCK_RESPONSES[category]
         return GuardrailResult.block(reason, message)
 
-    logger.debug("Input aproved: %s", input)
+    logger.debug(
+        "Input approved",
+        extra={"details": {"input": input, "category": category}},
+    )
     return GuardrailResult.input_aproved(input)
 
 
@@ -72,26 +84,42 @@ INPUT_GUARDRAIL_NODE_NAME = "input_guardrail"
 
 @log_execution_time
 async def input_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
-    logger.info("─" * 50)
-    logger.info(" [NODE] INPUT GUARDRAIL ")
     user_input = state["messages"][-1]
     assert user_input.id is not None
 
     anonymized, pii_map = anonymize_input(user_input.text)
-    logger.info(" Input: %s", anonymized)
+    logger.info(
+        "Agent called",
+        extra={
+            "details": {
+                "name": INPUT_GUARDRAIL_NODE_NAME,
+                "input_anonymized": anonymized,
+            }
+        },
+    )
     result = await _input_guardrail(anonymized)
 
     if result.blocked:
-        logger.info(" Output: BLOCKED (%s)", result.blocked)
-        logger.info("─" * 50)
+        logger.info(
+            "Agent response",
+            extra={
+                "details": {
+                    "from": INPUT_GUARDRAIL_NODE_NAME,
+                    "status": "blocked",
+                    "reason": result.blocked,
+                }
+            },
+        )
         return {
             GraphStateKeys.ROUTE: END,
             GraphStateKeys.CALLED_AGENTS: [INPUT_GUARDRAIL_NODE_NAME],
             GraphStateKeys.MESSAGES: [AIMessage(content=result.message)],
         }
 
-    logger.info(" Output: APPROVED")
-    logger.info("─" * 50)
+    logger.info(
+        "Agent response",
+        extra={"details": {"from": INPUT_GUARDRAIL_NODE_NAME, "status": "approved"}},
+    )
     return {
         GraphStateKeys.ROUTE: ROUTER_NODE_NAME,
         GraphStateKeys.CALLED_AGENTS: [INPUT_GUARDRAIL_NODE_NAME],
