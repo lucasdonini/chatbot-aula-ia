@@ -17,7 +17,7 @@ class TransactionService:
 
     @log_execution_time
     def calculate_total_balance(self) -> float:
-        logger.debug("Calculating total balance...")
+        logger.debug("Calculating total balance")
         income = self._repository.sum_amounts_by_transaction_type(
             TransactionType.INCOME
         )
@@ -28,7 +28,10 @@ class TransactionService:
 
     @log_execution_time
     def calculate_daily_balance(self, day: date) -> float:
-        logger.debug("Calculating daily balance...")
+        logger.debug(
+            "Calculating daily balance",
+            extra={"details": {"day": str(day)}},
+        )
         day_datetime = datetime.combine(day + timedelta(days=1), time.min)
         income = self._repository.sum_amounts_by_transaction_type(
             TransactionType.INCOME, period_end=day_datetime
@@ -40,17 +43,26 @@ class TransactionService:
 
     @log_execution_time
     def search_transactions(self, params: TransactionQueryParams) -> List[Transaction]:
-        logger.debug("Searching Transactions. Params: %s", params)
+        logger.debug(
+            "Searching transactions",
+            extra={"details": {"params": params.model_dump()}},
+        )
         return self._repository.find(params)
 
     @log_execution_time
     def add_transaction(self, transaction: Transaction) -> Transaction:
-        logger.debug("Adding Transaction: %s", transaction)
+        logger.debug(
+            "Adding transaction",
+            extra={"details": {"transaction": transaction.model_dump()}},
+        )
         return self._repository.add_transaction(transaction)
 
     @log_execution_time
     def update_transaction(
         self, params: UpdateTransactionParams
     ) -> Optional[Transaction]:
-        logger.debug("Updating transaction: %s", params)
+        logger.debug(
+            "Updating transaction",
+            extra={"details": {"params": params.model_dump()}},
+        )
         return self._repository.update_transaction(params)

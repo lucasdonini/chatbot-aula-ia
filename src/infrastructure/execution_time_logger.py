@@ -11,12 +11,8 @@ R = TypeVar("R")
 def log_execution_time(
     function: Callable[P, R], logger: Optional[Logger] = None
 ) -> Callable[P, R]:
-    """
-    Decorator to track and log execution time of
-    IO functions (like database accesses) or LLM calls.
-    Works with both sync and async functions
-    """
     logger = logger or getLogger(function.__module__)
+
     if inspect.iscoroutinefunction(function):
 
         @wraps(function)
@@ -27,10 +23,16 @@ def log_execution_time(
                 return result  # type: ignore[no-any-return]
             finally:
                 end_time = time.perf_counter()
-                exec_time = end_time - start_time
+                elapsed_ms = round((end_time - start_time) * 1000)
                 logger.debug(
-                    f"[METRIC] IO/LLM Async - Function '{function.__name__}' "
-                    f"finished in {exec_time:.4f} seconds."
+                    "Function finished",
+                    extra={
+                        "details": {
+                            "function": function.__name__,
+                            "elapsed_ms": elapsed_ms,
+                            "kind": "Async",
+                        }
+                    },
                 )
 
         return wrapper_async  # type: ignore[return-value]
@@ -44,10 +46,16 @@ def log_execution_time(
                 return result
             finally:
                 end_time = time.perf_counter()
-                exec_time = end_time - start_time
+                elapsed_ms = round((end_time - start_time) * 1000)
                 logger.debug(
-                    f"[METRIC] IO/LLM Sync - Function '{function.__name__}' "
-                    f"finished in {exec_time:.4f} seconds."
+                    "Function finished",
+                    extra={
+                        "details": {
+                            "function": function.__name__,
+                            "elapsed_ms": elapsed_ms,
+                            "kind": "Sync",
+                        }
+                    },
                 )
 
         return wrapper

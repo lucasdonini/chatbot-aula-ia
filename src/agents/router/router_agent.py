@@ -95,17 +95,26 @@ def _filter_messages_for_router(messages: List[AnyMessage]) -> List[AnyMessage]:
 
 
 async def router_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
-    logger.info("─" * 50)
-    logger.info(" [NODE] ROUTER ")
-    logger.info(" Input: %s", state["messages"][-1].content[:500])
+    input_text = state["messages"][-1].content[:500]
+    logger.info(
+        "Agent called",
+        extra={"details": {"name": ROUTER_NODE_NAME, "input": input_text}},
+    )
     filtered_state = {
         **state,
         "messages": _filter_messages_for_router(state["messages"]),
     }
     response = await router_agent.ainvoke(filtered_state)  # type: ignore[call-overload]
     output = response["messages"][-1].content[:500] if response.get("messages") else ""
-    logger.info(" Output: %s", output or "(tool call)")
-    logger.info("─" * 50)
+    logger.info(
+        "Agent response",
+        extra={
+            "details": {
+                "from": ROUTER_NODE_NAME,
+                "output": output or "(tool call)",
+            }
+        },
+    )
     return {
         GraphStateKeys.MESSAGES: response.get("messages") or [],
         GraphStateKeys.CALLED_AGENTS: [ROUTER_NODE_NAME],

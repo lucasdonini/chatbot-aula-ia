@@ -37,25 +37,40 @@ class LoggingMongoCommandListener(CommandListener):
     def started(self, event: CommandStartedEvent) -> None:
         if event.command_name.lower() not in IGNORED_COMMANDS:
             logger.debug(
-                f"MONGO QUERY EXECUTED [{event.command_name}] - "
-                f"Database: {event.database_name} - "
-                f"Query: {event.command}"
+                "Mongo command started",
+                extra={
+                    "details": {
+                        "command": event.command_name,
+                        "database": event.database_name,
+                        "query": str(event.command),
+                    }
+                },
             )
 
     def succeeded(self, event: CommandSucceededEvent) -> None:
         if event.command_name.lower() not in IGNORED_COMMANDS:
             logger.debug(
-                f"MONGO QUERY SUCCEEDED [{event.command_name}] - "
-                f"Database: {event.database_name} - "
-                f"Execution time: {event.duration_micros / 1_000} s"
+                "Mongo command succeeded",
+                extra={
+                    "details": {
+                        "command": event.command_name,
+                        "database": event.database_name,
+                        "elapsed_ms": round(event.duration_micros / 1000, 2),
+                    }
+                },
             )
 
     def failed(self, event: CommandFailedEvent) -> None:
         if event.command_name.lower() not in IGNORED_COMMANDS:
             logger.debug(
-                f"MONGO QUERY EXECUTED [{event.command_name}] - "
-                f"Database: {event.database_name} - "
-                f"Error: {event.failure}"
+                "Mongo command failed",
+                extra={
+                    "details": {
+                        "command": event.command_name,
+                        "database": event.database_name,
+                        "error": str(event.failure),
+                    }
+                },
             )
 
 
@@ -74,4 +89,4 @@ class MongoManager:
                 database=cls._client[settings.mongodb_dbname.get_secret_value()],
                 document_models=[ChatSession],
             )
-            logger.info("MongoDB Beanie initialized successfully")
+            logger.debug("MongoDB initialized")

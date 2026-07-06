@@ -41,7 +41,10 @@ class SearchHistoryTool(BaseTool):
 
     @log_execution_time
     async def _arun(self, search: str) -> str:
-        logger.debug("%s tool called (search: %s)", self.name, search)
+        logger.debug(
+            "Tool called",
+            extra={"details": {"tool": self.name, "search": search}},
+        )
         try:
             history = await self.service.fetch_history(search=search, limit=3)
             return (
@@ -51,5 +54,8 @@ class SearchHistoryTool(BaseTool):
             )
 
         except Exception as e:
-            logger.exception("Failed to search history", e)
+            logger.exception(
+                "Tool failed",
+                extra={"details": {"tool": self.name}},
+            )
             return f"Erro ao buscar as mensagens: {str(e)}"

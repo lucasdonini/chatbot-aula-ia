@@ -46,7 +46,10 @@ class TransactionRepository:
             return float(session.scalar(stmt))
 
     def find(self, params: TransactionQueryParams) -> List[Transaction]:
-        logger.info("Searching Transactions. Params: %s", params)
+        logger.info(
+            "Searching transactions",
+            extra={"details": {"params": params.model_dump()}},
+        )
 
         if params.limit is not None and params.limit <= 0:
             return []
@@ -85,12 +88,18 @@ class TransactionRepository:
         if params.limit is not None:
             stmt = stmt.limit(params.limit)
 
-        logger.debug("Searching query: %s", str(stmt))
+        logger.debug(
+            "Query built",
+            extra={"details": {"query": str(stmt)}},
+        )
         result: List[Transaction]
         with self._session_factory() as session:
             docs = session.scalars(stmt).all()
             result = [self._orm_to_model(doc) for doc in docs]
-        logger.info("Transaction search successful. Result size: %s", len(result))
+        logger.info(
+            "Search completed",
+            extra={"details": {"count": len(result)}},
+        )
         return result
 
     def add_transaction(self, transaction: Transaction) -> Transaction:
@@ -104,10 +113,13 @@ class TransactionRepository:
     def update_transaction(
         self, params: UpdateTransactionParams
     ) -> Optional[Transaction]:
-        logger.info("Updating transaction. Params: %s", params)
+        logger.info(
+            "Updating transaction",
+            extra={"details": {"params": params.model_dump()}},
+        )
 
         if not params.has_update:
-            logger.warning("Nothing to update.")
+            logger.warning("Nothing to update")
             return None
 
         stmt = select(TransactionORM)
@@ -127,7 +139,7 @@ class TransactionRepository:
                 TransactionORM.occurred_at < period_end,
             )
         else:
-            logger.error("Update called without any reference.")
+            logger.error("Update called without any reference")
             raise ValueError(
                 "You cannot update without a reference. "
                 "Please inform either the id or both match_text and date_local"
@@ -139,7 +151,10 @@ class TransactionRepository:
             exclude={"query"},
         )
 
-        logger.debug("Locate update target query: %s", str(stmt))
+        logger.debug(
+            "Locating update target",
+            extra={"details": {"query": str(stmt)}},
+        )
         with self._session_factory() as session:
             target = session.scalar(stmt)
 
@@ -151,5 +166,8 @@ class TransactionRepository:
             session.commit()
             session.refresh(target)
 
-            logger.debug("Updated: %s", target)
+            logger.debug(
+                "Transaction updated",
+                extra={"details": {"updated_id": target.id}},
+            )
             return self._orm_to_model(target)

@@ -27,11 +27,20 @@ class TotalBalanceTool(BaseTool):
     service: TransactionService = Field(exclude=True)
 
     def _run(self) -> ToolResponse:
-        logger.debug("%s tool called.", self.name)
+        logger.debug(
+            "Tool called",
+            extra={"details": {"tool": self.name}},
+        )
         try:
             balance = self.service.calculate_total_balance()
-            logger.debug("Total balance retreived successfully: %s", balance)
+            logger.debug(
+                "Tool succeeded",
+                extra={"details": {"tool": self.name, "balance": balance}},
+            )
             return ToolResponse.ok({"saldo": balance})
         except Exception as e:
-            logger.exception("Exception raised white retreiving total balance")
+            logger.exception(
+                "Tool failed",
+                extra={"details": {"tool": self.name}},
+            )
             return ToolResponse.exception(e)
