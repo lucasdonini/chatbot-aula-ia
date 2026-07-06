@@ -12,41 +12,31 @@ from src.model.update_transaction_params import (
 )
 
 
-class TestSumAmountsByTransactionType:
-    def test_sum_no_filters(self, repository, mock_session):
-        mock_session.scalar.return_value = 1500.50
+class TestGetBalance:
+    def test_get_balance_no_date(self, repository, mock_session):
+        mock_session.scalar.return_value = 7600.0
 
-        result = repository.sum_amounts_by_transaction_type(TransactionType.INCOME)
+        result = repository.get_balance(None)
 
-        assert result == 1500.50
-        assert mock_session.scalar.called
+        assert result == 7600.0
 
-    def test_sum_with_period(self, repository, mock_session):
-        mock_session.scalar.return_value = 500.0
-        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
-        end = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    def test_get_balance_with_date(self, repository, mock_session):
+        mock_session.scalar.return_value = 4850.0
 
-        result = repository.sum_amounts_by_transaction_type(
-            TransactionType.EXPENSE, period_start=start, period_end=end
-        )
+        result = repository.get_balance(date(2026, 6, 1))
 
-        assert result == 500.0
+        assert result == 4850.0
 
-    def test_sum_returns_zero_for_no_results(self, repository, mock_session):
-        mock_session.scalar.return_value = 0
+    def test_get_balance_scalar_none_returns_zero(
+        self,
+        repository,
+        mock_session,
+    ):
+        mock_session.scalar.return_value = None
 
-        result = repository.sum_amounts_by_transaction_type(TransactionType.TRANSFER)
+        result = repository.get_balance(date(2020, 1, 1))
 
         assert result == 0.0
-
-    def test_sum_uses_coalesce(self, repository, mock_session):
-        mock_session.scalar.return_value = 0
-
-        repository.sum_amounts_by_transaction_type(TransactionType.INCOME)
-
-        stmt = mock_session.scalar.call_args[0][0]
-        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
-        assert "coalesce" in compiled.lower()
 
 
 class TestFind:

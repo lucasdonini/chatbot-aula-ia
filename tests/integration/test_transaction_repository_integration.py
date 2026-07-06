@@ -148,40 +148,18 @@ class TestFind:
         assert results == []
 
 
-class TestSumAmounts:
-    def test_sum_income(self, transaction_repository, seed_transactions):
-        total = transaction_repository.sum_amounts_by_transaction_type(
-            TransactionType.INCOME
-        )
-        assert total == 8000.00
+class TestGetBalance:
+    def test_get_balance_all_time(self, transaction_repository, seed_transactions):
+        balance = transaction_repository.get_balance(None)
+        assert balance == 7600.0
 
-    def test_sum_expense(self, transaction_repository, seed_transactions):
-        total = transaction_repository.sum_amounts_by_transaction_type(
-            TransactionType.EXPENSE
-        )
-        assert total == 400.00
+    def test_get_balance_at_end_of_day(self, transaction_repository, seed_transactions):
+        balance = transaction_repository.get_balance(date(2026, 6, 1))
+        assert balance == 4850.0
 
-    def test_sum_transfer(self, transaction_repository, seed_transactions):
-        total = transaction_repository.sum_amounts_by_transaction_type(
-            TransactionType.TRANSFER
-        )
-        assert total == 1000.00
-
-    def test_sum_no_match(self, transaction_repository, seed_transactions):
-        total = transaction_repository.sum_amounts_by_transaction_type(
-            TransactionType.INCOME,
-            period_start=datetime(2099, 1, 1, tzinfo=timezone.utc),
-            period_end=datetime(2099, 12, 31, tzinfo=timezone.utc),
-        )
-        assert total == 0.0
-
-    def test_sum_with_period(self, transaction_repository, seed_transactions):
-        total = transaction_repository.sum_amounts_by_transaction_type(
-            TransactionType.INCOME,
-            period_start=datetime(2026, 6, 2, tzinfo=timezone.utc),
-            period_end=datetime(2026, 6, 3, tzinfo=timezone.utc),
-        )
-        assert total == 3000.00
+    def test_get_balance_no_transactions(self, transaction_repository):
+        balance = transaction_repository.get_balance(date(2020, 1, 1))
+        assert balance == 0.0
 
 
 class TestUpdateTransaction:

@@ -1,8 +1,8 @@
 import logging
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Callable, ContextManager, List, Optional
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import ScalarSelect, func, or_, select
 from sqlalchemy.orm import Session
 
 from src.model.transaction import Transaction, TransactionType
@@ -25,25 +25,41 @@ class TransactionRepository:
         data = model.model_dump(exclude_unset=True)
         return TransactionORM(**data)
 
-    def sum_amounts_by_transaction_type(
+    def _build_sum_amounts_of_transaction_type_subquery(
         self,
         transaction_type: TransactionType,
-        period_start: Optional[datetime] = None,
-        period_end: Optional[datetime] = None,
-    ) -> float:
+        period_end: Optional[datetime],
+    ) -> ScalarSelect[float]:
         stmt = select(func.coalesce(func.sum(TransactionORM.amount), 0)).where(
             TransactionORM.transaction_type == transaction_type,
             ~TransactionORM.is_canceled,
         )
 
-        if period_start:
-            stmt = stmt.where(TransactionORM.occurred_at >= period_start)
-
         if period_end:
             stmt = stmt.where(TransactionORM.occurred_at < period_end)
 
+        return stmt.scalar_subquery()
+
+    def get_balance(self, date: Optional[date] = None) -> float:
+        "Returns the balance of the user at the end of the requested date"
+        period_end = (
+            datetime.combine(date + timedelta(days=1), time.min) if date else None
+        )
+
+        income = self._build_sum_amounts_of_transaction_type_subquery(
+            transaction_type=TransactionType.INCOME,
+            period_end=period_end,
+        )
+
+        expenses = self._build_sum_amounts_of_transaction_type_subquery(
+            transaction_type=TransactionType.EXPENSE,
+            period_end=period_end,
+        )
+
+        stmt = select(income - expenses)
+
         with self._session_factory() as session:
-            return float(session.scalar(stmt))
+            return float(session.scalar(stmt) or 0)
 
     def find(self, params: TransactionQueryParams) -> List[Transaction]:
         logger.info(
