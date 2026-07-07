@@ -3,7 +3,7 @@ import re
 from typing import List
 
 from src.infrastructure.execution_time_logger import log_execution_time
-from src.model.chat_session import ChatMessage, ChatSession, ChatSessionSummarized
+from src.model.chat_session import ChatEntry, ChatSession, ChatSessionSummarized
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +18,10 @@ class ChatHistoryService:
 
         Strategy: first checks the summaries. If a search term is provided,
         filters by it; otherwise, returns the most recent sessions. Full
-        messages are NOT included here—use recuperar_mensagens(doc_id) for that.
+        messages are NOT included here.
 
         search      : optional term to filter relevant summaries
-        limit     : maximum number of sessions returned (most recent first)
+        limit       : maximum number of sessions returned (most recent first)
         """
         logger.debug(
             "Fetching history",
@@ -41,16 +41,16 @@ class ChatHistoryService:
         )
 
     @log_execution_time
-    async def fetch_messages(self, session_id: str) -> List[ChatMessage]:
+    async def fetch_entries(self, session_id: str) -> List[ChatEntry]:
         logger.debug(
-            "Fetching messages",
+            "Fetching entries",
             extra={"details": {"session_id": session_id[:8]}},
         )
         session = await ChatSession.find_one(ChatSession.session_id == session_id)
-        messages = session.messages if session else []
+        entries = session.entries if session else []
 
         logger.debug(
-            "Messages fetched",
-            extra={"details": {"count": len(messages)}},
+            "Entries fetched",
+            extra={"details": {"count": len(entries)}},
         )
-        return messages
+        return entries
