@@ -3,7 +3,7 @@ import logging
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from src.model.tool_response import ToolResponse
+from src.model.tool_response import LegacyToolResponse
 from src.services.transaction_service import TransactionService
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class TotalBalanceTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self) -> ToolResponse:
+    def _run(self) -> LegacyToolResponse:
         logger.debug(
             "Tool called",
             extra={"details": {"tool": self.name}},
@@ -37,10 +37,10 @@ class TotalBalanceTool(BaseTool):
                 "Tool succeeded",
                 extra={"details": {"tool": self.name, "balance": balance}},
             )
-            return ToolResponse.ok({"saldo": balance})
+            return LegacyToolResponse.ok({"saldo": balance})
         except Exception as e:
             logger.exception(
                 "Tool failed",
                 extra={"details": {"tool": self.name}},
             )
-            return ToolResponse.exception(e)
+            return LegacyToolResponse.exception(e)

@@ -4,7 +4,7 @@ from datetime import date
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from src.model.tool_response import ToolResponse
+from src.model.tool_response import LegacyToolResponse
 from src.services.transaction_service import TransactionService
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class DailyBalanceTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, target_date: date) -> ToolResponse:
+    def _run(self, target_date: date) -> LegacyToolResponse:
         logger.debug(
             "Tool called",
             extra={"details": {"tool": self.name, "target_date": str(target_date)}},
@@ -48,10 +48,10 @@ class DailyBalanceTool(BaseTool):
                 "Tool succeeded",
                 extra={"details": {"tool": self.name, "balance": balance}},
             )
-            return ToolResponse.ok({"saldo_diario": balance})
+            return LegacyToolResponse.ok({"saldo_diario": balance})
         except Exception as e:
             logger.exception(
                 "Tool failed",
                 extra={"details": {"tool": self.name}},
             )
-            return ToolResponse.exception(e)
+            return LegacyToolResponse.exception(e)

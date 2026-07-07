@@ -1,7 +1,7 @@
 import pytest
 
 from src.agents.financial.tools.total_balance import TotalBalanceTool
-from src.model.tool_response import ToolResponse
+from src.model.tool_response import LegacyToolResponse
 from src.services.transaction_service import TransactionService
 
 
@@ -17,7 +17,7 @@ class TestTotalBalanceTool:
 
         result = tool._run()
 
-        assert isinstance(result, ToolResponse)
+        assert isinstance(result, LegacyToolResponse)
         assert result.status == "ok"
         assert result.data["saldo"] == 5000.0
 

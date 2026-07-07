@@ -1,7 +1,7 @@
 import pytest
 
 from src.agents.financial.tools.search_transaction import SearchTransactionsTool
-from src.model.tool_response import ToolResponse
+from src.model.tool_response import LegacyToolResponse
 from src.model.transaction import Category, Transaction, TransactionType
 from src.model.transaction_query_params import TransactionQueryParams
 from src.services.transaction_service import TransactionService
@@ -28,7 +28,7 @@ class TestSearchTransactionsTool:
         params = TransactionQueryParams(category=Category.FOOD)
         result = tool._run(params)
 
-        assert isinstance(result, ToolResponse)
+        assert isinstance(result, LegacyToolResponse)
         assert result.status == "ok"
         assert "transactions" in result.data
         assert len(result.data["transactions"]) == 1
