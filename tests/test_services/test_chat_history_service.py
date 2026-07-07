@@ -49,24 +49,24 @@ class TestChatHistoryService:
             assert len(filter_arg) == 1
 
     @pytest.mark.asyncio
-    async def test_fetch_messages_found(self, service):
+    async def test_fetch_entries_found(self, service):
         with patch(
             "src.services.chat_history_service.ChatSession"
         ) as mock_chat_session:
             mock_session = AsyncMock()
-            mock_session.messages = ["msg1", "msg2"]
+            mock_session.entries = ["entry1", "entry2"]
 
             async def find_one_side(*args, **kwargs):
                 return mock_session
 
             mock_chat_session.find_one = MagicMock(side_effect=find_one_side)
 
-            result = await service.fetch_messages("session-123")
+            result = await service.fetch_entries("session-123")
 
             assert len(result) == 2
 
     @pytest.mark.asyncio
-    async def test_fetch_messages_not_found(self, service):
+    async def test_fetch_entries_not_found(self, service):
         with patch(
             "src.services.chat_history_service.ChatSession"
         ) as mock_chat_session:
@@ -76,6 +76,6 @@ class TestChatHistoryService:
 
             mock_chat_session.find_one = MagicMock(side_effect=find_one_side)
 
-            result = await service.fetch_messages("nonexistent")
+            result = await service.fetch_entries("nonexistent")
 
             assert result == []
