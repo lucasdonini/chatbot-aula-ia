@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 
 from src.agents.financial.tools.daily_balance import DailyBalanceTool
-from src.model.tool_response import ToolResponse
+from src.model.tool_response import LegacyToolResponse
 from src.services.transaction_service import TransactionService
 
 
@@ -19,7 +19,7 @@ class TestDailyBalanceTool:
 
         result = tool._run(target_date=date(2026, 6, 1))
 
-        assert isinstance(result, ToolResponse)
+        assert isinstance(result, LegacyToolResponse)
         assert result.status == "ok"
         assert result.data["saldo_diario"] == 300.0
 

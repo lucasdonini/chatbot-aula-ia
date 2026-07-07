@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from src.agents.financial.tools.delete_transaction import DeleteTransactionTool
-from src.model.tool_response import ToolResponse
+from src.model.tool_response import LegacyToolResponse
 from src.model.transaction import Category, Transaction, TransactionType
 from src.model.update_transaction_params import UpdateTransactionQuery
 from src.services.transaction_service import TransactionService
@@ -29,7 +29,7 @@ class TestDeleteTransactionTool:
 
         result = tool._run(query)
 
-        assert isinstance(result, ToolResponse)
+        assert isinstance(result, LegacyToolResponse)
         assert result.status == "ok"
         assert result.data["deleted"] is True
 

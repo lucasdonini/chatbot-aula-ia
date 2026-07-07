@@ -3,7 +3,7 @@ from typing import Any, NoReturn, Optional
 from pydantic import BaseModel, ValidatorFunctionWrapHandler, model_validator
 
 
-class ToolResponse(BaseModel):
+class LegacyToolResponse(BaseModel):
     _allow_direct: bool = False
     status: str
     data: dict
@@ -19,14 +19,14 @@ class ToolResponse(BaseModel):
         )
 
     @classmethod
-    def ok(cls, data: dict) -> "ToolResponse":
+    def ok(cls, data: dict) -> "LegacyToolResponse":
         return cls.model_construct(status="ok", data=data)
 
     @classmethod
-    def error(cls, msg: str, details: Optional[dict] = None) -> "ToolResponse":
+    def error(cls, msg: str, details: Optional[dict] = None) -> "LegacyToolResponse":
         data = {"message": msg, "details": details if details else {}}
         return cls.model_construct(status="error", data=data)
 
     @classmethod
-    def exception(cls, e: Exception) -> "ToolResponse":
+    def exception(cls, e: Exception) -> "LegacyToolResponse":
         return cls.error(str(e))

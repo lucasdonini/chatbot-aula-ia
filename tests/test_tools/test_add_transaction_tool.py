@@ -1,7 +1,7 @@
 import pytest
 
 from src.agents.financial.tools.add_transaction import AddTransactionTool
-from src.model.tool_response import ToolResponse
+from src.model.tool_response import LegacyToolResponse
 from src.model.transaction import Category, Transaction, TransactionType
 from src.services.transaction_service import TransactionService
 
@@ -24,7 +24,7 @@ class TestAddTransactionTool:
 
         result = tool._run(t)
 
-        assert isinstance(result, ToolResponse)
+        assert isinstance(result, LegacyToolResponse)
         assert result.status == "ok"
         assert "transaction" in result.data
 
