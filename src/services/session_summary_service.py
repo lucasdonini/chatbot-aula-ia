@@ -1,4 +1,5 @@
 import logging
+import traceback
 from typing import List
 
 from langchain_groq import ChatGroq
@@ -22,6 +23,38 @@ Conversa:
 {conversa}
 """
 
+_EXCEPTION_SUMMARY_PROMPT = """\
+Você é responsável por converter exceções internas da 
+aplicação em uma explicação curta e amigável para o usuário.
+
+Sua resposta será armazenada no histórico de uma conversa e poderá ser utilizada 
+posteriormente por outro agente para responder perguntas sobre o que aconteceu.
+
+Objetivo:
+Gerar um resumo fiel do erro em linguagem natural.
+
+Regras:
+- Escreva no máximo duas frases.
+- Explique apenas o que aconteceu, não como corrigir.
+- Não invente informações que não estejam evidentes no erro.
+- Não mencione nomes de classes, funções, arquivos, 
+    linhas de código ou stack traces.
+- Não exponha detalhes internos da aplicação.
+- Se a causa do erro estiver clara, mencione-a de forma simples.
+- Se a causa não puder ser determinada com segurança, 
+    diga apenas que ocorreu um erro interno inesperado.
+- Escreva como se estivesse registrando um fato ocorrido 
+    durante a conversa, e não respondendo diretamente ao usuário.
+- Não use primeira pessoa ("eu", "nós").
+
+Stack trace:
+<stack_trace>
+{}
+</stack_trace>
+
+Retorne apenas o resumo.
+"""
+
 
 class SessionSummaryService:
     def __init__(self) -> None:
@@ -36,7 +69,7 @@ class SessionSummaryService:
         lines = []
         for entry in entries:
             if isinstance(entry, ChatMessage):
-                lines.append(f"{entry.role}: {entry.content}")
+                lines.append(f"{entry.role.value}: {entry.content}")
             else:
                 lines.append(f"ERROR: {entry.exception} -> {entry.summary}")
         return "\n".join(lines)
@@ -54,6 +87,24 @@ class SessionSummaryService:
             await self._llm.ainvoke(
                 _MESSAGES_SUMMARY_PROMPT.format(conversa=conversation)
             )
+        ).content
+
+        if not isinstance(response, str):
+            raise TypeError(
+                f"Summarizer returned non-text content: {type(response).__name__!r}"
+            )
+
+        return response.strip()
+
+    async def summarize_exception(self, exc: Exception) -> str:
+        """Summarizes the erro's traceback into a couple of friendly lines."""
+        logger.debug(
+            "Summarizing error", extra={"details": {"exec_name": type(exc).__name__}}
+        )
+
+        stack_trace = traceback.format_exception(type(exc), exc, exc.__traceback__)
+        response = (
+            await self._llm.ainvoke(_EXCEPTION_SUMMARY_PROMPT.format(stack_trace))
         ).content
 
         if not isinstance(response, str):

@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.model.chat_session import ChatMessage
+from src.model.chat_session import ChatError, ChatMessage
 from src.services.session_summary_service import SessionSummaryService
 
 
@@ -17,8 +17,8 @@ class TestSessionSummaryService:
             yield service
 
     @pytest.mark.asyncio
-    async def test_summarize(self, service):
-        messages = [
+    async def test_summarize_session(self, service):
+        entries = [
             ChatMessage(role="human", content="Gastei 100 reais"),
             ChatMessage(role="assistant", content="Registrado como despesa"),
         ]
@@ -26,39 +26,62 @@ class TestSessionSummaryService:
         mock_response.content = "Usuário registrou despesa de 100 reais."
         service._llm.ainvoke.return_value = mock_response
 
-        result = await service.sumarize(messages)
+        result = await service.summarize_session(entries)
 
         assert result == "Usuário registrou despesa de 100 reais."
         service._llm.ainvoke.assert_called_once()
 
     def test_format_conversation(self, service):
-        messages = [
+        entries = [
             ChatMessage(role="human", content="Olá"),
+            ChatError(
+                exception="ValueError",
+                summary="Ocorreu um erro interno inesperado.",
+            ),
             ChatMessage(role="assistant", content="Oi!"),
         ]
-        result = service._format_conversation(messages)
-        assert result == "human: Olá\nassistant: Oi!"
+        expected = (
+            "human: Olá\n"
+            "ERROR: ValueError -> Ocorreu um erro interno inesperado.\n"
+            "assistant: Oi!"
+        )
+        result = service._format_conversation(entries)
+        assert result == expected
 
     @pytest.mark.asyncio
-    async def test_summarize_empty_conversation(self, service):
+    async def test_summarize_session_empty(self, service):
         mock_response = AsyncMock()
         mock_response.content = "Nenhuma conversa para resumir."
         service._llm.ainvoke.return_value = mock_response
 
-        result = await service.sumarize([])
+        result = await service.summarize_session([])
 
         assert result == "Nenhuma conversa para resumir."
 
     @pytest.mark.asyncio
-    async def test_summarize_calls_groq(self, service):
-        messages = [ChatMessage(role="human", content="teste")]
+    async def test_summarize_session_calls_groq(self, service):
+        entries = [ChatMessage(role="human", content="teste")]
         mock_response = AsyncMock()
         mock_response.content = "resumo"
         service._llm.ainvoke.return_value = mock_response
 
-        await service.sumarize(messages)
+        await service.summarize_session(entries)
 
         service._llm.ainvoke.assert_called_once()
         prompt_arg = service._llm.ainvoke.call_args[0][0]
         assert "{conversa}" not in prompt_arg
         assert "teste" in prompt_arg
+
+    @pytest.mark.asyncio
+    async def test_summarize_exception(self, service):
+        mock_response = AsyncMock()
+        mock_response.content = "Ocorreu um erro interno inesperado."
+        service._llm.ainvoke.return_value = mock_response
+
+        try:
+            raise ValueError("Algo deu errado")
+        except ValueError as exc:
+            result = await service.summarize_exception(exc)
+
+        assert result == "Ocorreu um erro interno inesperado."
+        service._llm.ainvoke.assert_called_once()

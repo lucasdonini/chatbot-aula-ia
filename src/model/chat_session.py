@@ -23,7 +23,7 @@ class ChatError(BaseModel):
     summary: str
 
 
-ChatEntry = Annotated[Union[ChatMessage, ChatError], Field(discriminator="type")]
+ChatEntry = Union[ChatMessage, ChatError]
 
 
 class ChatSession(Document):
@@ -33,7 +33,7 @@ class ChatSession(Document):
     started_at: Annotated[datetime, Indexed()]
     updated_at: Optional[datetime] = None
     summary: Optional[str] = None
-    entries: List[ChatEntry]
+    entries: List[Annotated[ChatEntry, Field(discriminator="type")]]
 
     class Settings:
         name = "sessions"

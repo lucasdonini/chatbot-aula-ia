@@ -57,15 +57,42 @@ class TestChatSessionService:
             mock_query.update.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_save_message_non_text_content(self, service, summary_service):
+        message = MagicMock(spec=HumanMessage)
+        message.content = {"key": "value"}
+
+        with pytest.raises(TypeError, match="Received message with non-text content"):
+            await service.save_message("session-123", message)
+
+    @pytest.mark.asyncio
+    async def test_save_error(self, service, summary_service):
+        summary_service.summarize_exception = AsyncMock(
+            return_value="Ocorreu um erro interno."
+        )
+
+        with patch("src.services.chat_session_service.ChatSession") as mock_chat:
+            chat_session_service._active_sessions["session-123"] = "doc-id"
+            mock_query = MagicMock()
+            mock_query.update = AsyncMock()
+            mock_chat.find_one = MagicMock(return_value=mock_query)
+
+            exc = ValueError("Algo deu errado")
+            await service.save_error("session-123", exc)
+
+            mock_chat.find_one.assert_called_once()
+            mock_query.update.assert_called_once()
+            summary_service.summarize_exception.assert_called_once_with(exc)
+
+    @pytest.mark.asyncio
     async def test_finalize_session_with_summary(self, service, summary_service):
-        summary_service.sumarize = AsyncMock(return_value="Resumo da sessão")
+        summary_service.summarize_session = AsyncMock(return_value="Resumo da sessão")
 
         with patch("src.services.chat_session_service.ChatSession") as mock_chat:
             chat_session_service._active_sessions["session-123"] = "doc-id"
 
             async def find_one_side(*args, **kwargs):
                 session = AsyncMock()
-                session.messages = [MagicMock(spec=ChatMessage)]
+                session.entries = [MagicMock(spec=ChatMessage)]
                 return session
 
             mock_chat.find_one = MagicMock(side_effect=find_one_side)
@@ -74,7 +101,7 @@ class TestChatSessionService:
 
             assert result is None
             assert "session-123" not in chat_session_service._active_sessions
-            summary_service.sumarize.assert_called_once()
+            summary_service.summarize_session.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_finalize_session_no_active(self, service, summary_service):
@@ -88,7 +115,7 @@ class TestChatSessionService:
 
             async def find_one_side(*args, **kwargs):
                 session = AsyncMock()
-                session.messages = []
+                session.entries = []
                 return session
 
             mock_chat.find_one = MagicMock(side_effect=find_one_side)
