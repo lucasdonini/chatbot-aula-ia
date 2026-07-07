@@ -3,9 +3,16 @@ from datetime import datetime
 from typing import Union
 
 from beanie import PydanticObjectId
+from beanie.operators import Push, Set
 from langchain_core.messages import AIMessage, HumanMessage
 
-from src.model.chat_session import ChatEntry, ChatMessage, ChatMessageRole, ChatSession
+from src.model.chat_session import (
+    ChatEntry,
+    ChatError,
+    ChatMessage,
+    ChatMessageRole,
+    ChatSession,
+)
 
 from .session_summary_service import SessionSummaryService
 
@@ -39,12 +46,10 @@ class ChatSessionService:
         return _active_sessions.copy()
 
     async def _save_entry(self, session_id: str, entry: ChatEntry) -> None:
-        id = _active_sessions[session_id]
-        await ChatSession.find_one(ChatSession.id == id).update(
-            {
-                "$push": {ChatSession.entries: entry},
-                "$set": {ChatSession.updated_at: datetime.now()},
-            }
+        doc_id = _active_sessions[session_id]
+        await ChatSession.find_one(ChatSession.id == doc_id).update(
+            Push({ChatSession.entries: entry}),
+            Set({ChatSession.updated_at: datetime.now()}),
         )
 
     async def save_message(
@@ -64,8 +69,15 @@ class ChatSessionService:
         await self._save_entry(session_id, entry)
         logger.debug(
             "Message saved",
-            extra={"details": {"role": role, "content": content[:100]}},
+            extra={"details": entry.model_dump()},
         )
+
+    async def save_error(self, session_id: str, error: Exception) -> None:
+        name = type(error).__name__
+        summary = await self._service.summarize_exception(error)
+        entry = ChatError(exception=name, summary=summary)
+        await self._save_entry(session_id, entry)
+        logger.debug("Error saved", extra={"details": entry.model_dump()})
 
     async def finalize_session(self, session_id: str) -> None:
         """
@@ -87,12 +99,12 @@ class ChatSessionService:
 
         summary = await self._service.summarize_session(session.entries)
         await session.update(
-            {
-                "$set": {
+            Set(
+                {
                     ChatSession.updated_at: datetime.now(),
                     ChatSession.summary: summary,
                 }
-            }
+            )
         )
 
         _active_sessions.pop(session_id)

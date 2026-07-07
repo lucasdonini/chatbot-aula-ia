@@ -24,11 +24,12 @@ async def main() -> None:
         await session_service.init_session(session_id)
         await _execute_interaction_loop(session_id=session_id, service=session_service)
 
-    except Exception:
+    except Exception as e:
         logger.exception(
             "Unhandled error",
             extra={"details": {"session": session_id[:8]}},
         )
+        await session_service.save_error(session_id, e)
         print("**Unknow error ocurred! Try again later.**")
 
     finally:
