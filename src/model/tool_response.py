@@ -1,6 +1,6 @@
-from typing import Any, NoReturn, Optional
+from typing import Any, Literal, NoReturn, Optional
 
-from pydantic import BaseModel, ValidatorFunctionWrapHandler, model_validator
+from pydantic import BaseModel, JsonValue, ValidatorFunctionWrapHandler, model_validator
 
 
 class LegacyToolResponse(BaseModel):
@@ -30,3 +30,21 @@ class LegacyToolResponse(BaseModel):
     @classmethod
     def exception(cls, e: Exception) -> "LegacyToolResponse":
         return cls.error(str(e))
+
+
+class ToolError(BaseModel):
+    message: str
+    details: dict[str, JsonValue] = {}
+
+
+class ToolSuccess[T: BaseModel](BaseModel):
+    status: Literal["ok"] = "ok"
+    data: T
+
+
+class ToolFailure(BaseModel):
+    status: Literal["error"] = "error"
+    error: ToolError
+
+
+type ToolResponse[T: BaseModel] = ToolSuccess[T] | ToolFailure
