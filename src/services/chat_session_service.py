@@ -1,11 +1,11 @@
 import logging
 from datetime import datetime
-from typing import Literal, Union
+from typing import Union
 
 from beanie import PydanticObjectId
 from langchain_core.messages import AIMessage, HumanMessage
 
-from src.model.chat_session import ChatMessage, ChatSession
+from src.model.chat_session import ChatEntry, ChatMessage, ChatMessageRole, ChatSession
 
 from .session_summary_service import SessionSummaryService
 
@@ -24,7 +24,7 @@ class ChatSessionService:
             started_at=now,
             updated_at=now,
             summary="",
-            messages=[],
+            entries=[],
         )
 
         await session.insert()
@@ -38,26 +38,30 @@ class ChatSessionService:
     def get_active_sessions(self) -> dict[str, PydanticObjectId]:
         return _active_sessions.copy()
 
+    async def _save_entry(self, session_id: str, entry: ChatEntry) -> None:
+        id = _active_sessions[session_id]
+        await ChatSession.find_one(ChatSession.id == id).update(
+            {
+                "$push": {ChatSession.entries: entry},
+                "$set": {ChatSession.updated_at: datetime.now()},
+            }
+        )
+
     async def save_message(
         self, session_id: str, message: Union[AIMessage, HumanMessage]
     ) -> None:
-        id = _active_sessions[session_id]
-        role: Literal["human", "assistant"] = (
-            "human" if isinstance(message, HumanMessage) else "assistant"
+        role = (
+            ChatMessageRole.HUMAN
+            if isinstance(message, HumanMessage)
+            else ChatMessageRole.ASSISTANT
         )
         if not isinstance((content := message.content), str):
             raise TypeError(
                 f"Received message with non-text content: {type(content).__name__!r}"
             )
 
-        await ChatSession.find_one(ChatSession.id == id).update(
-            {
-                "$push": {
-                    ChatSession.messages: ChatMessage(role=role, content=content)
-                },
-                "$set": {ChatSession.updated_at: datetime.now()},
-            }
-        )
+        entry = ChatMessage(role=role, content=content)
+        await self._save_entry(session_id, entry)
         logger.debug(
             "Message saved",
             extra={"details": {"role": role, "content": content[:100]}},
@@ -66,7 +70,7 @@ class ChatSessionService:
     async def finalize_session(self, session_id: str) -> None:
         """
         Finalizes the active session:
-            1. Load messages from MongoDB
+            1. Load entries from MongoDB
             2. Generate a summary via LLM
             3. Update document with the summary
             4. Remove session from internal state
@@ -78,10 +82,10 @@ class ChatSessionService:
             return
 
         session = await ChatSession.find_one(ChatSession.id == id)
-        if not session or not session.messages:
+        if not session or not session.entries:
             return
 
-        summary = await self._service.sumarize(session.messages)
+        summary = await self._service.summarize_session(session.entries)
         await session.update(
             {
                 "$set": {
@@ -97,7 +101,7 @@ class ChatSessionService:
             extra={
                 "details": {
                     "session_id": session_id[:8],
-                    "message_count": len(session.messages),
+                    "entry_count": len(session.entries),
                 }
             },
         )

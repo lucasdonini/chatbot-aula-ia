@@ -1,13 +1,29 @@
 from datetime import datetime
-from typing import Annotated, List, Literal, Optional
+from enum import Enum
+from typing import Annotated, List, Literal, Optional, Union
 
 from beanie import Document, Indexed
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class ChatMessageRole(str, Enum):
+    HUMAN = "human"
+    ASSISTANT = "assistant"
 
 
 class ChatMessage(BaseModel):
-    role: Literal["human", "assistant"]
+    type: Literal["message"] = "message"
+    role: ChatMessageRole
     content: str
+
+
+class ChatError(BaseModel):
+    type: Literal["error"] = "error"
+    exception: str
+    summary: str
+
+
+ChatEntry = Annotated[Union[ChatMessage, ChatError], Field(discriminator="type")]
 
 
 class ChatSession(Document):
@@ -17,7 +33,7 @@ class ChatSession(Document):
     started_at: Annotated[datetime, Indexed()]
     updated_at: Optional[datetime] = None
     summary: Optional[str] = None
-    messages: List[ChatMessage]
+    entries: List[ChatEntry]
 
     class Settings:
         name = "sessions"
