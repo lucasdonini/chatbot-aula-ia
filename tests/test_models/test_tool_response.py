@@ -1,52 +1,107 @@
 import pytest
+from pydantic import BaseModel
 
-from src.model.tool_response import LegacyToolResponse
+from src.model.tool_response import ToolFailure, ToolSuccess
 
 
-class TestToolResponse:
-    def test_direct_instantiation_blocked(self):
-        with pytest.raises(TypeError):
-            LegacyToolResponse(status="ok", data={})
+class _DummyData(BaseModel):
+    value: int
+    name: str = "default"
 
-    def test_ok(self):
-        response = LegacyToolResponse.ok({"saldo": 1000.0})
+
+class TestToolSuccess:
+    def test_ok_status(self):
+        response = ToolSuccess(data=_DummyData(value=42))
         assert response.status == "ok"
-        assert response.data == {"saldo": 1000.0}
 
-    def test_ok_empty_data(self):
-        response = LegacyToolResponse.ok({})
+    def test_typed_data(self):
+        response = ToolSuccess(data=_DummyData(value=99, name="test"))
+        assert response.data.value == 99
+        assert response.data.name == "test"
+
+    def test_default_status(self):
+        response = ToolSuccess(data=_DummyData(value=1))
         assert response.status == "ok"
-        assert response.data == {}
 
-    def test_error(self):
-        response = LegacyToolResponse.error("Something went wrong")
+    def test_is_base_model(self):
+        response = ToolSuccess(data=_DummyData(value=0))
+        assert isinstance(response, BaseModel)
+
+
+class TestToolFailure:
+    def test_error_status(self):
+        response = ToolFailure(error="fail")
         assert response.status == "error"
-        assert response.data["message"] == "Something went wrong"
-        assert response.data["details"] == {}
 
-    def test_error_with_details(self):
-        response = LegacyToolResponse.error("Error", {"code": 500})
-        assert response.status == "error"
-        assert response.data["message"] == "Error"
-        assert response.data["details"] == {"code": 500}
+    def test_error_message(self):
+        response = ToolFailure(error="Something went wrong")
+        assert response.error == "Something went wrong"
 
-    def test_exception(self):
+    def test_default_details(self):
+        response = ToolFailure(error="fail")
+        assert response.details == {}
+
+    def test_custom_details(self):
+        response = ToolFailure(error="fail", details={"code": 500})
+        assert response.details == {"code": 500}
+
+    def test_exception_classmethod(self):
         exc = ValueError("invalid value")
-        response = LegacyToolResponse.exception(exc)
+        response = ToolFailure.exception(exc)
         assert response.status == "error"
-        assert response.data["message"] == "invalid value"
+        assert response.error == "Exception raised"
+        assert response.details["exception"] == "invalid value"
 
-    def test_ok_is_not_blocked(self):
-        response = LegacyToolResponse.ok({"key": "val"})
-        assert response.status == "ok"
+    def test_exception_with_non_string_details(self):
+        response = ToolFailure(error="err", details={"count": 3, "active": True})
+        assert response.details == {"count": 3, "active": True}
 
-    def test_error_is_not_ok(self):
-        response = LegacyToolResponse.error("fail")
-        assert response.status != "ok"
 
-    def test_multiple_ok_calls_return_different_instances(self):
-        r1 = LegacyToolResponse.ok({"a": 1})
-        r2 = LegacyToolResponse.ok({"b": 2})
-        assert r1 is not r2
-        assert r1.data == {"a": 1}
-        assert r2.data == {"b": 2}
+class TestToolResponseDiscrimination:
+    def test_success_is_not_failure(self):
+        success = ToolSuccess(data=_DummyData(value=1))
+        assert not isinstance(success, ToolFailure)
+
+    def test_failure_is_not_success(self):
+        failure = ToolFailure(error="err")
+        assert not isinstance(failure, ToolSuccess)
+
+    def test_success_and_failure_are_distinct(self):
+        success = ToolSuccess(data=_DummyData(value=1))
+        failure = ToolFailure(error="err")
+
+        ok_results = [
+            isinstance(success, ToolSuccess),
+            not isinstance(failure, ToolSuccess),
+        ]
+        assert all(ok_results)
+
+    def test_union_discrimination_via_isinstance(self):
+        results: list[ToolSuccess[_DummyData] | ToolFailure] = [
+            ToolSuccess(data=_DummyData(value=10)),
+            ToolFailure(error="err"),
+        ]
+
+        assert isinstance(results[0], ToolSuccess)
+        assert isinstance(results[1], ToolFailure)
+
+    def test_pattern_matching_success(self):
+        response: ToolSuccess[_DummyData] | ToolFailure = ToolSuccess(
+            data=_DummyData(value=7)
+        )
+        match response:
+            case ToolSuccess(data=data):
+                assert data.value == 7
+            case _:
+                pytest.fail("Expected ToolSuccess")
+
+    def test_pattern_matching_failure(self):
+        response: ToolSuccess[_DummyData] | ToolFailure = ToolFailure(
+            error="fail", details={"reason": "timeout"}
+        )
+        match response:
+            case ToolFailure(error=err, details=det):
+                assert err == "fail"
+                assert det == {"reason": "timeout"}
+            case _:
+                pytest.fail("Expected ToolFailure")
