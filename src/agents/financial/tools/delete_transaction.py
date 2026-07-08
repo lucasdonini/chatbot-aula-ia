@@ -3,7 +3,7 @@ import logging
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from src.model.tool_response import LegacyToolResponse
+from src.model.tool_response import ToolFailure, ToolResponse, ToolSuccess
 from src.model.update_transaction_params import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
@@ -15,6 +15,10 @@ logger = logging.getLogger(__name__)
 
 class _DeleteTransactionArgsSchema(BaseModel):
     query: UpdateTransactionQuery
+
+
+class _DeleteTransactionResponse(BaseModel):
+    deleted: bool
 
 
 TOOL_NAME = "delete_transaction"
@@ -35,28 +39,32 @@ class DeleteTransactionTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, query: UpdateTransactionQuery) -> LegacyToolResponse:
+    def _run(
+        self, query: UpdateTransactionQuery
+    ) -> ToolResponse[_DeleteTransactionResponse]:
         logger.debug(
             "Tool called",
             extra={"details": {"tool": self.name, "query": query.model_dump()}},
         )
         params = UpdateTransactionParams(query=query, is_canceled=True)
+        response: _DeleteTransactionResponse
         try:
             if self.service.update_transaction(params):
                 logger.debug(
                     "Tool succeeded",
                     extra={"details": {"tool": self.name, "deleted": True}},
                 )
-                return LegacyToolResponse.ok({"deleted": True})
+                response = _DeleteTransactionResponse(deleted=True)
             else:
                 logger.debug(
                     "Tool succeeded",
                     extra={"details": {"tool": self.name, "deleted": False}},
                 )
-                return LegacyToolResponse.ok({"deleted": False})
+                response = _DeleteTransactionResponse(deleted=False)
+            return ToolSuccess(data=response)
         except Exception as e:
             logger.exception(
                 "Tool failed",
                 extra={"details": {"tool": self.name}},
             )
-            return LegacyToolResponse.exception(e)
+            return ToolFailure.exception(e)

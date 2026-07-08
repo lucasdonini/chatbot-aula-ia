@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from src.agents.financial.tools.update_transaction import UpdateTransactionTool
-from src.model.tool_response import LegacyToolResponse
+from src.model.tool_response import ToolFailure, ToolSuccess
 from src.model.transaction import Category, Transaction, TransactionType
 from src.model.update_transaction_params import (
     UpdateTransactionParams,
@@ -36,9 +36,9 @@ class TestUpdateTransactionTool:
 
         result = tool._run(params)
 
-        assert isinstance(result, LegacyToolResponse)
-        assert result.status == "ok"
-        assert "updated" in result.data
+        assert isinstance(result, ToolSuccess)
+        assert result.data.updated is not None
+        assert result.data.updated.amount == 200.0
 
     def test_nothing_to_update(self, tool):
         params = UpdateTransactionParams(
@@ -50,8 +50,8 @@ class TestUpdateTransactionTool:
 
         result = tool._run(params)
 
-        assert result.status == "ok"
-        assert result.data["updated"] == "Nothing to update"
+        assert isinstance(result, ToolSuccess)
+        assert result.data.updated is None
 
     def test_handles_exception(self, tool):
         def raise_error(p):
@@ -65,4 +65,4 @@ class TestUpdateTransactionTool:
         )
         result = tool._run(params)
 
-        assert result.status == "error"
+        assert isinstance(result, ToolFailure)

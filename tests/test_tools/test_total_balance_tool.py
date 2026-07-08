@@ -1,7 +1,7 @@
 import pytest
 
 from src.agents.financial.tools.total_balance import TotalBalanceTool
-from src.model.tool_response import LegacyToolResponse
+from src.model.tool_response import ToolFailure, ToolSuccess
 from src.services.transaction_service import TransactionService
 
 
@@ -17,25 +17,24 @@ class TestTotalBalanceTool:
 
         result = tool._run()
 
-        assert isinstance(result, LegacyToolResponse)
-        assert result.status == "ok"
-        assert result.data["saldo"] == 5000.0
+        assert isinstance(result, ToolSuccess)
+        assert result.data.balance == 5000.0
 
     def test_returns_zero(self, tool):
         tool.service.calculate_total_balance = lambda: 0.0
 
         result = tool._run()
 
-        assert result.status == "ok"
-        assert result.data["saldo"] == 0.0
+        assert isinstance(result, ToolSuccess)
+        assert result.data.balance == 0.0
 
     def test_returns_negative(self, tool):
         tool.service.calculate_total_balance = lambda: -500.0
 
         result = tool._run()
 
-        assert result.status == "ok"
-        assert result.data["saldo"] == -500.0
+        assert isinstance(result, ToolSuccess)
+        assert result.data.balance == -500.0
 
     def test_handles_exception(self, tool):
         def raise_error():
@@ -45,5 +44,5 @@ class TestTotalBalanceTool:
 
         result = tool._run()
 
-        assert result.status == "error"
-        assert "DB error" in result.data["message"]
+        assert isinstance(result, ToolFailure)
+        assert "DB error" in result.details["exception"]

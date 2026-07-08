@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from src.agents.financial.tools.delete_transaction import DeleteTransactionTool
-from src.model.tool_response import LegacyToolResponse
+from src.model.tool_response import ToolFailure, ToolSuccess
 from src.model.transaction import Category, Transaction, TransactionType
 from src.model.update_transaction_params import UpdateTransactionQuery
 from src.services.transaction_service import TransactionService
@@ -29,9 +29,8 @@ class TestDeleteTransactionTool:
 
         result = tool._run(query)
 
-        assert isinstance(result, LegacyToolResponse)
-        assert result.status == "ok"
-        assert result.data["deleted"] is True
+        assert isinstance(result, ToolSuccess)
+        assert result.data.deleted is True
 
     def test_no_transaction_found_returns_false(self, tool):
         query = UpdateTransactionQuery(
@@ -42,8 +41,8 @@ class TestDeleteTransactionTool:
 
         result = tool._run(query)
 
-        assert result.status == "ok"
-        assert result.data["deleted"] is False
+        assert isinstance(result, ToolSuccess)
+        assert result.data.deleted is False
 
     def test_handles_exception(self, tool):
         def raise_error(p):
@@ -54,5 +53,5 @@ class TestDeleteTransactionTool:
         query = UpdateTransactionQuery(id=uuid4())
         result = tool._run(query)
 
-        assert result.status == "error"
-        assert "DB error" in result.data["message"]
+        assert isinstance(result, ToolFailure)
+        assert "DB error" in result.details["exception"]

@@ -9,6 +9,7 @@ from src.agents.financial.tools.restore_transaction import RestoreTransactionToo
 from src.agents.financial.tools.search_transaction import SearchTransactionsTool
 from src.agents.financial.tools.total_balance import TotalBalanceTool
 from src.agents.financial.tools.update_transaction import UpdateTransactionTool
+from src.model.tool_response import ToolSuccess
 from src.model.transaction import Category, Transaction, TransactionType
 from src.model.transaction_query_params import TransactionQueryParams
 from src.model.update_transaction_params import (
@@ -60,44 +61,44 @@ def restore_tool(transaction_service):
 class TestTotalBalanceTool:
     def test_returns_balance(self, total_balance_tool, seed_transactions):
         result = total_balance_tool._run()
-        assert result.status == "ok"
-        assert result.data["saldo"] == 7600.00
+        assert isinstance(result, ToolSuccess)
+        assert result.data.balance == 7600.00
 
     def test_empty_db_returns_zero(self, total_balance_tool, db_session):
         result = total_balance_tool._run()
-        assert result.status == "ok"
-        assert result.data["saldo"] == 0.0
+        assert isinstance(result, ToolSuccess)
+        assert result.data.balance == 0.0
 
 
 class TestDailyBalanceTool:
     def test_returns_daily_balance(self, daily_balance_tool, seed_transactions):
         result = daily_balance_tool._run(target_date=date(2026, 6, 1))
-        assert result.status == "ok"
-        assert result.data["saldo_diario"] == 4850.00
+        assert isinstance(result, ToolSuccess)
+        assert result.data.balance == 4850.00
 
     def test_no_transactions_on_date(self, daily_balance_tool, db_session):
         result = daily_balance_tool._run(target_date=date(2025, 1, 1))
-        assert result.status == "ok"
-        assert result.data["saldo_diario"] == 0.0
+        assert isinstance(result, ToolSuccess)
+        assert result.data.balance == 0.0
 
 
 class TestSearchTransactionsTool:
     def test_search_by_category(self, search_tool, seed_transactions):
         params = TransactionQueryParams(category=Category.FOOD, limit=50)
         result = search_tool._run(params)
-        assert result.status == "ok"
-        assert len(result.data["transactions"]) >= 1
+        assert isinstance(result, ToolSuccess)
+        assert len(result.data.transactions) >= 1
 
     def test_no_results(self, search_tool, seed_transactions):
         params = TransactionQueryParams(source_text="xyz_nonexistent", limit=50)
         result = search_tool._run(params)
-        assert result.status == "ok"
-        assert result.data["transactions"] == []
+        assert isinstance(result, ToolSuccess)
+        assert result.data.transactions == []
 
-    def test_returns_dicts(self, search_tool, seed_transactions):
+    def test_returns_typed_models(self, search_tool, seed_transactions):
         params = TransactionQueryParams(limit=1)
         result = search_tool._run(params)
-        assert isinstance(result.data["transactions"][0], dict)
+        assert isinstance(result.data.transactions[0], Transaction)
 
 
 class TestAddTransactionTool:
@@ -110,8 +111,8 @@ class TestAddTransactionTool:
             source_text="Comprei presente",
         )
         result = add_tool._run(t)
-        assert result.status == "ok"
-        assert "transaction" in result.data
+        assert isinstance(result, ToolSuccess)
+        assert result.data.transaction is not None
 
     def test_add_and_verify(self, add_tool, transaction_service, db_session):
         t = Transaction(
@@ -119,7 +120,7 @@ class TestAddTransactionTool:
             source_text="teste add tool",
         )
         add_result = add_tool._run(t)
-        assert add_result.status == "ok"
+        assert isinstance(add_result, ToolSuccess)
 
         params = TransactionQueryParams(source_text="teste add tool", limit=50)
         search_result = transaction_service.search_transactions(params)
@@ -135,8 +136,8 @@ class TestUpdateTransactionTool:
             description="Atualizado via tool",
         )
         result = update_tool._run(params)
-        assert result.status == "ok"
-        assert "updated" in result.data
+        assert isinstance(result, ToolSuccess)
+        assert result.data.updated is not None
 
     def test_nothing_to_update(self, update_tool, seed_transactions):
         params = UpdateTransactionParams(
@@ -146,8 +147,8 @@ class TestUpdateTransactionTool:
             ),
         )
         result = update_tool._run(params)
-        assert result.status == "ok"
-        assert result.data["updated"] == "Nothing to update"
+        assert isinstance(result, ToolSuccess)
+        assert result.data.updated is None
 
 
 class TestDeleteTransactionTool:
@@ -155,16 +156,16 @@ class TestDeleteTransactionTool:
         target = seed_transactions[0]
         query = UpdateTransactionQuery(id=target.id)
         result = delete_tool._run(query)
-        assert result.status == "ok"
-        assert result.data["deleted"] is True
+        assert isinstance(result, ToolSuccess)
+        assert result.data.deleted is True
 
     def test_delete_not_found(self, delete_tool, seed_transactions):
         from uuid import uuid4
 
         query = UpdateTransactionQuery(id=uuid4())
         result = delete_tool._run(query)
-        assert result.status == "ok"
-        assert result.data["deleted"] is False
+        assert isinstance(result, ToolSuccess)
+        assert result.data.deleted is False
 
 
 class TestRestoreTransactionTool:
@@ -172,16 +173,16 @@ class TestRestoreTransactionTool:
         target = seed_transactions[0]
         query = UpdateTransactionQuery(id=target.id)
         result = restore_tool._run(query)
-        assert result.status == "ok"
-        assert result.data["restored"] is True
+        assert isinstance(result, ToolSuccess)
+        assert result.data.restored is True
 
     def test_restore_not_found(self, restore_tool, seed_transactions):
         from uuid import uuid4
 
         query = UpdateTransactionQuery(id=uuid4())
         result = restore_tool._run(query)
-        assert result.status == "ok"
-        assert result.data["restored"] is False
+        assert isinstance(result, ToolSuccess)
+        assert result.data.restored is False
 
     def test_delete_then_restore_cycle(
         self, restore_tool, delete_tool, seed_transactions
@@ -189,9 +190,9 @@ class TestRestoreTransactionTool:
         target = seed_transactions[0]
         delete_query = UpdateTransactionQuery(id=target.id)
         delete_result = delete_tool._run(delete_query)
-        assert delete_result.status == "ok"
-        assert delete_result.data["deleted"] is True
+        assert isinstance(delete_result, ToolSuccess)
+        assert delete_result.data.deleted is True
 
         restore_result = restore_tool._run(delete_query)
-        assert restore_result.status == "ok"
-        assert restore_result.data["restored"] is True
+        assert isinstance(restore_result, ToolSuccess)
+        assert restore_result.data.restored is True
