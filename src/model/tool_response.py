@@ -32,11 +32,6 @@ class LegacyToolResponse(BaseModel):
         return cls.error(str(e))
 
 
-class ToolError(BaseModel):
-    message: str
-    details: dict[str, JsonValue] = {}
-
-
 class ToolSuccess[T: BaseModel](BaseModel):
     status: Literal["ok"] = "ok"
     data: T
@@ -44,7 +39,14 @@ class ToolSuccess[T: BaseModel](BaseModel):
 
 class ToolFailure(BaseModel):
     status: Literal["error"] = "error"
-    error: ToolError
+    error: str
+    details: dict[str, JsonValue] = {}
+
+    @classmethod
+    def exception(cls, e: Exception) -> "ToolFailure":
+        return cls.model_construct(
+            error="Exception raised", details={"exception": str(e)}
+        )
 
 
 type ToolResponse[T: BaseModel] = ToolSuccess[T] | ToolFailure

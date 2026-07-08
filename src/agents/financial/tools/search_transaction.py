@@ -3,7 +3,8 @@ import logging
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from src.model.tool_response import LegacyToolResponse
+from src.model.tool_response import ToolFailure, ToolResponse, ToolSuccess
+from src.model.transaction import Transaction
 from src.model.transaction_query_params import TransactionQueryParams
 from src.services.transaction_service import TransactionService
 
@@ -12,6 +13,10 @@ logger = logging.getLogger(__name__)
 
 class _SearchTransactionsArgsSchema(BaseModel):
     params: TransactionQueryParams
+
+
+class _SearchTransactionsResponse(BaseModel):
+    transactions: list[Transaction]
 
 
 TOOL_NAME = "search_transactions"
@@ -36,7 +41,9 @@ class SearchTransactionsTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, params: TransactionQueryParams) -> LegacyToolResponse:
+    def _run(
+        self, params: TransactionQueryParams
+    ) -> ToolResponse[_SearchTransactionsResponse]:
         logger.debug(
             "Tool called",
             extra={"details": {"tool": self.name, "params": params.model_dump()}},
@@ -47,12 +54,10 @@ class SearchTransactionsTool(BaseTool):
                 "Tool succeeded",
                 extra={"details": {"tool": self.name, "count": len(result)}},
             )
-            return LegacyToolResponse.ok(
-                {"transactions": [t.model_dump() for t in result]}
-            )
+            return ToolSuccess(data=_SearchTransactionsResponse(transactions=result))
         except Exception as e:
             logger.exception(
                 "Tool failed",
                 extra={"details": {"tool": self.name}},
             )
-            return LegacyToolResponse.exception(e)
+            return ToolFailure.exception(e)

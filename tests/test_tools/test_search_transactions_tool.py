@@ -1,7 +1,7 @@
 import pytest
 
 from src.agents.financial.tools.search_transaction import SearchTransactionsTool
-from src.model.tool_response import LegacyToolResponse
+from src.model.tool_response import ToolFailure, ToolSuccess
 from src.model.transaction import Category, Transaction, TransactionType
 from src.model.transaction_query_params import TransactionQueryParams
 from src.services.transaction_service import TransactionService
@@ -28,10 +28,8 @@ class TestSearchTransactionsTool:
         params = TransactionQueryParams(category=Category.FOOD)
         result = tool._run(params)
 
-        assert isinstance(result, LegacyToolResponse)
-        assert result.status == "ok"
-        assert "transactions" in result.data
-        assert len(result.data["transactions"]) == 1
+        assert isinstance(result, ToolSuccess)
+        assert len(result.data.transactions) == 1
 
     def test_returns_empty_list(self, tool):
         tool.service.search_transactions = lambda p: []
@@ -39,8 +37,8 @@ class TestSearchTransactionsTool:
         params = TransactionQueryParams()
         result = tool._run(params)
 
-        assert result.status == "ok"
-        assert result.data["transactions"] == []
+        assert isinstance(result, ToolSuccess)
+        assert result.data.transactions == []
 
     def test_handles_exception(self, tool):
         def raise_error(p):
@@ -51,9 +49,9 @@ class TestSearchTransactionsTool:
         params = TransactionQueryParams()
         result = tool._run(params)
 
-        assert result.status == "error"
+        assert isinstance(result, ToolFailure)
 
-    def test_transactions_are_dumped_as_dicts(self, tool):
+    def test_transactions_are_typed_model(self, tool):
         mock_result = [
             Transaction(
                 amount=50.0,
@@ -67,4 +65,5 @@ class TestSearchTransactionsTool:
         params = TransactionQueryParams()
         result = tool._run(params)
 
-        assert isinstance(result.data["transactions"][0], dict)
+        assert isinstance(result, ToolSuccess)
+        assert isinstance(result.data.transactions[0], Transaction)

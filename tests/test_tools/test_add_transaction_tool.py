@@ -1,7 +1,7 @@
 import pytest
 
 from src.agents.financial.tools.add_transaction import AddTransactionTool
-from src.model.tool_response import LegacyToolResponse
+from src.model.tool_response import ToolFailure, ToolSuccess
 from src.model.transaction import Category, Transaction, TransactionType
 from src.services.transaction_service import TransactionService
 
@@ -24,9 +24,9 @@ class TestAddTransactionTool:
 
         result = tool._run(t)
 
-        assert isinstance(result, LegacyToolResponse)
-        assert result.status == "ok"
-        assert "transaction" in result.data
+        assert isinstance(result, ToolSuccess)
+        assert result.data.transaction is not None
+        assert result.data.transaction.amount == 100.0
 
     def test_handles_exception(self, tool):
         def raise_error(tr):
@@ -40,4 +40,4 @@ class TestAddTransactionTool:
         )
         result = tool._run(t)
 
-        assert result.status == "error"
+        assert isinstance(result, ToolFailure)
