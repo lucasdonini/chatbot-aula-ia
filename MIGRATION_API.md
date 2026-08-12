@@ -195,10 +195,12 @@ Analogia ao `Clock` do Spring Boot: um provider único de "agora".
   `temporal_context.py`, quem consumir `build_temporal_context` (nós do grafo).
 - **Aceite:** teste com `FixedClock` fixa `started_at`/`updated_at`/contexto temporal.
 
-### 0.7 Pacote de código fonte — `src/ -> app/`
+### 0.7 Refatorações menores
 
-Renomear o pacote `src/` para `app/` com cuidado para manter a coerência de nomes 
-e imports em todo o projeto.
+- Renomear o pacote `src/` para `app/` com cuidado para manter a coerência de nomes 
+  e imports em todo o projeto.
+- Remover referências a pacote pai com `..pacote_pai` pelo caminho 
+  completo `app.pacote_pai.pacote_irmao`
 
 ### ✅ Fase 0 — Definição de pronto
 
