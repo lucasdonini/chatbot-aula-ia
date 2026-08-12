@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Any
+from typing import Any, Optional
 
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
 from langgraph.graph import END
@@ -53,30 +53,53 @@ async def _input_guardrail(input: str) -> GuardrailResult:
             )
 
     # 3. Classificação semântica via LLM
-    response = (
-        await fast_llm.ainvoke(CLASSIFIER_PROMPT.format(mensagem=input))
-    ).content
+    try:
+        response = (
+            await fast_llm.ainvoke(CLASSIFIER_PROMPT.format(mensagem=input))
+        ).content
 
-    if not isinstance(response, str):
-        raise TypeError(
-            f"Classifier returned non-text content: {type(response).__name__!r}"
+        if not isinstance(response, str):
+            raise TypeError(
+                f"Classifier returned non-text content: {type(response).__name__!r}"
+            )
+    except Exception:
+        logger.exception(
+            "Input classifier failed",
+            extra={"details": {"stage": "classification"}},
+        )
+        return GuardrailResult.block(
+            "classificador_indisponivel",
+            (
+                "Não consigo processar essa solicitação no momento. "
+                "Tente novamente mais tarde."
+            ),
         )
 
-    category = "APROVADO"
+    category: Optional[str] = None
     for line in response.splitlines():
         if line.strip().upper().startswith("CATEGORIA:"):
             category = line.split(":", 1)[1].strip().upper()
             break
 
+    if category == "APROVADO":
+        logger.debug(
+            "Input approved",
+            extra={"details": {"input": input, "category": category}},
+        )
+        return GuardrailResult.input_aproved(input)
+
     if category in BLOCK_RESPONSES:
         reason, message = BLOCK_RESPONSES[category]
         return GuardrailResult.block(reason, message)
 
-    logger.debug(
-        "Input approved",
-        extra={"details": {"input": input, "category": category}},
+    logger.warning(
+        "Input blocked due to undetermined classification",
+        extra={"details": {"category": category}},
     )
-    return GuardrailResult.input_aproved(input)
+    return GuardrailResult.block(
+        "classificacao_indeterminada",
+        "Não consigo processar essa solicitação no momento. Tente reformulá-la.",
+    )
 
 
 INPUT_GUARDRAIL_NODE_NAME = "input_guardrail"
