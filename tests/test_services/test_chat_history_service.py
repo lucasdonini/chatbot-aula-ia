@@ -18,7 +18,9 @@ class TestChatHistoryService:
             mock_find = MagicMock()
             mock_project = MagicMock()
             mock_sort = MagicMock()
-            mock_sort.to_list = AsyncMock(return_value=[])
+            mock_limit = MagicMock()
+            mock_limit.to_list = AsyncMock(return_value=[])
+            mock_sort.limit.return_value = mock_limit
             mock_project.sort.return_value = mock_sort
             mock_find.project.return_value = mock_project
             mock_chat_session.find.return_value = mock_find
@@ -27,6 +29,8 @@ class TestChatHistoryService:
 
             assert result == []
             mock_chat_session.find.assert_called_once_with({})
+            mock_project.sort.assert_called_once_with(mock_chat_session.updated_at, -1)
+            mock_sort.limit.assert_called_once_with(3)
 
     @pytest.mark.asyncio
     async def test_fetch_history_with_search(self, service):
@@ -36,7 +40,9 @@ class TestChatHistoryService:
             mock_find = MagicMock()
             mock_project = MagicMock()
             mock_sort = MagicMock()
-            mock_sort.to_list = AsyncMock(return_value=[])
+            mock_limit = MagicMock()
+            mock_limit.to_list = AsyncMock(return_value=[])
+            mock_sort.limit.return_value = mock_limit
             mock_project.sort.return_value = mock_sort
             mock_find.project.return_value = mock_project
             mock_chat_session.find.return_value = mock_find
@@ -47,6 +53,7 @@ class TestChatHistoryService:
             mock_chat_session.find.assert_called_once()
             filter_arg = mock_chat_session.find.call_args[0][0]
             assert len(filter_arg) == 1
+            mock_sort.limit.assert_called_once_with(3)
 
     @pytest.mark.asyncio
     async def test_fetch_entries_found(self, service):

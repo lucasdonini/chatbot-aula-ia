@@ -2,6 +2,8 @@ import logging
 import re
 from typing import List
 
+from pymongo import DESCENDING
+
 from src.infrastructure.execution_time_logger import log_execution_time
 from src.model.chat_session import ChatEntry, ChatSession, ChatSessionSummarized
 
@@ -36,7 +38,8 @@ class ChatHistoryService:
         return await (
             ChatSession.find(filter)
             .project(ChatSessionSummarized)
-            .sort(ChatSession.started_at)  # type: ignore[arg-type]
+            .sort(ChatSession.updated_at, DESCENDING)  # type: ignore[arg-type]
+            .limit(limit)
             .to_list()
         )
 

@@ -5,7 +5,7 @@
 > comandos de verificação. Leia também o `AGENTS.md` (regras de engajamento) e o
 > `TODO.md` (dívida auditada) antes de começar.
 >
-> Status: **em andamento** — Fase 0.1 concluída em 2026-08-12.
+> Status: **em andamento** — Fase 0.2 concluída em 2026-08-12.
 
 ---
 
@@ -106,6 +106,13 @@ Cada fase termina com: `ruff check .` limpo, testes verdes e critérios de aceit
   respeita o `.env`; env desconhecida levanta `ValidationError`.
 
 ### 0.2 Bug `src/services/chat_history_service.py::fetch_history`
+
+**Implementado (2026-08-12):**
+
+- A query agora ordena por `updated_at` em ordem decrescente e aplica o `limit`
+  recebido antes de materializar os resultados.
+- Os testes unitários cobrem a direção da ordenação e o limite padrão usado pelo
+  `SearchHistoryTool`.
 
 Hoje `limit` é **ignorado** (`.to_list()` sem `.limit(limit)`) e a ordenação é
 **ascendente** por `started_at` (contradiz "most recent first" da docstring).
