@@ -188,6 +188,11 @@ Analogia ao `Clock` do Spring Boot: um provider único de "agora".
   `temporal_context.py`, quem consumir `build_temporal_context` (nós do grafo).
 - **Aceite:** teste com `FixedClock` fixa `started_at`/`updated_at`/contexto temporal.
 
+### 0.7 Pacote de código fonte — `src/ -> app/`
+
+Renomear o pacote `src/` para `app/` com cuidado para manter a coerência de nomes 
+e imports em todo o projeto.
+
 ### ✅ Fase 0 — Definição de pronto
 
 `uv run ruff check .` limpo; `uv run pytest` verde; `make build-db && make upgrade-db`
