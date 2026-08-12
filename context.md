@@ -1,7 +1,7 @@
 # Contexto do Projeto: Assessor.IA
 
 ## 1. Visão Geral
-Este projeto contém um sistema de assistente multiagencial com acesso via CLI. O objetivo principal do assistente é ajudar na organização, tanto financeira como do dia a dia (tarefas, compromissos, etc.). 
+Este projeto contém um sistema de assistente multiagencial com acesso via CLI. A migração gradual para uma API REST com FastAPI está planejada em `MIGRATION_API.md`; a Fase 0.1 foi concluída. O objetivo principal do assistente é ajudar na organização, tanto financeira como do dia a dia (tarefas, compromissos, etc.).
 Este projeto é o principal objeto de estudo das aulas de IA do meu curso de desenvolvimento de sistema, usado para introduzir tecnicas e ferramentas na prática ao invés de só na teoria. Cada aluno tem seu projeto, assim como o professor. Este é o meu, mas ele está versionado num repositório público no GitHub para que meus colegas tenham acesso.
 Outros colegas que acessam o repositório não necessariamente têm conhecimento sobre todas as funcionalidades extra que eu adicionei, além da arquitetura e stack que está diferente do que o professor usa em aula.
 
@@ -67,6 +67,13 @@ Podem ser consultadas no `makefile`, mas para contexto:
 1. ~~**Falta de testes:**~~ Agora existem **235 testes** (173 unitários + 62 de integração). Testes unitários rodam sem Docker; testes de integração sobem PostgreSQL via testcontainers. CI no GitHub Actions executa ambos em jobs paralelos.
 2. ~~**Chamadas síncronas a LLMs:**~~ Guardrails e serviços de sumarização agora usam `ainvoke` (assíncrono), eliminando bloqueios e permitindo mocks via `AsyncMock`.
 3. ~~**Vazamento de PII em logs:**~~ Output guardrail só loga o texto após sanitização. Input guardrail recebe texto anônimo.
+4. ~~**Configuração permissiva e ambiente compartilhado:**~~ A aplicação agora lê `.env.app` com `extra="forbid"`; o Compose lê `.env.compose`. Os exemplos versionados são `.env.app.example` e `.env.compose.example`.
+
+### Migração para API
+- O plano operacional está em `MIGRATION_API.md`.
+- Fase 0.1 concluída: novos settings de logging/timezone, validação explícita das chaves LLM no boot da CLI e separação entre configuração da aplicação e do Compose.
+- Para executar localmente, preencher `GEMINI_API_KEY` e `GROQ_API_KEY` em `.env.app`. Credenciais nunca devem ser versionadas.
+- Próximo passo: Fase 0.2, corrigir `ChatHistoryService.fetch_history` para aplicar `limit` e ordenar por `updated_at` decrescente.
 
 ## 6. Funcionalidades Implementadas Recentemente
 

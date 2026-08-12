@@ -9,6 +9,7 @@ from .infrastructure.console_utils import clear_console
 from .infrastructure.logger import set_session_context, setup_logger
 from .infrastructure.md_console import print
 from .infrastructure.mongo_connection import MongoManager
+from .infrastructure.settings import settings
 from .services.chat_session_service import ChatSessionService
 from .services.session_summary_service import SessionSummaryService
 
@@ -58,6 +59,7 @@ async def _execute_interaction_loop(
 if __name__ == "__main__":
     setup_logger()
     logger = logging.getLogger(__name__)
+    settings.validate_llm_api_keys()
     logger.info("App started", extra={"details": {"state": "booting"}})
     asyncio.run(main())
     logger.info("App closed", extra={"details": {"state": "shutdown"}})
