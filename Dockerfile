@@ -1,6 +1,4 @@
-FROM postgres:latest
-
-LABEL maintainer="Lucas Kluska Donini"
+FROM postgres:18-alpine
 
 COPY ./sql/init-db.sql /docker-entrypoint-initdb.d/
 COPY ./.psqlrc /etc/postgresql-common/psqlrc
