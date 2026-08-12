@@ -73,8 +73,9 @@ Podem ser consultadas no `makefile`, mas para contexto:
 - O plano operacional está em `MIGRATION_API.md`.
 - Fase 0.1 concluída: novos settings de logging/timezone, validação explícita das chaves LLM no boot da CLI e separação entre configuração da aplicação e do Compose.
 - Fase 0.2 concluída: o histórico usado pelo router respeita o limite solicitado e retorna sessões por atualização mais recente.
+- Fase 0.3 concluída: o input guardrail bloqueia falhas, formatos inválidos e categorias desconhecidas do classificador LLM.
 - Para executar localmente, preencher `GEMINI_API_KEY` e `GROQ_API_KEY` em `.env.app`. Credenciais nunca devem ser versionadas.
-- Próximo passo: Fase 0.3, tornar o input guardrail fail-closed.
+- Próximo passo: Fase 0.4, finalizar as correções de configuração e ambiente.
 
 ## 6. Funcionalidades Implementadas Recentemente
 

@@ -5,7 +5,7 @@
 > comandos de verificação. Leia também o `AGENTS.md` (regras de engajamento) e o
 > `TODO.md` (dívida auditada) antes de começar.
 >
-> Status: **em andamento** — Fase 0.2 concluída em 2026-08-12.
+> Status: **em andamento** — Fase 0.3 concluída em 2026-08-12.
 
 ---
 
@@ -124,6 +124,16 @@ Consequência: `search_history` (router) puxa todo o histórico.
 - **Aceite:** teste unitário provando `limit` aplicado e ordem descendente.
 
 ### 0.3 Guardrails fail-closed
+
+**Implementado (2026-08-12):**
+
+- Apenas `CATEGORIA: APROVADO` aprova uma mensagem; respostas sem categoria ou
+  com categoria desconhecida são bloqueadas.
+- Falhas e conteúdo não textual do classificador são registrados e retornam um
+  bloqueio seguro, sem propagar a exceção para o grafo.
+- Testes unitários cobrem aprovação explícita, formato inválido, categoria
+  desconhecida, indisponibilidade do LLM e bloqueio determinístico sem chamada
+  ao LLM.
 
 `src/agents/guardrails/input_guardrail.py` define `category = "APROVADO"` por default:
 classificação desconhecida/vazia é aprovada, e exceção do LLM propaga sem bloqueio.

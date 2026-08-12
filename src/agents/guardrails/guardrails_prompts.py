@@ -16,6 +16,8 @@ ILICITO         - pedido de auxílio para atividades ilegais ou fraudulentas
 POLITICO        - opiniões ou debates políticos, partidos, eleições
 INDICACAO_INVEST - recomendação direta de ativo específico para comprar/vender/manter
 
+Use exatamente uma das categorias listadas e sempre inclua a linha CATEGORIA.
+
 Mensagem: {mensagem}
 """
 
