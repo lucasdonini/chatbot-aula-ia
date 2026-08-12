@@ -1,4 +1,6 @@
-.env
+**/.env
+**/.env.app
+**/.env.compose
 .venv/
 **/__pycache__/*
 /logs

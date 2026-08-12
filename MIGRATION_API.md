@@ -5,7 +5,7 @@
 > comandos de verificação. Leia também o `AGENTS.md` (regras de engajamento) e o
 > `TODO.md` (dívida auditada) antes de começar.
 >
-> Status: **planejado** — nenhuma fase iniciada.
+> Status: **em andamento** — Fase 0.1 concluída em 2026-08-12.
 
 ---
 
@@ -79,6 +79,19 @@ Cada fase termina com: `ruff check .` limpo, testes verdes e critérios de aceit
 ## Fase 0 — Correções pré-migração
 
 ### 0.1 `src/infrastructure/settings.py`
+
+**Implementado (2026-08-12):**
+
+- `Settings` agora lê exclusivamente `.env.app`, rejeita variáveis desconhecidas e
+  expõe `log_level`, `log_to_file`, `log_file` e `app_timezone`.
+- `validate_llm_api_keys()` é chamado no boot da CLI e deve ser reutilizado no
+  lifespan da futura API. A validação não ocorre no import para não bloquear
+  migrations, testes de domínio e comandos administrativos.
+- O ambiente foi separado: `.env.app` é da aplicação e `.env.compose` é do
+  PostgreSQL no Docker Compose. Os modelos versionados são
+  `.env.app.example` e `.env.compose.example`.
+- Credenciais não foram migradas automaticamente. Configure `GEMINI_API_KEY` e
+  `GROQ_API_KEY` em `.env.app` por canal seguro antes de iniciar a aplicação.
 
 - Adicionar campos:
   - `log_level` (default `"INFO"`, validado p/ `INFO`/`DEBUG`).
