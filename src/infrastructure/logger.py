@@ -2,29 +2,28 @@ import json
 import logging
 import re
 import sys
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Optional, cast
 
 from .paths import SRC
+from .settings import settings
 
-_INTERACTION_COUNTER: int = 0
-_current_session_id: str = ""
-_current_trace_id: str = ""
+_interaction_counter: ContextVar[int] = ContextVar("interaction_counter", default=0)
+_session_id: ContextVar[str] = ContextVar("session_id", default="")
+_trace_id: ContextVar[str] = ContextVar("trace_id", default="")
 
 
 def set_session_context(session_id: str) -> None:
-    global _current_session_id
-    _current_session_id = session_id
+    _session_id.set(session_id)
 
 
 def set_trace_context(trace_id: str) -> None:
-    global _current_trace_id
-    _current_trace_id = trace_id
+    _trace_id.set(trace_id)
 
 
 def increment_interaction() -> None:
-    global _INTERACTION_COUNTER
-    _INTERACTION_COUNTER += 1
+    _interaction_counter.set(_interaction_counter.get() + 1)
 
 
 _TOP_LEVEL_MODULES = "|".join(d.name for d in SRC.iterdir() if d.is_dir())
@@ -48,18 +47,11 @@ def _short_module_name(name: str) -> str:
 
 class ContextFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        record.interaction = _INTERACTION_COUNTER
-        record.session_id = _current_session_id
-        record.trace_id = _current_trace_id
-        record.agent = _short_module_name(record.name)
-        return True
-
-
-class HideConsoleTracebackFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        if record.exc_info:
-            record.exc_info = None
-            record.exc_text = None
+        structured_record = cast(StructuredLogRecord, record)
+        structured_record.interaction = _interaction_counter.get()
+        structured_record.session_id = _session_id.get()
+        structured_record.trace_id = _trace_id.get()
+        structured_record.agent = _short_module_name(record.name)
         return True
 
 
@@ -107,10 +99,52 @@ class StructuredFormatter(logging.Formatter):
         )
 
 
-def setup_logger(log_file: str = "logs/app.log", level: int = logging.DEBUG) -> None:
+class ConsoleFormatter(logging.Formatter):
+    _COLORS = {
+        logging.DEBUG: "\033[36m",
+        logging.INFO: "\033[32m",
+        logging.WARNING: "\033[33m",
+        logging.ERROR: "\033[31m",
+        logging.CRITICAL: "\033[35m",
+    }
+    _RESET = "\033[0m"
+
+    def __init__(self, debug: bool) -> None:
+        super().__init__()
+        self._debug = debug
+
+    def format(self, record: logging.LogRecord) -> str:
+        record = cast(StructuredLogRecord, record)
+        prefix = f"{record.levelname}:"
+        color = self._COLORS.get(record.levelno, "")
+        message = record.getMessage()
+
+        if self._debug:
+            agent = record.agent or _short_module_name(record.name)
+            details = ""
+            if record.details:
+                details = " | " + json.dumps(
+                    record.details, default=str, ensure_ascii=False
+                )
+            line = f"[{agent}] {prefix} {message}{details}"
+        else:
+            line = f"{prefix} {message}"
+
+        if record.exc_info:
+            line = f"{line}\n{self.formatException(record.exc_info)}"
+        return f"{color}{line}{self._RESET}" if color else line
+
+
+def _get_log_level() -> int:
+    return logging.DEBUG if settings.log_level == "DEBUG" else logging.INFO
+
+
+def setup_logger() -> None:
     logging.setLogRecordFactory(StructuredLogRecord)
     root = logging.getLogger()
-    root.setLevel(level)
+    root.setLevel(_get_log_level())
+    for handler in root.handlers:
+        handler.close()
     root.handlers.clear()
 
     file_fmt = StructuredFormatter(
@@ -122,18 +156,19 @@ def setup_logger(log_file: str = "logs/app.log", level: int = logging.DEBUG) -> 
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    Path(log_file).parent.mkdir(parents=True, exist_ok=True)
-    file_handler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
-    file_handler.setFormatter(file_fmt)
-    file_handler.addFilter(ContextFilter())
-    root.addHandler(file_handler)
+    if settings.log_to_file:
+        Path(settings.log_file).parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(
+            settings.log_file, mode="a", encoding="utf-8"
+        )
+        file_handler.setFormatter(file_fmt)
+        file_handler.addFilter(ContextFilter())
+        root.addHandler(file_handler)
 
-    console_fmt = StructuredFormatter(datefmt="%Y-%m-%d %H:%M:%S")
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.CRITICAL)
-    console_handler.setFormatter(console_fmt)
+    console_handler.setLevel(_get_log_level())
+    console_handler.setFormatter(ConsoleFormatter(debug=settings.log_level == "DEBUG"))
     console_handler.addFilter(ContextFilter())
-    console_handler.addFilter(HideConsoleTracebackFilter())
     root.addHandler(console_handler)
 
     root.info("Session initialized")
