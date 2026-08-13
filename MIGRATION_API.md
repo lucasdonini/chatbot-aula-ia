@@ -5,7 +5,7 @@
 > comandos de verificação. Leia também o `AGENTS.md` (regras de engajamento) e o
 > `TODO.md` (dívida auditada) antes de começar.
 >
-> Status: **em andamento** — Fase 0.4 concluída em 2026-08-13.
+> Status: **em andamento** — Fase 0.5 concluída em 2026-08-13.
 
 ---
 
@@ -170,6 +170,17 @@ classificação desconhecida/vazia é aprovada, e exceção do LLM propaga sem b
 - **Aceite:** `make build-db && make upgrade-db && make run` conecta sem erro.
 
 ### 0.5 Loggers (terminal estilo FastAPI) — `src/infrastructure/logger.py`
+
+**Implementado (2026-08-13):**
+
+- `setup_logger()` usa `settings.log_level`, só cria handler de arquivo quando
+  `log_to_file` está habilitado e fecha handlers anteriores antes de reconfigurar.
+- O console usa saída concisa com prefixo ANSI por nível; em `DEBUG`, inclui o
+  módulo reduzido e `details`. Tracebacks não são mais suprimidos.
+- Contexto de sessão, trace e interação agora usa `ContextVar`, isolando tasks
+  assíncronas concorrentes sem alterar os consumidores existentes.
+- Testes cobrem formatos de console, arquivo opcional, traceback e isolamento
+  de contexto.
 
 Comportamento alvo:
 
