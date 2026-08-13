@@ -4,13 +4,14 @@ import logging
 from typing import Any, Dict, List, Set, cast
 
 from langchain.agents import create_agent
-from langchain_core.messages import AIMessage, AnyMessage, ToolMessage
+from langchain_core.messages import AIMessage, AnyMessage, SystemMessage, ToolMessage
 
 from src.infrastructure.execution_time_logger import log_execution_time
 from src.model.graph_state import GraphState, GraphStateKeys
 from src.services.chat_history_service import ChatHistoryService
 
 from ..llms import fast_llm
+from ..temporal_context import build_temporal_context
 from .router_prompt import PROMPT
 from .tools import SearchHistoryTool
 
@@ -98,7 +99,10 @@ async def router_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
     )
     filtered_state = {
         **state,
-        "messages": _filter_messages_for_router(state["messages"]),
+        "messages": [
+            SystemMessage(content=build_temporal_context()),
+            *_filter_messages_for_router(state["messages"]),
+        ],
     }
     response = await router_agent.ainvoke(filtered_state)  # type: ignore[call-overload]
     output = response["messages"][-1].content[:500] if response.get("messages") else ""

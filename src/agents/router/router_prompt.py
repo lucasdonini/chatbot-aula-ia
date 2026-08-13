@@ -4,7 +4,6 @@ from ..agenda import AGENDA_NODE_NAME
 from ..faq import FAQ_NODE_NAME
 from ..financial import FINANCIAL_NODE_NAME
 from ..general_persona import SYSTEM_PERSONA
-from ..temporal_context import TEMPORAL_CONTEXT
 from .tools import SEARCH_HISTORY_TOOL_NAME
 
 SPECIALIST_ROUTES = {
@@ -15,9 +14,6 @@ SPECIALIST_ROUTES = {
 
 _BASE_PROMPT = f"""
 {SYSTEM_PERSONA}
-
-
-{TEMPORAL_CONTEXT}
 
 
 ### PAPEL

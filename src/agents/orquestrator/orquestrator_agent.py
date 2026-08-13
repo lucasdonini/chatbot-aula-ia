@@ -2,11 +2,13 @@ import logging
 from typing import Any, Dict
 
 from langchain.agents import create_agent
+from langchain_core.messages import SystemMessage
 
 from src.infrastructure.execution_time_logger import log_execution_time
 from src.model.graph_state import GraphState, GraphStateKeys
 
 from ..llms import fast_llm
+from ..temporal_context import build_temporal_context
 from .orquestrator_prompt import PROMPT
 
 logger = logging.getLogger(__name__)
@@ -25,7 +27,14 @@ async def orquestrator_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
         "Agent called",
         extra={"details": {"name": ORQUESTRATOR_NODE_NAME, "input": input_text}},
     )
-    response = await orquestrator_agent.ainvoke(state)  # type: ignore[arg-type]
+    request_state: GraphState = {
+        **state,
+        "messages": [
+            SystemMessage(content=build_temporal_context()),
+            *state["messages"],
+        ],
+    }
+    response = await orquestrator_agent.ainvoke(request_state)  # type: ignore[arg-type]
     last = (response.get("messages") or [None])[-1]
     output = last.content[:500] if last and last.content else "(tool call)"
     logger.info(

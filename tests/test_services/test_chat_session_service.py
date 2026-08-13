@@ -1,14 +1,22 @@
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
+from src.infrastructure.clock import FixedClock, get_clock, set_clock
 from src.model.chat_session import ChatMessage
 from src.services import chat_session_service
 from src.services.chat_session_service import ChatSessionService
 
 
 class TestChatSessionService:
+    @pytest.fixture(autouse=True)
+    def restore_clock(self):
+        original_clock = get_clock()
+        yield
+        set_clock(original_clock)
+
     @pytest.fixture
     def summary_service(self):
         return MagicMock()
@@ -20,6 +28,9 @@ class TestChatSessionService:
 
     @pytest.mark.asyncio
     async def test_init_session(self, service, summary_service):
+        fixed = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
+        set_clock(FixedClock(fixed))
+
         with patch("src.services.chat_session_service.ChatSession") as mock_chat:
             mock_instance = AsyncMock()
             mock_chat.return_value = mock_instance
@@ -28,6 +39,8 @@ class TestChatSessionService:
             await service.init_session("session-123")
 
             mock_instance.insert.assert_called_once()
+            assert mock_chat.call_args.kwargs["started_at"] == fixed
+            assert mock_chat.call_args.kwargs["updated_at"] == fixed
             assert "session-123" in chat_session_service._active_sessions
 
     @pytest.mark.asyncio

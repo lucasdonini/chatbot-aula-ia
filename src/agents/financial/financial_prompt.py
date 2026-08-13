@@ -3,7 +3,6 @@
 from src.model.transaction import Category
 
 from ..general_persona import SYSTEM_PERSONA
-from ..temporal_context import TEMPORAL_CONTEXT
 from .tools import (
     ADD_TRANSACTION_TOOL_NAME,
     DAILY_BALANCE_TOOL_NAME,
@@ -18,9 +17,6 @@ FINANCIAL_NODE_NAME = "financial"
 
 _BASE_PROMPT = f"""
 {SYSTEM_PERSONA}
-
-
-{TEMPORAL_CONTEXT}
 
 
 ### PAPEL
