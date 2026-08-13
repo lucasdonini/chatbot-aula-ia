@@ -5,7 +5,7 @@
 > comandos de verificação. Leia também o `AGENTS.md` (regras de engajamento) e o
 > `TODO.md` (dívida auditada) antes de começar.
 >
-> Status: **em andamento** — Fase 0.3 concluída em 2026-08-12.
+> Status: **em andamento** — Fase 0.4 concluída em 2026-08-13.
 
 ---
 
@@ -144,6 +144,19 @@ classificação desconhecida/vazia é aprovada, e exceção do LLM propaga sem b
 - **Aceite:** mock de LLM devolvendo `"sem categoria"` resulta em bloqueio.
 
 ### 0.4 Configuração e ambiente
+
+**Implementado (2026-08-13):**
+
+- O ambiente da aplicação usa `POSTGRES_URL` com a porta, credenciais e banco
+  expostos pelo Compose; o PostgreSQL usa o arquivo separado `.env.compose`.
+- Os exemplos de ambiente removem a configuração morta do LangGraph e incluem
+  logging e timezone.
+- O Makefile executa Python via `uv run`, sem depender de caminhos específicos
+  de `.venv`; README e ajuda do Makefile documentam o fluxo correto e o nome
+  correto do container.
+- O volume do PostgreSQL 18 é montado em `/var/lib/postgresql`; volumes do
+  layout anterior precisam ser recriados ou migrados antes da atualização. O
+  Dockerfile não declara volume adicional no caminho legado.
 
 - `.env` precisa definir `POSTGRES_URL` correto (hoje ausente → usa default
   `postgres:postgres@localhost:5432`, mas o container expõe `5433` com senha

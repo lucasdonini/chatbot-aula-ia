@@ -5,18 +5,27 @@ Assistente modular para as aulas de IA — agentes principais em `src/agents/` e
 ## Rápido (o essencial)
 - Requisitos: `python 3.12+`, `git`. Docker é opcional para execução em container.
 - Logs: `logs/`.
+- Configuração local: copie `.env.app.example` para `.env.app` e
+  `.env.compose.example` para `.env.compose`. Preencha as chaves LLM em `.env.app`.
 
 ## Como rodar (opções)
 
 1) Usando `make` (recomendado quando disponível)
 
-- Preparar e rodar (constrói containers e inicia o app):
+- Preparar dependências, configurar ambiente, banco e iniciar a CLI:
 
 ```bash
-make build
+make prepare-environment
+# Crie .env.app e .env.compose a partir dos respectivos arquivos .example.
+make build-db
+make upgrade-db
+make run
 ```
 
-- Rodar local (usa `.venv` se existir):
+- O MongoDB deve estar disponível em `MONGODB_URI` e as chaves LLM devem estar
+  configuradas em `.env.app` antes de executar `make run`.
+
+- Rodar a CLI após a preparação:
 
 ```bash
 make run
@@ -33,7 +42,7 @@ uv sync
 - Executar o módulo principal:
 
 ```bash
-uv run src.main
+uv run python -m src.main
 ```
 
 3) Sem `make` e sem `uv` (manual, funciona em Windows/Unix)
@@ -56,23 +65,25 @@ pip install -e .
 .\.venv\Scripts\python -m src.main
 ```
 
-4) Somente Docker (sem instalar dependências locais)
+4) Banco PostgreSQL com Docker
 
 ```bash
 docker compose up -d --build
 ```
 
+O PostgreSQL 18 usa o volume em `/var/lib/postgresql`. Ao atualizar de uma
+imagem anterior, recrie o volume após exportar dados que precisem ser mantidos.
+
 Para acessar o banco (quando o serviço estiver ativo):
 
 ```bash
-docker exec -it acessoria-sql psql -d acessoriadb
+docker exec -it assessoria-sql psql -d assessoriadb
 ```
 
 ## Comandos úteis (Makefile)
 
-- `make build` — executa `uv sync`, sobe containers e inicia o app.
 - `make build-db` — `docker compose up -d --build` (apenas DB/infra).
-- `make run` — executa `python -m src.main` usando o `.venv`.
+- `make run` — executa `uv run python -m src.main`.
 - `make prepare-environment` — `uv sync` (sincroniza dependências).
 - `make access-db` — abre um shell psql no container do banco.
 
