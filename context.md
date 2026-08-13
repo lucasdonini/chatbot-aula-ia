@@ -74,8 +74,9 @@ Podem ser consultadas no `makefile`, mas para contexto:
 - Fase 0.1 concluída: novos settings de logging/timezone, validação explícita das chaves LLM no boot da CLI e separação entre configuração da aplicação e do Compose.
 - Fase 0.2 concluída: o histórico usado pelo router respeita o limite solicitado e retorna sessões por atualização mais recente.
 - Fase 0.3 concluída: o input guardrail bloqueia falhas, formatos inválidos e categorias desconhecidas do classificador LLM.
+- Fase 0.4 concluída: README e Makefile usam o fluxo `uv`, os ambientes da aplicação e do Compose são separados e a URL PostgreSQL local usa a porta publicada correta.
 - Para executar localmente, preencher `GEMINI_API_KEY` e `GROQ_API_KEY` em `.env.app`. Credenciais nunca devem ser versionadas.
-- Próximo passo: Fase 0.4, finalizar as correções de configuração e ambiente.
+- Próximo passo: Fase 0.5, refatorar os loggers para o formato da API e isolamento por contextvars.
 
 ## 6. Funcionalidades Implementadas Recentemente
 

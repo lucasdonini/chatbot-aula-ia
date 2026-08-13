@@ -1,11 +1,5 @@
-ifeq ($(OS), Windows_NT)
-    PYTHON = .venv\Scripts\python
-else
-    PYTHON = .venv/bin/python
-endif
-
 help:
-	@echo 'First, run `make prepare-environment`'
+	@echo 'First, run `make prepare-environment` and create .env.app/.env.compose from their examples'
 	@echo 'Then, run `make build-db`'
 	@echo 'Wait a few seconds, then run `make upgrade-db`'
 	@echo 'Now you are ready to run with `make run`'
@@ -14,21 +8,21 @@ build-db:
 	docker compose up -d --build
 
 destroy-db:
-	$(PYTHON) -m alembic downgrade base
+	uv run python -m alembic downgrade base
 	docker compose down -v
 
 run:
-	$(PYTHON) -m src.main
+	uv run python -m src.main
 
 prepare-environment:
 	uv sync
-	@echo 'Remember to activate your venv before running'
+	@echo 'Copy .env.app.example to .env.app and .env.compose.example to .env.compose'
 
 access-db:
 	docker exec -it assessoria-sql psql -d assessoriadb
 
 upgrade-db:
-	$(PYTHON) -m alembic upgrade head
+	uv run python -m alembic upgrade head
 
 downgrade-db:
-	$(PYTHON) -m alembic downgrade -1
+	uv run python -m alembic downgrade -1
