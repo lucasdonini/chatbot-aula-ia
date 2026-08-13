@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from src.agents.temporal_context import build_temporal_context
-from src.infrastructure.clock import FixedClock, get_clock, set_clock
+from app.agents.temporal_context import build_temporal_context
+from app.infrastructure.clock import FixedClock, get_clock, set_clock
 
 
 @pytest.fixture(autouse=True)

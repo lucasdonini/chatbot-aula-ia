@@ -62,7 +62,7 @@ class TestMigrationSchema:
         """The second migration creates PostgreSQL enums category_enum
         and transaction_type_enum. This test verifies the import
         infrastructure loads correctly."""
-        from src.model.transaction import Category, TransactionType
+        from app.model.transaction import Category, TransactionType
 
         assert len(Category) == 12
         assert len(TransactionType) == 3
@@ -70,7 +70,7 @@ class TestMigrationSchema:
     def test_migration_enum_names_match_orm(self):
         """PostgreSQL enum names must match ORM column definitions."""
 
-        from src.infrastructure.postgres.entities.transaction import TransactionORM
+        from app.infrastructure.postgres.entities.transaction import TransactionORM
 
         category_col = TransactionORM.__table__.c["category"]
         tt_col = TransactionORM.__table__.c["transaction_type"]

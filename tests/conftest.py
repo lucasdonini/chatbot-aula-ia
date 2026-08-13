@@ -38,16 +38,16 @@ _patch_create_agent_model_edge()
 
 pytest_plugins = ["tests.conftest_integration"]  # noqa: E402
 
-from src.infrastructure.repositories.transaction_repository import (  # noqa: E402
+from app.infrastructure.repositories.transaction_repository import (  # noqa: E402
     TransactionRepository,
 )
-from src.model.transaction import Category, Transaction, TransactionType  # noqa: E402
-from src.model.transaction_query_params import TransactionQueryParams  # noqa: E402
-from src.model.update_transaction_params import (  # noqa: E402
+from app.model.transaction import Category, Transaction, TransactionType  # noqa: E402
+from app.model.transaction_query_params import TransactionQueryParams  # noqa: E402
+from app.model.update_transaction_params import (  # noqa: E402
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )
-from src.services.transaction_service import TransactionService  # noqa: E402
+from app.services.transaction_service import TransactionService  # noqa: E402
 
 
 @pytest.fixture

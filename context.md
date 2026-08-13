@@ -32,7 +32,7 @@ Outros colegas que acessam o repositório não necessariamente têm conhecimento
 ## 3.1. Arquitetura e Organização de Pastas (deste projeto)
 O projeto segue os princípios de Arquitetura em Camadas e Domain-Driven Design (DDD).
 Estou aprendendo ainda, então a rigorosidade da arquitetura está em aprimoramento:
-- `/src`: Código fonte da aplicação
+- `/app`: Código fonte da aplicação
     - `/model`: Entidades (não todas puras, alguns ORMs) e regras de negócio.
     - `/services`: Utilização direta ou indireta via repository a ferramentas externas; lógica de negócio complexa
     - `/infrastructure`: Implementações técnicas como repositories, alguns ORMs, loggers personalizados, variáveis de ambiente, etc.
@@ -77,8 +77,9 @@ Podem ser consultadas no `makefile`, mas para contexto:
 - Fase 0.4 concluída: README e Makefile usam o fluxo `uv`, os ambientes da aplicação e do Compose são separados e a URL PostgreSQL local usa a porta publicada correta.
 - Fase 0.5 concluída: logs usam settings, arquivo opcional, saída de console no estilo da API e `ContextVar` para isolar sessão, trace e interação entre tasks.
 - Fase 0.6 concluída: Clock centralizado fornece UTC para persistência e timezone local para contexto temporal; prompts recebem contexto atualizado a cada execução.
+- Fase 0.7 concluída: o pacote raiz é `app`; código, testes, migrations, comandos e documentação usam esse namespace e não usam imports parentais.
 - Para executar localmente, preencher `GEMINI_API_KEY` e `GROQ_API_KEY` em `.env.app`. Credenciais nunca devem ser versionadas.
-- Próximo passo: Fase 0.7, refatorações menores.
+- Próximo passo: Fase 1, criar o núcleo FastAPI e o endpoint `POST /chat` em `app/api/`.
 
 ## 6. Funcionalidades Implementadas Recentemente
 

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.infrastructure.settings import Settings
+from app.infrastructure.settings import Settings
 
 
 def test_settings_use_expected_defaults() -> None:

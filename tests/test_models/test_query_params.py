@@ -1,7 +1,7 @@
 from datetime import date
 
-from src.model.transaction import Category, TransactionType
-from src.model.transaction_query_params import TransactionQueryParams
+from app.model.transaction import Category, TransactionType
+from app.model.transaction_query_params import TransactionQueryParams
 
 
 class TestTransactionQueryParams:

@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from src.infrastructure.clock import FixedClock, get_clock, set_clock
-from src.model.chat_session import ChatMessage
-from src.services import chat_session_service
-from src.services.chat_session_service import ChatSessionService
+from app.infrastructure.clock import FixedClock, get_clock, set_clock
+from app.model.chat_session import ChatMessage
+from app.services import chat_session_service
+from app.services.chat_session_service import ChatSessionService
 
 
 class TestChatSessionService:
@@ -31,7 +31,7 @@ class TestChatSessionService:
         fixed = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
         set_clock(FixedClock(fixed))
 
-        with patch("src.services.chat_session_service.ChatSession") as mock_chat:
+        with patch("app.services.chat_session_service.ChatSession") as mock_chat:
             mock_instance = AsyncMock()
             mock_chat.return_value = mock_instance
             mock_instance.insert = AsyncMock()
@@ -45,7 +45,7 @@ class TestChatSessionService:
 
     @pytest.mark.asyncio
     async def test_save_message_human(self, service, summary_service):
-        with patch("src.services.chat_session_service.ChatSession") as mock_chat:
+        with patch("app.services.chat_session_service.ChatSession") as mock_chat:
             chat_session_service._active_sessions["session-123"] = "doc-id"
             mock_query = MagicMock()
             mock_query.update = AsyncMock()
@@ -58,7 +58,7 @@ class TestChatSessionService:
 
     @pytest.mark.asyncio
     async def test_save_message_ai(self, service, summary_service):
-        with patch("src.services.chat_session_service.ChatSession") as mock_chat:
+        with patch("app.services.chat_session_service.ChatSession") as mock_chat:
             chat_session_service._active_sessions["session-123"] = "doc-id"
             mock_query = MagicMock()
             mock_query.update = AsyncMock()
@@ -83,7 +83,7 @@ class TestChatSessionService:
             return_value="Ocorreu um erro interno."
         )
 
-        with patch("src.services.chat_session_service.ChatSession") as mock_chat:
+        with patch("app.services.chat_session_service.ChatSession") as mock_chat:
             chat_session_service._active_sessions["session-123"] = "doc-id"
             mock_query = MagicMock()
             mock_query.update = AsyncMock()
@@ -100,7 +100,7 @@ class TestChatSessionService:
     async def test_finalize_session_with_summary(self, service, summary_service):
         summary_service.summarize_session = AsyncMock(return_value="Resumo da sessão")
 
-        with patch("src.services.chat_session_service.ChatSession") as mock_chat:
+        with patch("app.services.chat_session_service.ChatSession") as mock_chat:
             chat_session_service._active_sessions["session-123"] = "doc-id"
 
             async def find_one_side(*args, **kwargs):
@@ -123,7 +123,7 @@ class TestChatSessionService:
 
     @pytest.mark.asyncio
     async def test_finalize_no_messages(self, service, summary_service):
-        with patch("src.services.chat_session_service.ChatSession") as mock_chat:
+        with patch("app.services.chat_session_service.ChatSession") as mock_chat:
             chat_session_service._active_sessions["session-123"] = "doc-id"
 
             async def find_one_side(*args, **kwargs):

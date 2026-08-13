@@ -14,10 +14,10 @@ import sqlalchemy as sa
 from alembic import op
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
-sys.path.insert(0, str(SRC))
+APP = ROOT / "app"
+sys.path.insert(0, str(APP))
 
-from src.model.transaction import Category, TransactionType
+from app.model.transaction import Category, TransactionType
 
 # revision identifiers, used by Alembic.
 revision: str = '4c6c2484039c'

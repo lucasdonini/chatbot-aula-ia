@@ -3,11 +3,11 @@ from uuid import uuid4
 
 import pytest
 
-from src.agents.financial.tools.restore_transaction import RestoreTransactionTool
-from src.model.tool_response import ToolFailure, ToolSuccess
-from src.model.transaction import Category, Transaction, TransactionType
-from src.model.update_transaction_params import UpdateTransactionQuery
-from src.services.transaction_service import TransactionService
+from app.agents.financial.tools.restore_transaction import RestoreTransactionTool
+from app.model.tool_response import ToolFailure, ToolSuccess
+from app.model.transaction import Category, Transaction, TransactionType
+from app.model.update_transaction_params import UpdateTransactionQuery
+from app.services.transaction_service import TransactionService
 
 
 class TestRestoreTransactionTool:

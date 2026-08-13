@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import pytest
 from pydantic import ValidationError
 
-from src.model.transaction import Category, Transaction, TransactionType
+from app.model.transaction import Category, Transaction, TransactionType
 
 
 class TestTransactionModel:
@@ -78,7 +78,7 @@ class TestTransactionModel:
         assert restored.source_text == sample_transaction.source_text
 
     def test_from_attributes_enabled(self):
-        from src.infrastructure.postgres.entities.transaction import TransactionORM
+        from app.infrastructure.postgres.entities.transaction import TransactionORM
 
         orm = TransactionORM(
             amount=99.90,

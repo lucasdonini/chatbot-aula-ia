@@ -1,10 +1,10 @@
 import pytest
 
-from src.agents.financial.tools.search_transaction import SearchTransactionsTool
-from src.model.tool_response import ToolFailure, ToolSuccess
-from src.model.transaction import Category, Transaction, TransactionType
-from src.model.transaction_query_params import TransactionQueryParams
-from src.services.transaction_service import TransactionService
+from app.agents.financial.tools.search_transaction import SearchTransactionsTool
+from app.model.tool_response import ToolFailure, ToolSuccess
+from app.model.transaction import Category, Transaction, TransactionType
+from app.model.transaction_query_params import TransactionQueryParams
+from app.services.transaction_service import TransactionService
 
 
 class TestSearchTransactionsTool:

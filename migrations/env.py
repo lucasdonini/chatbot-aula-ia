@@ -7,11 +7,11 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
-sys.path.insert(0, str(SRC))
+APP = ROOT / "app"
+sys.path.insert(0, str(APP))
 
 import infrastructure.postgres.entities as models
-from src.infrastructure.settings import settings
+from app.infrastructure.settings import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.infrastructure import logger as logger_module
+from app.infrastructure import logger as logger_module
 
 
 @pytest.fixture(autouse=True)
@@ -28,7 +28,7 @@ def restore_logging() -> None:
     logging.setLogRecordFactory(original_factory)
 
 
-def _record(name: str = "src.agents.graph") -> logging.LogRecord:
+def _record(name: str = "app.agents.graph") -> logging.LogRecord:
     return logging.LogRecord(name, logging.INFO, "", 0, "Message", (), None)
 
 
@@ -90,7 +90,7 @@ def test_setup_logger_writes_structured_file_when_enabled(tmp_path: Path) -> Non
         logger_module.set_session_context("session-123")
         logger_module.set_trace_context("trace-456")
         logger_module.setup_logger()
-        logging.getLogger("src.agents.graph").info(
+        logging.getLogger("app.agents.graph").info(
             "Message", extra={"details": {"key": "value"}}
         )
 
@@ -127,7 +127,7 @@ def test_console_formatter_preserves_traceback() -> None:
         raise RuntimeError("failure")
     except RuntimeError:
         record = logging.LogRecord(
-            "src.agents.graph",
+            "app.agents.graph",
             logging.ERROR,
             "",
             0,
@@ -151,7 +151,7 @@ def test_setup_logger_uses_debug_console_format() -> None:
         patch.object(logger_module.sys, "stdout", output),
     ):
         logger_module.setup_logger()
-        logging.getLogger("src.agents.graph").info(
+        logging.getLogger("app.agents.graph").info(
             "Message", extra={"details": {"key": "value"}}
         )
 

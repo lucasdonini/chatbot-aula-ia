@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from src.infrastructure.clock import FixedClock, SystemClock, get_clock, set_clock
+from app.infrastructure.clock import FixedClock, SystemClock, get_clock, set_clock
 
 
 @pytest.fixture(autouse=True)

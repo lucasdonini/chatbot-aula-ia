@@ -3,9 +3,9 @@ from uuid import uuid4
 import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as pg
 
-from src.infrastructure.postgres.entities.base import Base
-from src.infrastructure.postgres.entities.transaction import TransactionORM
-from src.model.transaction import Category, TransactionType
+from app.infrastructure.postgres.entities.base import Base
+from app.infrastructure.postgres.entities.transaction import TransactionORM
+from app.model.transaction import Category, TransactionType
 
 
 class TestTransactionORM:

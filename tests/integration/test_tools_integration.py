@@ -2,17 +2,17 @@ from datetime import date
 
 import pytest
 
-from src.agents.financial.tools.add_transaction import AddTransactionTool
-from src.agents.financial.tools.daily_balance import DailyBalanceTool
-from src.agents.financial.tools.delete_transaction import DeleteTransactionTool
-from src.agents.financial.tools.restore_transaction import RestoreTransactionTool
-from src.agents.financial.tools.search_transaction import SearchTransactionsTool
-from src.agents.financial.tools.total_balance import TotalBalanceTool
-from src.agents.financial.tools.update_transaction import UpdateTransactionTool
-from src.model.tool_response import ToolSuccess
-from src.model.transaction import Category, Transaction, TransactionType
-from src.model.transaction_query_params import TransactionQueryParams
-from src.model.update_transaction_params import (
+from app.agents.financial.tools.add_transaction import AddTransactionTool
+from app.agents.financial.tools.daily_balance import DailyBalanceTool
+from app.agents.financial.tools.delete_transaction import DeleteTransactionTool
+from app.agents.financial.tools.restore_transaction import RestoreTransactionTool
+from app.agents.financial.tools.search_transaction import SearchTransactionsTool
+from app.agents.financial.tools.total_balance import TotalBalanceTool
+from app.agents.financial.tools.update_transaction import UpdateTransactionTool
+from app.model.tool_response import ToolSuccess
+from app.model.transaction import Category, Transaction, TransactionType
+from app.model.transaction_query_params import TransactionQueryParams
+from app.model.update_transaction_params import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )

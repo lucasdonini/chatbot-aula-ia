@@ -2,9 +2,9 @@ from datetime import date
 
 import pytest
 
-from src.agents.financial.tools.daily_balance import DailyBalanceTool
-from src.model.tool_response import ToolFailure, ToolSuccess
-from src.services.transaction_service import TransactionService
+from app.agents.financial.tools.daily_balance import DailyBalanceTool
+from app.model.tool_response import ToolFailure, ToolSuccess
+from app.services.transaction_service import TransactionService
 
 
 class TestDailyBalanceTool:

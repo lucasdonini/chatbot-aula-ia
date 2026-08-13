@@ -2,14 +2,14 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.model.chat_session import ChatError, ChatMessage
-from src.services.session_summary_service import SessionSummaryService
+from app.model.chat_session import ChatError, ChatMessage
+from app.services.session_summary_service import SessionSummaryService
 
 
 class TestSessionSummaryService:
     @pytest.fixture
     def service(self):
-        with patch("src.services.session_summary_service.ChatGroq") as mock_groq:
+        with patch("app.services.session_summary_service.ChatGroq") as mock_groq:
             mock_llm = AsyncMock()
             mock_groq.return_value = mock_llm
             service = SessionSummaryService()

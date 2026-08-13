@@ -5,23 +5,23 @@
 > comandos de verificação. Leia também o `AGENTS.md` (regras de engajamento) e o
 > `TODO.md` (dívida auditada) antes de começar.
 >
-> Status: **em andamento** — Fase 0.6 concluída em 2026-08-13.
+> Status: **em andamento** — Fase 0.7 concluída em 2026-08-13.
 
 ---
 
 ## 1. Contexto
 
 O projeto hoje é um chatbot multiagente (LangGraph) executado via **CLI**
-(`src/main.py`). A meta é expô-lo como **API REST (FastAPI)** para alimentar uma
+(`app/main.py`). A meta é expô-lo como **API REST (FastAPI)** para alimentar uma
 interface de chat com: chat atual, lista de chats anteriores (com título) e
 mensagens de um chat específico.
 
 Pontos de partida verificados:
 
-- `src/main.py` — loop de CLI; concentra `setup_logger`, sessão e finalização.
-- `src/agents/graph.py` — grafo compilado com `MemorySaver` (thread_id = session_id).
-- `src/services/chat_session_service.py` — persistência das sessões no MongoDB (Beanie).
-- `src/services/chat_history_service.py` — leitura de histórico (contém bugs, ver Fase 0.2).
+- `app/main.py` — loop de CLI; concentra `setup_logger`, sessão e finalização.
+- `app/agents/graph.py` — grafo compilado com `MemorySaver` (thread_id = session_id).
+- `app/services/chat_session_service.py` — persistência das sessões no MongoDB (Beanie).
+- `app/services/chat_history_service.py` — leitura de histórico (contém bugs, ver Fase 0.2).
 - MongoDB guarda mensagens (`ChatSession.entries`); PostgreSQL guarda transações.
 
 ## 2. Decisões registradas (não reabrir sem forte motivo)
@@ -54,7 +54,7 @@ Pontos de partida verificados:
 - Type check: `uv run mypy .` (exclui `tests/` e `migrations/`).
 - Testes unitários: `uv run pytest` (default roda `-m 'not integration'`).
 - Testes de integração: `uv run pytest -m integration` (sobe PostgreSQL via testcontainers).
-- Rodar API em dev: `uv run uvicorn src.api.app:app --reload`.
+- Rodar API em dev: `uv run uvicorn app.api.app:app --reload`.
 - Padrões do projeto: type hints estritos, logs em PT-BR via `extra={"details": {...}}`,
   injeção de dependência por construtor, separação `model`/`service`/`infrastructure`/`agents`.
 - **Não** gerar código sem pedido explícito (ver `AGENTS.md`). Em dúvida, perguntar.
@@ -66,7 +66,7 @@ Pontos de partida verificados:
 | 0 | Pré-migração (settings, bugs, guardrails, env) | — |
 | 0.5 | Refatoração dos loggers (terminal estilo FastAPI) | Fase 0 (settings) |
 | 0.6 | Clock centralizado | Fase 0 (settings) |
-| 1 | Núcleo da API (`src/api/`, `POST /chat`) | 0, 0.5, 0.6 |
+| 1 | Núcleo da API (`app/api/`, `POST /chat`) | 0, 0.5, 0.6 |
 | 2 | Endpoints de histórico (UI) | Fase 1 |
 | 3 | Dívida técnica priorizada | Fase 0 (opcional, pode paralelizar) |
 | 4 | Testes de API + CI | Fase 1 e 2 |
@@ -78,7 +78,7 @@ Cada fase termina com: `ruff check .` limpo, testes verdes e critérios de aceit
 
 ## Fase 0 — Correções pré-migração
 
-### 0.1 `src/infrastructure/settings.py`
+### 0.1 `app/infrastructure/settings.py`
 
 **Implementado (2026-08-12):**
 
@@ -101,11 +101,11 @@ Cada fase termina com: `ruff check .` limpo, testes verdes e critérios de aceit
 - Validar no boot que `gemini_api_key` e `groq_api_key` **não** são o valor dummy
   (`"No key provided"`) — falha clara e cedo em vez de erro enigmático em runtime.
 - Trocar `model_config.extra` de `"ignore"` para `"forbid"` (typos em env param a falhar).
-- **Arquivos tocados:** `src/infrastructure/settings.py`, `.env`, `.env.example`.
-- **Aceite:** `uv run python -c "from src.infrastructure.settings import settings; print(settings.log_level)"`
+- **Arquivos tocados:** `app/infrastructure/settings.py`, `.env`, `.env.example`.
+- **Aceite:** `uv run python -c "from app.infrastructure.settings import settings; print(settings.log_level)"`
   respeita o `.env`; env desconhecida levanta `ValidationError`.
 
-### 0.2 Bug `src/services/chat_history_service.py::fetch_history`
+### 0.2 Bug `app/services/chat_history_service.py::fetch_history`
 
 **Implementado (2026-08-12):**
 
@@ -135,7 +135,7 @@ Consequência: `search_history` (router) puxa todo o histórico.
   desconhecida, indisponibilidade do LLM e bloqueio determinístico sem chamada
   ao LLM.
 
-`src/agents/guardrails/input_guardrail.py` define `category = "APROVADO"` por default:
+`app/agents/guardrails/input_guardrail.py` define `category = "APROVADO"` por default:
 classificação desconhecida/vazia é aprovada, e exceção do LLM propaga sem bloqueio.
 
 - Categoria desconhecida ou ausente → `GuardrailResult.block(...)`.
@@ -162,14 +162,14 @@ classificação desconhecida/vazia é aprovada, e exceção do LLM propaga sem b
   `postgres:postgres@localhost:5432`, mas o container expõe `5433` com senha
   `germinare`). `make build-db` + `make run` hoje **não conecta**.
 - `.env.example`: corrigir/remover `LANGGRAPH_ALLOWED_MSGPACK_MODULES` (config morta:
-  `graph.py:70` hardcoda `src.model.graph_state`); adicionar `LOG_LEVEL`, `LOG_TO_FILE`,
+  `graph.py:70` hardcoda `app.model.graph_state`); adicionar `LOG_LEVEL`, `LOG_TO_FILE`,
   `LOG_FILE`, `APP_TIMEZONE`.
 - `.gitignore`: adicionar `**/.env`.
 - README/makefile: `make build` não existe (target é `build-db`); banco é
   `assessoriadb` (README escreve `acessoriadb`).
 - **Aceite:** `make build-db && make upgrade-db && make run` conecta sem erro.
 
-### 0.5 Loggers (terminal estilo FastAPI) — `src/infrastructure/logger.py`
+### 0.5 Loggers (terminal estilo FastAPI) — `app/infrastructure/logger.py`
 
 **Implementado (2026-08-13):**
 
@@ -192,7 +192,7 @@ Comportamento alvo:
   - `INFO+`: `INFO: mensagem` puro — sem details, sem módulo, sem data/sessão.
     Intercala naturalmente com os requests do uvicorn.
   - `DEBUG`: `[nome_reduzido] INFO: mensagem | {details_json}` — reusar
-    `_short_module_name` (remove `src.`, `_agent/_service/_repository`, etc.).
+    `_short_module_name` (remove `app.`, `_agent/_service/_repository`, etc.).
   - **Traceback: nunca suprimir** no console (remover `HideConsoleTracebackFilter`).
 - `ContextFilter` continua preenchendo `agent/session/trace/interaction`.
 - Não silenciar `uvicorn`, `uvicorn.error`, `uvicorn.access`.
@@ -209,7 +209,7 @@ Os três globals viram `ContextVar`. O `ContextFilter` lê as contextvars. A Fas
 seta os valores por request (middleware/dependency). Sem isso, requests concorrentes
 cruzam `session/trace/int`.
 
-### 0.6 Clock centralizado — novo `src/infrastructure/clock.py`
+### 0.6 Clock centralizado — novo `app/infrastructure/clock.py`
 
 **Implementado (2026-08-13):**
 
@@ -243,10 +243,16 @@ Analogia ao `Clock` do Spring Boot: um provider único de "agora".
 
 ### 0.7 Refatorações menores
 
-- Renomear o pacote `src/` para `app/` com cuidado para manter a coerência de nomes 
-  e imports em todo o projeto.
-- Remover referências a pacote pai com `..pacote_pai` pelo caminho 
-  completo `app.pacote_pai.pacote_irmao`
+**Implementado (2026-08-13):**
+
+- O pacote raiz é `app/`; imports, patches de testes, comandos, configuração de
+  ferramentas e o serializador LangGraph usam esse namespace.
+- Imports parentais foram substituídos por imports absolutos `app.*`.
+- Migrations, documentação atual e planejamento futuro agora usam `app/`.
+
+- Manter o pacote `app/` coerente em nomes e imports por todo o projeto.
+- Remover referências a pacote pai com `..pacote_pai` pelo caminho completo
+  `app.pacote_pai.pacote_irmao`.
 
 ### ✅ Fase 0 — Definição de pronto
 
@@ -255,17 +261,17 @@ ok; `.env`/`.env.example` consistentes; bug do `limit` coberto por teste.
 
 ---
 
-## Fase 1 — Núcleo da API (novo pacote `src/api/`)
+## Fase 1 — Núcleo da API (novo pacote `app/api/`)
 
-### 1.1 `src/api/app.py` — aplicação e lifespan
+### 1.1 `app/api/app.py` — aplicação e lifespan
 
 - Criar `FastAPI` com `lifespan`:
   - Startup: `setup_logger()`, `MongoManager.init_database()` (com `asyncio.Lock`
     contra dupla inicialização), validação de chaves de API.
   - Shutdown: fechar `AsyncMongoClient` (adicionar método de close no `MongoManager`).
-- Título/descrição da API; sem dependência do `src.main` CLI.
+- Título/descrição da API; sem dependência do `app.main` CLI.
 
-### 1.2 `POST /chat` — `src/api/routers/chat.py`
+### 1.2 `POST /chat` — `app/api/routers/chat.py`
 
 Request: `{session_id?: str, message: str}`. Fluxo:
 
@@ -277,7 +283,7 @@ Request: `{session_id?: str, message: str}`. Fluxo:
    resposta (Mongo).
 5. Retornar `{session_id, title, response, trace_id}`.
 
-Response model Pydantic em `src/api/schemas.py`.
+Response model Pydantic em `app/api/schemas.py`.
 
 ### 1.3 Refatorar `ChatSessionService`
 
@@ -298,7 +304,7 @@ Response model Pydantic em `src/api/schemas.py`.
 
 ### ✅ Fase 1 — Definição de pronto
 
-`uv run uvicorn src.api.app:app --reload` sobe; `POST /chat` cria sessão, persiste
+`uv run uvicorn app.api.app:app --reload` sobe; `POST /chat` cria sessão, persiste
 mensagens, responde; dois `POST /chat` na mesma sessão preservam contexto;
 dois requests em sessões diferentes não se interferem (logs com `session/trace`
 corretos via contextvars).
@@ -368,7 +374,7 @@ Os 3 endpoints atendem a UI de chat (lista, mensagens, conversa em andamento);
 
 ## Fase 5 — Documentação
 
-- **README.md:** seção de API (rodar com `uvicorn src.api.app:app`, exemplos curl
+- **README.md:** seção de API (rodar com `uvicorn app.api.app:app`, exemplos curl
   dos 3 endpoints), CLI vira legado, correções de `make`/nome do banco (0.4).
 - **context.md:** "acesso via CLI" → CLI + API; atualizar "Estado Atual" e
   "Próximos Passos"; typos (`sumarize`).
@@ -389,15 +395,15 @@ Os 3 endpoints atendem a UI de chat (lista, mensagens, conversa em andamento);
 
 | Arquivo | Papel na migração |
 |---|---|
-| `src/main.py` | CLI a ser aposentado; contém `setup_logger`/sessão hoje |
-| `src/agents/graph.py` | Grafo + `MemorySaver` (thread_id = session_id); FAQ→END (Fase 3) |
-| `src/agents/temporal_context.py` | `_now` no import (Fase 0.6) |
-| `src/services/chat_session_service.py` | Sessões/Mongo; `_active_sessions` (Fase 1) |
-| `src/services/chat_history_service.py` | Bug do `limit` (Fase 0.2); endpoints (Fase 2) |
-| `src/infrastructure/logger.py` | Refatoração console/arquivo + contextvars (Fase 0.5) |
-| `src/infrastructure/settings.py` | Novos campos env (Fase 0.1) |
-| `src/infrastructure/mongo_connection.py` | `init_database` + close no shutdown (Fase 1) |
-| `src/agents/guardrails/input_guardrail.py` | Fail-closed (Fase 0.3) |
-| `src/api/` | Novo pacote da API (Fases 1–2) |
+| `app/main.py` | CLI a ser aposentado; contém `setup_logger`/sessão hoje |
+| `app/agents/graph.py` | Grafo + `MemorySaver` (thread_id = session_id); FAQ→END (Fase 3) |
+| `app/agents/temporal_context.py` | `_now` no import (Fase 0.6) |
+| `app/services/chat_session_service.py` | Sessões/Mongo; `_active_sessions` (Fase 1) |
+| `app/services/chat_history_service.py` | Bug do `limit` (Fase 0.2); endpoints (Fase 2) |
+| `app/infrastructure/logger.py` | Refatoração console/arquivo + contextvars (Fase 0.5) |
+| `app/infrastructure/settings.py` | Novos campos env (Fase 0.1) |
+| `app/infrastructure/mongo_connection.py` | `init_database` + close no shutdown (Fase 1) |
+| `app/agents/guardrails/input_guardrail.py` | Fail-closed (Fase 0.3) |
+| `app/api/` | Novo pacote da API (Fases 1–2) |
 | `.env` / `.env.example` | Correção de config (Fase 0.4) |
 | `TODO.md` | Dívida auditada; atualizar ao longo da migração (Fase 5) |

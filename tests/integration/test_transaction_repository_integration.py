@@ -2,10 +2,10 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from src.infrastructure.postgres.entities.transaction import TransactionORM
-from src.model.transaction import Category, Transaction, TransactionType
-from src.model.transaction_query_params import TransactionQueryParams
-from src.model.update_transaction_params import (
+from app.infrastructure.postgres.entities.transaction import TransactionORM
+from app.model.transaction import Category, Transaction, TransactionType
+from app.model.transaction_query_params import TransactionQueryParams
+from app.model.update_transaction_params import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )

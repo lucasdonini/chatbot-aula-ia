@@ -2,9 +2,9 @@ import re
 
 import pytest
 
-from src.agents.guardrails.anonymization import anonymize_input, deanonymize_output
-from src.agents.guardrails.anonymization_config import PII
-from src.agents.guardrails.guardrails_config import (
+from app.agents.guardrails.anonymization import anonymize_input, deanonymize_output
+from app.agents.guardrails.anonymization_config import PII
+from app.agents.guardrails.guardrails_config import (
     BLOCK_RESPONSES,
     INJECTION_PATTERNS,
     INTERN_DATA_KEYWORDS,
