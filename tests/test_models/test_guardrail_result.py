@@ -1,6 +1,6 @@
 import pytest
 
-from src.model.guardrail_result import GuardrailResult
+from app.model.guardrail_result import GuardrailResult
 
 
 class TestGuardrailResult:

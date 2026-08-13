@@ -1,7 +1,7 @@
 import pytest
 from pydantic import BaseModel
 
-from src.model.tool_response import ToolFailure, ToolSuccess
+from app.model.tool_response import ToolFailure, ToolSuccess
 
 
 class _DummyData(BaseModel):

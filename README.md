@@ -1,6 +1,6 @@
 # Chatbot Aula IA
 
-Assistente modular para as aulas de IA — agentes principais em `src/agents/` e infraestrutura em `src/infrastructure/`.
+Assistente modular para as aulas de IA — agentes principais em `app/agents/` e infraestrutura em `app/infrastructure/`.
 
 ## Rápido (o essencial)
 - Requisitos: `python 3.12+`, `git`. Docker é opcional para execução em container.
@@ -42,7 +42,7 @@ uv sync
 - Executar o módulo principal:
 
 ```bash
-uv run python -m src.main
+uv run python -m app.main
 ```
 
 3) Sem `make` e sem `uv` (manual, funciona em Windows/Unix)
@@ -53,7 +53,7 @@ uv run python -m src.main
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
-python -m src.main
+python -m app.main
 ```
 
 - Criar e ativar um venv (Windows PowerShell):
@@ -62,7 +62,7 @@ python -m src.main
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e .
-.\.venv\Scripts\python -m src.main
+.\.venv\Scripts\python -m app.main
 ```
 
 4) Banco PostgreSQL com Docker
@@ -83,19 +83,19 @@ docker exec -it assessoria-sql psql -d assessoriadb
 ## Comandos úteis (Makefile)
 
 - `make build-db` — `docker compose up -d --build` (apenas DB/infra).
-- `make run` — executa `uv run python -m src.main`.
+- `make run` — executa `uv run python -m app.main`.
 - `make prepare-environment` — `uv sync` (sincroniza dependências).
 - `make access-db` — abre um shell psql no container do banco.
 
 ## Como alterar o projeto
 
-- Código: `src/` — edite agentes em `src/agents/`.
+- Código: `app/` — edite agentes em `app/agents/`.
 - Dependências: se possível, adicione e remova dependências via `uv add / remove`. Se não der, altere o `pyproject.toml` e rode `pip install -e .`
 - Banco: scripts em `sql/` (ex.: `sql/init-db.sql`). Para recriar a infra, use `docker compose up -d --build`.
 
 ## Dicas rápidas
 
-- Se não tiver `uv`: use o fluxo de venv + `python -m src.main`.
+- Se não tiver `uv`: use o fluxo de venv + `python -m app.main`.
 - Se não tiver `make`: use `uv` ou os comandos manuais acima.
 - Para trocar o Python usado pelo projeto, ative o venv desejado antes de rodar.
 

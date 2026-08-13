@@ -12,7 +12,7 @@ destroy-db:
 	docker compose down -v
 
 run:
-	uv run python -m src.main
+	uv run python -m app.main
 
 prepare-environment:
 	uv sync

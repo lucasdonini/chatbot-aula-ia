@@ -1,0 +1,28 @@
+import logging
+from contextlib import contextmanager
+from typing import Generator
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+
+from app.infrastructure.settings import settings
+
+logger = logging.getLogger(__name__)
+
+engine = create_engine(settings.postgres_url.get_secret_value(), pool_pre_ping=True)
+SessionLocal = sessionmaker(bind=engine, autoflush=False)
+
+
+@contextmanager
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    logger.debug("Postgres session opened")
+    try:
+        yield db
+    except Exception:
+        db.rollback()
+        logger.exception("Postgres session rolled back")
+        raise
+    finally:
+        db.close()
+        logger.debug("Postgres session closed")

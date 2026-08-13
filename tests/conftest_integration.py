@@ -13,12 +13,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from testcontainers.postgres import PostgresContainer
 
-from src.infrastructure.postgres.entities.transaction import TransactionORM
-from src.infrastructure.repositories.transaction_repository import (
+from app.infrastructure.postgres.entities.transaction import TransactionORM
+from app.infrastructure.repositories.transaction_repository import (
     TransactionRepository,
 )
-from src.model.transaction import Category, TransactionType
-from src.services.transaction_service import TransactionService
+from app.model.transaction import Category, TransactionType
+from app.services.transaction_service import TransactionService
 
 ALEMBIC_CFG = AlembicConfig(str(Path(__file__).resolve().parent.parent / "alembic.ini"))
 
@@ -36,7 +36,7 @@ def db_url(postgres_container: PostgresContainer) -> str:
 
 @pytest.fixture(scope="session")
 def apply_migrations(db_url: str) -> Generator[None, None, None]:
-    with patch("src.infrastructure.settings.settings.postgres_url", SecretStr(db_url)):
+    with patch("app.infrastructure.settings.settings.postgres_url", SecretStr(db_url)):
         upgrade(ALEMBIC_CFG, "head")
         yield
         downgrade(ALEMBIC_CFG, "base")

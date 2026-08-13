@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.services.chat_history_service import ChatHistoryService
+from app.services.chat_history_service import ChatHistoryService
 
 
 class TestChatHistoryService:
@@ -13,7 +13,7 @@ class TestChatHistoryService:
     @pytest.mark.asyncio
     async def test_fetch_history_no_search(self, service):
         with patch(
-            "src.services.chat_history_service.ChatSession"
+            "app.services.chat_history_service.ChatSession"
         ) as mock_chat_session:
             mock_find = MagicMock()
             mock_project = MagicMock()
@@ -35,7 +35,7 @@ class TestChatHistoryService:
     @pytest.mark.asyncio
     async def test_fetch_history_with_search(self, service):
         with patch(
-            "src.services.chat_history_service.ChatSession"
+            "app.services.chat_history_service.ChatSession"
         ) as mock_chat_session:
             mock_find = MagicMock()
             mock_project = MagicMock()
@@ -58,7 +58,7 @@ class TestChatHistoryService:
     @pytest.mark.asyncio
     async def test_fetch_entries_found(self, service):
         with patch(
-            "src.services.chat_history_service.ChatSession"
+            "app.services.chat_history_service.ChatSession"
         ) as mock_chat_session:
             mock_session = AsyncMock()
             mock_session.entries = ["entry1", "entry2"]
@@ -75,7 +75,7 @@ class TestChatHistoryService:
     @pytest.mark.asyncio
     async def test_fetch_entries_not_found(self, service):
         with patch(
-            "src.services.chat_history_service.ChatSession"
+            "app.services.chat_history_service.ChatSession"
         ) as mock_chat_session:
 
             async def find_one_side(*args, **kwargs):

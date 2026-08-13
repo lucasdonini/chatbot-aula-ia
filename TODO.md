@@ -14,7 +14,7 @@
 - [ ] **PII vazando em logs**: `ChatSessionService`, `MongoManager` (listener de queries) e `TransactionRepository` logam dados sensíveis (mensagens, parâmetros de busca) **antes** dos guardrails sanitizarem.
 - [ ] **Log level DEBUG por default**: `logger.py` configura `DEBUG` como padrão — grava tudo, incluindo PII. Deveria ser `INFO` com configuração runtime via variável de ambiente.
 - [ ] **Regex de PII incompletos**: Faltam RG, passaporte, IP, CEP, endereços. Padrão `CONTA` (`\d{4,6}-\d{1}`) é muito genérico e gera falsos positivos.
-- [ ] **`.env.example` com path inválido**: `LANGGRAPH_ALLOWED_MSGPACK_MODULES` referencia `src.model.common.graph_state` — o módulo real é `src.model.graph_state`.
+- [ ] **`.env.example` com path inválido**: `LANGGRAPH_ALLOWED_MSGPACK_MODULES` referencia `app.model.common.graph_state` — o módulo real é `app.model.graph_state`.
 - [ ] **`INTERN_DATA_KEYWORDS` incompleta**: Falta "credentials" (inglês), "connection string", "environment variable", ".env", "database password".
 - [ ] **Colisão de tokens de anonimização**: `uuid4().hex[:6]` em `anonymization.py` — 1 em ~16M de colisão. Remota mas possível.
 

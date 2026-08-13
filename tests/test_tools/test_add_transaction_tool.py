@@ -1,9 +1,9 @@
 import pytest
 
-from src.agents.financial.tools.add_transaction import AddTransactionTool
-from src.model.tool_response import ToolFailure, ToolSuccess
-from src.model.transaction import Category, Transaction, TransactionType
-from src.services.transaction_service import TransactionService
+from app.agents.financial.tools.add_transaction import AddTransactionTool
+from app.model.tool_response import ToolFailure, ToolSuccess
+from app.model.transaction import Category, Transaction, TransactionType
+from app.services.transaction_service import TransactionService
 
 
 class TestAddTransactionTool:

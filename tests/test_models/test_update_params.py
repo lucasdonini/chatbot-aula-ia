@@ -1,8 +1,8 @@
 from datetime import date, datetime
 from uuid import uuid4
 
-from src.model.transaction import Category, TransactionType
-from src.model.update_transaction_params import (
+from app.model.transaction import Category, TransactionType
+from app.model.update_transaction_params import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )

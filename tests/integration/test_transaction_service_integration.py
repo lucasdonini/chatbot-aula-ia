@@ -2,9 +2,9 @@ from datetime import date
 
 import pytest
 
-from src.model.transaction import Category, Transaction, TransactionType
-from src.model.transaction_query_params import TransactionQueryParams
-from src.model.update_transaction_params import (
+from app.model.transaction import Category, Transaction, TransactionType
+from app.model.transaction_query_params import TransactionQueryParams
+from app.model.update_transaction_params import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )
@@ -22,7 +22,7 @@ class TestCalculateTotalBalance:
         assert balance == 7600.00
 
     def test_zero_balance_no_transactions(self, transaction_repository, db_session):
-        from src.services.transaction_service import TransactionService
+        from app.services.transaction_service import TransactionService
 
         service = TransactionService(repository=transaction_repository)
         balance = service.calculate_total_balance()
@@ -41,7 +41,7 @@ class TestCalculateDailyBalance:
         assert balance == 7800.00
 
     def test_daily_balance_no_transactions(self, transaction_repository, db_session):
-        from src.services.transaction_service import TransactionService
+        from app.services.transaction_service import TransactionService
 
         service = TransactionService(repository=transaction_repository)
         balance = service.calculate_daily_balance(date(2026, 1, 1))

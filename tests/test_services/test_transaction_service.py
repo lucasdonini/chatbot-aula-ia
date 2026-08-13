@@ -2,8 +2,8 @@ from datetime import date
 
 import pytest
 
-from src.model.transaction import Category
-from src.model.transaction_query_params import TransactionQueryParams
+from app.model.transaction import Category
+from app.model.transaction_query_params import TransactionQueryParams
 
 
 class TestCalculateTotalBalance:

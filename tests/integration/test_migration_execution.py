@@ -69,8 +69,8 @@ class TestMigrationExecution:
     def test_insert_and_read_transaction(self, db_session):
         from decimal import Decimal
 
-        from src.infrastructure.postgres.entities.transaction import TransactionORM
-        from src.model.transaction import Category, TransactionType
+        from app.infrastructure.postgres.entities.transaction import TransactionORM
+        from app.model.transaction import Category, TransactionType
 
         orm = TransactionORM(
             amount=Decimal("99.90"),
@@ -89,8 +89,8 @@ class TestMigrationExecution:
     def test_insert_with_enum_filter(self, db_session):
         from sqlalchemy import select
 
-        from src.infrastructure.postgres.entities.transaction import TransactionORM
-        from src.model.transaction import Category, TransactionType
+        from app.infrastructure.postgres.entities.transaction import TransactionORM
+        from app.model.transaction import Category, TransactionType
 
         db_session.add_all(
             [

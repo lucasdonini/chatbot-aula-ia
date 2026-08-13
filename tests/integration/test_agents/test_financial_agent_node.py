@@ -1,9 +1,9 @@
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from src.agents.financial.financial_agent import financial_node
-from src.agents.financial.financial_prompt import FINANCIAL_NODE_NAME
-from src.model.graph_state import GraphState
+from app.agents.financial.financial_agent import financial_node
+from app.agents.financial.financial_prompt import FINANCIAL_NODE_NAME
+from app.model.graph_state import GraphState
 
 pytestmark = [
     pytest.mark.integration,

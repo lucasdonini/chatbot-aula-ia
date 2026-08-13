@@ -1,8 +1,8 @@
 import pytest
 
-from src.agents.financial.tools.total_balance import TotalBalanceTool
-from src.model.tool_response import ToolFailure, ToolSuccess
-from src.services.transaction_service import TransactionService
+from app.agents.financial.tools.total_balance import TotalBalanceTool
+from app.model.tool_response import ToolFailure, ToolSuccess
+from app.services.transaction_service import TransactionService
 
 
 class TestTotalBalanceTool:

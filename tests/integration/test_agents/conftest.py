@@ -49,7 +49,7 @@ def mock_all_llms(
 
 @pytest.fixture(autouse=True)
 def clear_active_sessions() -> Generator:
-    from src.services import chat_session_service
+    from app.services import chat_session_service
 
     chat_session_service._active_sessions.clear()
     yield
