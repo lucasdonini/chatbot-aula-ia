@@ -2,6 +2,7 @@ import logging
 from typing import Any, Dict
 
 from langchain.agents import create_agent
+from langchain_core.messages import SystemMessage
 
 from src.infrastructure.execution_time_logger import log_execution_time
 from src.infrastructure.postgres.pg_connection import get_db
@@ -11,6 +12,7 @@ from src.model.specialist_output import FinancialOutput
 from src.services.transaction_service import TransactionService
 
 from ..llms import specialist_llm
+from ..temporal_context import build_temporal_context
 from .financial_prompt import FINANCIAL_NODE_NAME, PROMPT
 from .tools import (
     AddTransactionTool,
@@ -61,7 +63,14 @@ async def financial_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
         "Agent called",
         extra={"details": {"name": FINANCIAL_NODE_NAME, "input": input_text}},
     )
-    response = await financial_agent.ainvoke(state)  # type: ignore[arg-type]
+    request_state: GraphState = {
+        **state,
+        "messages": [
+            SystemMessage(content=build_temporal_context()),
+            *state["messages"],
+        ],
+    }
+    response = await financial_agent.ainvoke(request_state)  # type: ignore[arg-type]
     last = (response.get("messages") or [None])[-1]
     output = last.content[:500] if last and last.content else "(tool call)"
     logger.info(

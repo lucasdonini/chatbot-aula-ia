@@ -1,11 +1,11 @@
 import logging
-from datetime import datetime
 from typing import Union
 
 from beanie import PydanticObjectId
 from beanie.operators import Push, Set
 from langchain_core.messages import AIMessage, HumanMessage
 
+from src.infrastructure.clock import get_clock
 from src.model.chat_session import (
     ChatEntry,
     ChatError,
@@ -25,7 +25,7 @@ class ChatSessionService:
         self._service = service
 
     async def init_session(self, session_id: str) -> None:
-        now = datetime.now()
+        now = get_clock().now()
         session = ChatSession(
             session_id=session_id,
             started_at=now,
@@ -49,7 +49,7 @@ class ChatSessionService:
         doc_id = _active_sessions[session_id]
         await ChatSession.find_one(ChatSession.id == doc_id).update(
             Push({ChatSession.entries: entry}),
-            Set({ChatSession.updated_at: datetime.now()}),
+            Set({ChatSession.updated_at: get_clock().now()}),
         )
 
     async def save_message(
@@ -101,7 +101,7 @@ class ChatSessionService:
         await session.update(
             Set(
                 {
-                    ChatSession.updated_at: datetime.now(),
+                    ChatSession.updated_at: get_clock().now(),
                     ChatSession.summary: summary,
                 }
             )

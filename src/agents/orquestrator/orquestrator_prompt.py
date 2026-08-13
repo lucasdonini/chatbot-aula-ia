@@ -1,13 +1,9 @@
 # ruff: noqa: E501
 
 from ..general_persona import SYSTEM_PERSONA
-from ..temporal_context import TEMPORAL_CONTEXT
 
 _BASE_PROMPT = f"""
 {SYSTEM_PERSONA}
-
-
-{TEMPORAL_CONTEXT}
 
 
 ### PAPEL

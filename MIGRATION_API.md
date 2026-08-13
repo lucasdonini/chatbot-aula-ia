@@ -5,7 +5,7 @@
 > comandos de verificação. Leia também o `AGENTS.md` (regras de engajamento) e o
 > `TODO.md` (dívida auditada) antes de começar.
 >
-> Status: **em andamento** — Fase 0.5 concluída em 2026-08-13.
+> Status: **em andamento** — Fase 0.6 concluída em 2026-08-13.
 
 ---
 
@@ -210,6 +210,18 @@ seta os valores por request (middleware/dependency). Sem isso, requests concorre
 cruzam `session/trace/int`.
 
 ### 0.6 Clock centralizado — novo `src/infrastructure/clock.py`
+
+**Implementado (2026-08-13):**
+
+- `Clock`, `SystemClock`, `FixedClock` e o provider `get_clock()`/`set_clock()`
+  centralizam o tempo. O timezone IANA é suportado em todas as plataformas pela
+  dependência `tzdata`.
+- Sessões MongoDB gravam `started_at` e `updated_at` em UTC timezone-aware.
+- O contexto temporal é reconstruído por execução, com períodos derivados da
+  data local configurada. Os nós de router, financeiro, agenda e orquestrador
+  o inserem como mensagem de sistema sem recriar agentes ou ferramentas.
+- Testes cobrem clock fixo, timezone local, contexto dinâmico e timestamps de
+  sessão determinísticos.
 
 Analogia ao `Clock` do Spring Boot: um provider único de "agora".
 

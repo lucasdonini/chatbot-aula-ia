@@ -76,8 +76,9 @@ Podem ser consultadas no `makefile`, mas para contexto:
 - Fase 0.3 concluída: o input guardrail bloqueia falhas, formatos inválidos e categorias desconhecidas do classificador LLM.
 - Fase 0.4 concluída: README e Makefile usam o fluxo `uv`, os ambientes da aplicação e do Compose são separados e a URL PostgreSQL local usa a porta publicada correta.
 - Fase 0.5 concluída: logs usam settings, arquivo opcional, saída de console no estilo da API e `ContextVar` para isolar sessão, trace e interação entre tasks.
+- Fase 0.6 concluída: Clock centralizado fornece UTC para persistência e timezone local para contexto temporal; prompts recebem contexto atualizado a cada execução.
 - Para executar localmente, preencher `GEMINI_API_KEY` e `GROQ_API_KEY` em `.env.app`. Credenciais nunca devem ser versionadas.
-- Próximo passo: Fase 0.6, centralizar o clock para datas consistentes e testáveis.
+- Próximo passo: Fase 0.7, refatorações menores.
 
 ## 6. Funcionalidades Implementadas Recentemente
 
