@@ -1,10 +1,9 @@
 import logging
 from typing import Any, Dict
 
-from langchain.agents import create_agent
 from langchain_core.messages import SystemMessage
 
-from app.agents.llms import specialist_llm
+from app.agents.llms import create_specialist
 from app.agents.temporal_context import build_temporal_context
 from app.infrastructure.execution_time_logger import log_execution_time
 from app.infrastructure.postgres.pg_connection import get_db
@@ -48,8 +47,7 @@ TOOLS = [
 ]
 
 
-financial_agent = create_agent(
-    model=specialist_llm,  # type: ignore[arg-type]
+financial_agent = create_specialist(
     system_prompt=PROMPT,
     tools=TOOLS,
     response_format=FinancialOutput,

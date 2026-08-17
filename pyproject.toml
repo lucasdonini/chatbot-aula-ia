@@ -1,7 +1,7 @@
 [project]
 name = "acessorIA"
-version = "0.1.0"
-requires-python = "==3.12.*"
+version = "2.0.0"
+requires-python = "==3.14.*"
 dependencies = [
     "google-genai>=1.68.0",
     "langchain>=1.2.14",
@@ -54,10 +54,10 @@ skip-magic-trailing-comma = false
 select = ["E", "F", "I"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 explicit_package_bases = true
 namespace_packages = true
-exclude = ["migrations/", "tests/"]
+exclude = ["migrations/", "tests/", "app/legacy-main.py"]

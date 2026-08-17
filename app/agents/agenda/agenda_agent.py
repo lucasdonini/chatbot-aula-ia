@@ -1,10 +1,9 @@
 import logging
 from typing import Any, Dict
 
-from langchain.agents import create_agent
 from langchain_core.messages import SystemMessage
 
-from app.agents.llms import specialist_llm
+from app.agents.llms import create_specialist
 from app.agents.temporal_context import build_temporal_context
 from app.infrastructure.execution_time_logger import log_execution_time
 from app.model.graph_state import GraphState, GraphStateKeys
@@ -14,8 +13,7 @@ from .agenda_prompt import AGENDA_NODE_NAME, PROMPT
 
 logger = logging.getLogger(__name__)
 
-agenda_agent = create_agent(
-    model=specialist_llm,  # type: ignore[arg-type]
+agenda_agent = create_specialist(
     system_prompt=PROMPT,
     response_format=AgendaOutput,
 )
