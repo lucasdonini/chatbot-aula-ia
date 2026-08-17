@@ -1,0 +1,11 @@
+services:
+  app:
+    container_name: assessor-ia
+    build: .
+    ports:
+      - '8000:8000'
+    env_file:
+      - .env
+    environment:
+      - 'POSTGRES_URL=postgresql://host.docker.internal:5432/assessoriadb'
+      - 'MONGODB_URI=mongodb://host.docker.internal:27017/assessoria'

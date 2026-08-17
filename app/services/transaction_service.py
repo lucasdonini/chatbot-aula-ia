@@ -1,7 +1,9 @@
 import logging
+from dataclasses import asdict
 from datetime import date
 from typing import List, Optional
 
+from app.domain.model.transaction import Transaction
 from app.infrastructure.agents.schema.transaction_query_params import (
     TransactionQueryParams,
 )
@@ -10,7 +12,6 @@ from app.infrastructure.agents.schema.update_transaction_params import (
 )
 from app.infrastructure.execution_time_logger import log_execution_time
 from app.infrastructure.repositories.transaction_repository import TransactionRepository
-from app.model.transaction import Transaction
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class TransactionService:
     def add_transaction(self, transaction: Transaction) -> Transaction:
         logger.debug(
             "Adding transaction",
-            extra={"details": {"transaction": transaction.model_dump()}},
+            extra={"details": {"transaction": asdict(transaction)}},
         )
         return self._repository.add_transaction(transaction)
 
