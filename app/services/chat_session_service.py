@@ -1,18 +1,18 @@
 import logging
-from typing import Union
+from dataclasses import asdict
 
 from beanie import PydanticObjectId
 from beanie.operators import Push, Set
 from langchain_core.messages import AIMessage, HumanMessage
 
-from app.infrastructure.clock import get_clock
-from app.model.chat_session import (
+from app.domain.model.chat_entry import (
     ChatEntry,
     ChatError,
     ChatMessage,
     ChatMessageRole,
-    ChatSession,
 )
+from app.infrastructure.clock import get_clock
+from app.infrastructure.mongodb.entities.chat_session import ChatSessionDocument
 
 from .session_summary_service import SessionSummaryService
 
@@ -26,7 +26,7 @@ class ChatSessionService:
 
     async def init_session(self, session_id: str) -> None:
         now = get_clock().now()
-        session = ChatSession(
+        session = ChatSessionDocument(
             session_id=session_id,
             started_at=now,
             updated_at=now,
@@ -47,13 +47,13 @@ class ChatSessionService:
 
     async def _save_entry(self, session_id: str, entry: ChatEntry) -> None:
         doc_id = _active_sessions[session_id]
-        await ChatSession.find_one(ChatSession.id == doc_id).update(
-            Push({ChatSession.entries: entry}),
-            Set({ChatSession.updated_at: get_clock().now()}),
+        await ChatSessionDocument.find_one(ChatSessionDocument.id == doc_id).update(
+            Push({ChatSessionDocument.entries: asdict(entry)}),
+            Set({ChatSessionDocument.updated_at: get_clock().now()}),
         )
 
     async def save_message(
-        self, session_id: str, message: Union[AIMessage, HumanMessage]
+        self, session_id: str, message: AIMessage | HumanMessage
     ) -> None:
         role = (
             ChatMessageRole.HUMAN
@@ -69,7 +69,7 @@ class ChatSessionService:
         await self._save_entry(session_id, entry)
         logger.debug(
             "Message saved",
-            extra={"details": entry.model_dump()},
+            extra={"details": asdict(entry)},
         )
 
     async def save_error(self, session_id: str, error: Exception) -> None:
@@ -77,7 +77,7 @@ class ChatSessionService:
         summary = await self._service.summarize_exception(error)
         entry = ChatError(exception=name, summary=summary)
         await self._save_entry(session_id, entry)
-        logger.debug("Error saved", extra={"details": entry.model_dump()})
+        logger.debug("Error saved", extra={"details": asdict(entry)})
 
     async def finalize_session(self, session_id: str) -> None:
         """
@@ -93,7 +93,7 @@ class ChatSessionService:
         if id is None:
             return
 
-        session = await ChatSession.find_one(ChatSession.id == id)
+        session = await ChatSessionDocument.find_one(ChatSessionDocument.id == id)
         if not session or not session.entries:
             return
 
@@ -101,8 +101,8 @@ class ChatSessionService:
         await session.update(
             Set(
                 {
-                    ChatSession.updated_at: get_clock().now(),
-                    ChatSession.summary: summary,
+                    ChatSessionDocument.updated_at: get_clock().now(),
+                    ChatSessionDocument.summary: summary,
                 }
             )
         )

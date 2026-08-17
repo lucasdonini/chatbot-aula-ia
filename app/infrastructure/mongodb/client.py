@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
@@ -11,9 +10,8 @@ from pymongo.monitoring import (
     register,
 )
 
-from app.model.chat_session import ChatSession
-
-from .settings import settings
+from ..settings import Settings
+from .entities.chat_session import ChatSessionDocument
 
 logger = logging.getLogger(__name__)
 
@@ -74,19 +72,22 @@ class LoggingMongoCommandListener(CommandListener):
             )
 
 
-register(LoggingMongoCommandListener())
-
-
 class MongoManager:
-    _client: Optional[AsyncMongoClient] = None
+    def __init__(self, settings: Settings) -> None:
+        self._settings = settings
+        self._client: AsyncMongoClient | None = None
+        self._registered_listeners: bool = False
 
-    @classmethod
-    async def init_database(cls) -> None:
+    async def init_database(self) -> None:
         """Initialize connection and map classes"""
-        if cls._client is None:
-            cls._client = AsyncMongoClient(settings.mongodb_uri.get_secret_value())
-            await init_beanie(
-                database=cls._client[settings.mongodb_dbname.get_secret_value()],
-                document_models=[ChatSession],
+        if self._client is None:
+            self._client = AsyncMongoClient(
+                self._settings.mongodb_uri.get_secret_value()
             )
-            logger.debug("MongoDB initialized")
+        if not self._registered_listeners:
+            register(LoggingMongoCommandListener())
+        await init_beanie(
+            database=self._client[self._settings.mongodb_dbname.get_secret_value()],
+            document_models=[ChatSessionDocument],
+        )
+        logger.debug("MongoDB initialized")
