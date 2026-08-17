@@ -11,7 +11,7 @@ destroy-db:
 	uv run python -m alembic downgrade base
 	docker compose down -v
 
-run:
+up: check
 	uv run python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 prepare-environment:
@@ -26,3 +26,8 @@ upgrade-db:
 
 downgrade-db:
 	uv run python -m alembic downgrade -1
+
+check:
+	uv run -m ruff format \
+	&& uv run -m ruff check --fix \
+	&& uv run -m mypy .
