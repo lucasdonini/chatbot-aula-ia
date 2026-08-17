@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 APP = ROOT / "app"
 sys.path.insert(0, str(APP))
 
-from app.model.transaction import Category, TransactionType
+from app.domain.model.transaction import Category, TransactionType
 
 # revision identifiers, used by Alembic.
 revision: str = '4c6c2484039c'

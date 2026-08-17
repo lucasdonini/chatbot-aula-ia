@@ -6,7 +6,7 @@ import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as pg
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.model.transaction import Category, TransactionType
+from app.domain.model.transaction import Category, TransactionType
 
 from .base import Base
 

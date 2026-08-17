@@ -8,10 +8,10 @@ from app.infrastructure.agents.schema.tool_response import (
     ToolResponse,
     ToolSuccess,
 )
+from app.infrastructure.agents.schema.transaction import TransactionOutput
 from app.infrastructure.agents.schema.update_transaction_params import (
     UpdateTransactionParams,
 )
-from app.model.transaction import Transaction
 from app.services.transaction_service import TransactionService
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class _UpdateTransactionArgsSchema(BaseModel):
 
 
 class _UpdateTransactionResponse(BaseModel):
-    updated: Transaction | None = None
+    updated: TransactionOutput | None = None
 
 
 TOOL_NAME = "update_transaction"
@@ -57,11 +57,15 @@ class UpdateTransactionTool(BaseTool):
                     extra={
                         "details": {
                             "tool": self.name,
-                            "updated": updated.model_dump(),
+                            "updated": updated,
                         }
                     },
                 )
-                return ToolSuccess(data=_UpdateTransactionResponse(updated=updated))
+                return ToolSuccess(
+                    data=_UpdateTransactionResponse(
+                        updated=TransactionOutput.from_domain(updated)
+                    )
+                )
             else:
                 logger.debug(
                     "Tool succeeded",

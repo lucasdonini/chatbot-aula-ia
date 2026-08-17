@@ -62,7 +62,7 @@ class TestMigrationSchema:
         """The second migration creates PostgreSQL enums category_enum
         and transaction_type_enum. This test verifies the import
         infrastructure loads correctly."""
-        from app.model.transaction import Category, TransactionType
+        from app.domain.model.transaction import Category, TransactionType
 
         assert len(Category) == 12
         assert len(TransactionType) == 3

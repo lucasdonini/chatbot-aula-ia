@@ -5,6 +5,7 @@ from typing import Callable, ContextManager, List, Optional
 from sqlalchemy import ScalarSelect, func, or_, select
 from sqlalchemy.orm import Session
 
+from app.domain.model.transaction import Transaction, TransactionType
 from app.infrastructure.agents.schema.transaction_query_params import (
     TransactionQueryParams,
 )
@@ -12,7 +13,6 @@ from app.infrastructure.agents.schema.update_transaction_params import (
     UpdateTransactionParams,
 )
 from app.infrastructure.postgres.entities.transaction import TransactionORM
-from app.model.transaction import Transaction, TransactionType
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +22,35 @@ class TransactionRepository:
         self._session_factory = session_factory
 
     def _orm_to_model(self, orm: TransactionORM) -> Transaction:
-        return Transaction.model_validate(orm)
+        return Transaction(
+            id=orm.id,
+            amount=float(orm.amount),
+            category=orm.category,
+            transaction_type=orm.transaction_type,
+            description=orm.description,
+            payment_method=orm.payment_method,
+            occurred_at=orm.occurred_at,
+            updated_at=orm.updated_at,
+            source_text=orm.source_text,
+            is_canceled=orm.is_canceled,
+        )
 
     def _model_to_orm(self, model: Transaction) -> TransactionORM:
-        data = model.model_dump(exclude_unset=True)
+        data = {
+            "amount": model.amount,
+            "category": model.category,
+            "transaction_type": model.transaction_type,
+            "description": model.description,
+            "payment_method": model.payment_method,
+            "source_text": model.source_text,
+            "is_canceled": model.is_canceled,
+        }
+        if model.id is not None:
+            data["id"] = model.id
+        if model.occurred_at is not None:
+            data["occurred_at"] = model.occurred_at
+        if model.updated_at is not None:
+            data["updated_at"] = model.updated_at
         return TransactionORM(**data)
 
     def _build_sum_amounts_of_transaction_type_subquery(

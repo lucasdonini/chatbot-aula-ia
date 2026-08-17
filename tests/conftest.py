@@ -38,6 +38,11 @@ _patch_create_agent_model_edge()
 
 pytest_plugins = ["tests.conftest_integration"]  # noqa: E402
 
+from app.domain.model.transaction import (  # noqa: E402
+    Category,
+    Transaction,
+    TransactionType,
+)
 from app.infrastructure.agents.schema.transaction_query_params import (  # noqa: E402
     TransactionQueryParams,
 )
@@ -48,7 +53,6 @@ from app.infrastructure.agents.schema.update_transaction_params import (  # noqa
 from app.infrastructure.repositories.transaction_repository import (  # noqa: E402
     TransactionRepository,
 )
-from app.model.transaction import Category, Transaction, TransactionType  # noqa: E402
 from app.services.transaction_service import TransactionService  # noqa: E402
 
 
@@ -68,10 +72,17 @@ def sample_transaction() -> Transaction:
 
 @pytest.fixture
 def sample_transaction_with_id(sample_transaction) -> Transaction:
-    t = sample_transaction.model_copy()
-    t.occurred_at = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
-    t.updated_at = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
-    return t
+    return Transaction(
+        amount=sample_transaction.amount,
+        source_text=sample_transaction.source_text,
+        category=sample_transaction.category,
+        transaction_type=sample_transaction.transaction_type,
+        description=sample_transaction.description,
+        payment_method=sample_transaction.payment_method,
+        occurred_at=datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc),
+        updated_at=datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc),
+        is_canceled=sample_transaction.is_canceled,
+    )
 
 
 @pytest.fixture
