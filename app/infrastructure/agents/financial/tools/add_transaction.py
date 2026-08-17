@@ -8,18 +8,21 @@ from app.infrastructure.agents.schema.tool_response import (
     ToolResponse,
     ToolSuccess,
 )
-from app.model.transaction import Transaction
+from app.infrastructure.agents.schema.transaction import (
+    TransactionInput,
+    TransactionOutput,
+)
 from app.services.transaction_service import TransactionService
 
 logger = logging.getLogger(__name__)
 
 
 class _AddTransactionArgsSchema(BaseModel):
-    transaction: Transaction
+    transaction: TransactionInput
 
 
 class _AddTransactionResponse(BaseModel):
-    transaction: Transaction
+    transaction: TransactionOutput
 
 
 TOOL_NAME = "add_transaction"
@@ -32,7 +35,9 @@ class AddTransactionTool(BaseTool):
 
     service: TransactionService = Field(exclude=True)
 
-    def _run(self, transaction: Transaction) -> ToolResponse[_AddTransactionResponse]:
+    def _run(
+        self, transaction: TransactionInput
+    ) -> ToolResponse[_AddTransactionResponse]:
         logger.debug(
             "Tool called",
             extra={
@@ -43,12 +48,16 @@ class AddTransactionTool(BaseTool):
             },
         )
         try:
-            added = self.service.add_transaction(transaction)
+            added = self.service.add_transaction(transaction.to_domain())
             logger.debug(
                 "Tool succeeded",
-                extra={"details": {"tool": self.name, "added": added.model_dump()}},
+                extra={"details": {"tool": self.name, "added": added}},
             )
-            return ToolSuccess(data=_AddTransactionResponse(transaction=added))
+            return ToolSuccess(
+                data=_AddTransactionResponse(
+                    transaction=TransactionOutput.from_domain(added)
+                )
+            )
         except Exception as e:
             logger.exception(
                 "Tool failed",

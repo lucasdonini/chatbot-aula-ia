@@ -1,8 +1,8 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from app.model.chat_session import ChatError, ChatMessage
 
+from app.domain.model.chat_entry import ChatError, ChatMessage
 from app.services.session_summary_service import SessionSummaryService
 
 

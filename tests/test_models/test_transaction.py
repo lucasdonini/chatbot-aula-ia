@@ -1,12 +1,15 @@
 from datetime import datetime, timezone
 
 import pytest
-from pydantic import ValidationError
 
-from app.model.transaction import Category, Transaction, TransactionType
+from app.domain.model.transaction import Category, Transaction, TransactionType
+from app.infrastructure.agents.schema.transaction import (
+    TransactionInput,
+    TransactionOutput,
+)
 
 
-class TestTransactionModel:
+class TestTransaction:
     def test_create_minimal(self):
         t = Transaction(
             amount=100.0,
@@ -65,32 +68,45 @@ class TestTransactionModel:
         assert t.amount == -50.0
 
     def test_source_text_required(self):
-        with pytest.raises(ValidationError):
+        with pytest.raises(TypeError):
             Transaction(amount=100.0)
 
-    def test_model_dump_roundtrip(self, sample_transaction):
-        data = sample_transaction.model_dump()
-        restored = Transaction.model_validate(data)
+    def test_domain_entity_roundtrip(self, sample_transaction):
+        restored = Transaction(
+            amount=sample_transaction.amount,
+            source_text=sample_transaction.source_text,
+            category=sample_transaction.category,
+            transaction_type=sample_transaction.transaction_type,
+            description=sample_transaction.description,
+            payment_method=sample_transaction.payment_method,
+            occurred_at=sample_transaction.occurred_at,
+            updated_at=sample_transaction.updated_at,
+            is_canceled=sample_transaction.is_canceled,
+            id=sample_transaction.id,
+        )
         assert restored.amount == sample_transaction.amount
         assert restored.category == sample_transaction.category
         assert restored.transaction_type == sample_transaction.transaction_type
         assert restored.description == sample_transaction.description
         assert restored.source_text == sample_transaction.source_text
 
-    def test_from_attributes_enabled(self):
-        from app.infrastructure.postgres.entities.transaction import TransactionORM
-
-        orm = TransactionORM(
+    def test_agent_input_converts_to_domain_entity(self):
+        model = TransactionInput(
             amount=99.90,
             category=Category.FOOD,
             transaction_type=TransactionType.EXPENSE,
             source_text="Comprei comida",
             is_canceled=False,
         )
-        model = Transaction.model_validate(orm)
-        assert model.amount == 99.90
-        assert model.category == Category.FOOD
-        assert model.transaction_type == TransactionType.EXPENSE
+        transaction = model.to_domain()
+        assert transaction.amount == 99.90
+        assert transaction.category == Category.FOOD
+        assert transaction.transaction_type == TransactionType.EXPENSE
+
+    def test_agent_output_converts_from_domain_entity(self, sample_transaction):
+        output = TransactionOutput.from_domain(sample_transaction)
+        assert output.amount == sample_transaction.amount
+        assert output.source_text == sample_transaction.source_text
 
     def test_category_enum_values(self):
         assert Category.FOOD == "comida"

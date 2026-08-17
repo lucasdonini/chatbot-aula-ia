@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.domain.model.transaction import Category, Transaction, TransactionType
 from app.infrastructure.agents.schema.transaction_query_params import (
     TransactionQueryParams,
 )
@@ -11,7 +12,6 @@ from app.infrastructure.agents.schema.update_transaction_params import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )
-from app.model.transaction import Category, Transaction, TransactionType
 
 
 class TestGetBalance:

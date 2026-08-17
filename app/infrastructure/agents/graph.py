@@ -78,7 +78,9 @@ class AgentGraphImpl:
 
         # Memória centralizada no grafo — persiste o Estado inteiro entre turns
         json_serializer = JsonPlusSerializer(
-            allowed_msgpack_modules=[("app.model.graph_state", "GraphStateKeys")]
+            allowed_msgpack_modules=[
+                ("app.infrastructure.agents.schema.graph_state", "GraphStateKeys")
+            ]
         )
         memory = MemorySaver(serde=json_serializer)
         return graph.compile(checkpointer=memory)

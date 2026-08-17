@@ -1,13 +1,14 @@
 import pytest
 
+from app.domain.model.transaction import Category, Transaction, TransactionType
 from app.infrastructure.agents.financial.tools.search_transaction import (
     SearchTransactionsTool,
 )
 from app.infrastructure.agents.schema.tool_response import ToolFailure, ToolSuccess
+from app.infrastructure.agents.schema.transaction import TransactionOutput
 from app.infrastructure.agents.schema.transaction_query_params import (
     TransactionQueryParams,
 )
-from app.model.transaction import Category, Transaction, TransactionType
 from app.services.transaction_service import TransactionService
 
 
@@ -70,4 +71,4 @@ class TestSearchTransactionsTool:
         result = tool._run(params)
 
         assert isinstance(result, ToolSuccess)
-        assert isinstance(result.data.transactions[0], Transaction)
+        assert isinstance(result.data.transactions[0], TransactionOutput)

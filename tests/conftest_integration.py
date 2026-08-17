@@ -13,11 +13,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from testcontainers.postgres import PostgresContainer
 
+from app.domain.model.transaction import Category, TransactionType
 from app.infrastructure.postgres.entities.transaction import TransactionORM
 from app.infrastructure.repositories.transaction_repository import (
     TransactionRepository,
 )
-from app.model.transaction import Category, TransactionType
 from app.services.transaction_service import TransactionService
 
 ALEMBIC_CFG = AlembicConfig(str(Path(__file__).resolve().parent.parent / "alembic.ini"))

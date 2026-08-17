@@ -2,6 +2,7 @@ from datetime import date
 
 import pytest
 
+from app.domain.model.transaction import Category, TransactionType
 from app.infrastructure.agents.financial.tools.add_transaction import AddTransactionTool
 from app.infrastructure.agents.financial.tools.daily_balance import DailyBalanceTool
 from app.infrastructure.agents.financial.tools.delete_transaction import (
@@ -18,6 +19,10 @@ from app.infrastructure.agents.financial.tools.update_transaction import (
     UpdateTransactionTool,
 )
 from app.infrastructure.agents.schema.tool_response import ToolSuccess
+from app.infrastructure.agents.schema.transaction import (
+    TransactionInput,
+    TransactionOutput,
+)
 from app.infrastructure.agents.schema.transaction_query_params import (
     TransactionQueryParams,
 )
@@ -25,7 +30,6 @@ from app.infrastructure.agents.schema.update_transaction_params import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )
-from app.model.transaction import Category, Transaction, TransactionType
 
 pytestmark = [
     pytest.mark.integration,
@@ -108,12 +112,12 @@ class TestSearchTransactionsTool:
     def test_returns_typed_models(self, search_tool, seed_transactions):
         params = TransactionQueryParams(limit=1)
         result = search_tool._run(params)
-        assert isinstance(result.data.transactions[0], Transaction)
+        assert isinstance(result.data.transactions[0], TransactionOutput)
 
 
 class TestAddTransactionTool:
     def test_add_transaction(self, add_tool, db_session):
-        t = Transaction(
+        t = TransactionInput(
             amount=99.00,
             category=Category.GIFTS,
             transaction_type=TransactionType.EXPENSE,
@@ -125,7 +129,7 @@ class TestAddTransactionTool:
         assert result.data.transaction is not None
 
     def test_add_and_verify(self, add_tool, transaction_service, db_session):
-        t = Transaction(
+        t = TransactionInput(
             amount=50.00,
             source_text="teste add tool",
         )

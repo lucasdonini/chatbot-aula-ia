@@ -1,7 +1,7 @@
 # ruff: noqa: E501
 
+from app.domain.model.transaction import Category
 from app.infrastructure.agents.general_persona import SYSTEM_PERSONA
-from app.model.transaction import Category
 
 from .tools import (
     ADD_TRANSACTION_TOOL_NAME,

@@ -8,10 +8,10 @@ from app.infrastructure.agents.schema.tool_response import (
     ToolResponse,
     ToolSuccess,
 )
+from app.infrastructure.agents.schema.transaction import TransactionOutput
 from app.infrastructure.agents.schema.transaction_query_params import (
     TransactionQueryParams,
 )
-from app.model.transaction import Transaction
 from app.services.transaction_service import TransactionService
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class _SearchTransactionsArgsSchema(BaseModel):
 
 
 class _SearchTransactionsResponse(BaseModel):
-    transactions: list[Transaction]
+    transactions: list[TransactionOutput]
 
 
 TOOL_NAME = "search_transactions"
@@ -60,7 +60,13 @@ class SearchTransactionsTool(BaseTool):
                 "Tool succeeded",
                 extra={"details": {"tool": self.name, "count": len(result)}},
             )
-            return ToolSuccess(data=_SearchTransactionsResponse(transactions=result))
+            return ToolSuccess(
+                data=_SearchTransactionsResponse(
+                    transactions=[
+                        TransactionOutput.from_domain(item) for item in result
+                    ]
+                )
+            )
         except Exception as e:
             logger.exception(
                 "Tool failed",

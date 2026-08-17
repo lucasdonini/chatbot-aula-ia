@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
-from ....model.transaction import Category, TransactionType
+from app.domain.model.transaction import Category, TransactionType
 
 
 class UpdateTransactionQuery(BaseModel):

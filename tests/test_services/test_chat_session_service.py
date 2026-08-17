@@ -2,9 +2,9 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from app.model.chat_session import ChatMessage
 from langchain_core.messages import AIMessage, HumanMessage
 
+from app.domain.model.chat_entry import ChatMessage
 from app.infrastructure.clock import FixedClock, get_clock, set_clock
 from app.services import chat_session_service
 from app.services.chat_session_service import ChatSessionService
