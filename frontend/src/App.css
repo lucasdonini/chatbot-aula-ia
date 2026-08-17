@@ -1,0 +1,137 @@
+.chat-page {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+}
+
+.chat-card {
+  width: min(100%, 720px);
+  padding: clamp(28px, 6vw, 52px);
+  background: #172321;
+  border: 1px solid #304542;
+  border-radius: 20px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+}
+
+.chat-header {
+  margin-bottom: 32px;
+}
+
+.eyebrow {
+  color: #75cbbf;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.chat-header h1 {
+  margin: 8px 0;
+  color: #f0f7f6;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.1;
+}
+
+.subtitle {
+  color: #aabfbc;
+}
+
+.chat-form {
+  display: grid;
+  gap: 10px;
+}
+
+label,
+h2 {
+  color: #d5e4e1;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 130px;
+  padding: 14px;
+  color: #e5f0ee;
+  font: inherit;
+  line-height: 1.5;
+  background: #0f1917;
+  border: 1px solid #45615c;
+  border-radius: 10px;
+}
+
+textarea:focus {
+  outline: 3px solid rgba(117, 203, 191, 0.22);
+  border-color: #75cbbf;
+}
+
+button {
+  justify-self: start;
+  margin-top: 6px;
+  padding: 12px 18px;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  background: #278d80;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #36a996;
+}
+
+button:focus-visible {
+  outline: 3px solid rgba(117, 203, 191, 0.4);
+  outline-offset: 2px;
+}
+
+button:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.response-section {
+  margin-top: 36px;
+}
+
+.response-section h2 {
+  margin: 0 0 10px;
+}
+
+.response {
+  display: block;
+  min-height: 88px;
+  padding: 16px;
+  color: #e5f0ee;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  background: #0f1b19;
+  border-left: 4px solid #5eb5a8;
+  border-radius: 4px 10px 10px 4px;
+}
+
+.placeholder {
+  color: #91aaa5;
+}
+
+.error {
+  color: #ff938a;
+}
+
+@media (max-width: 560px) {
+  .chat-page {
+    padding: 16px;
+  }
+
+  .chat-card {
+    border-radius: 14px;
+  }
+
+  button {
+    width: 100%;
+  }
+}

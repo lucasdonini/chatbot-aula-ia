@@ -1,5 +1,8 @@
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
+from .infrastructure.paths import FRONTEND
 from .lifespan import lifespan
 from .middleware.exception_handler import register_exception_handlers
 from .routers import ROUTERS
@@ -25,3 +28,11 @@ for router in ROUTERS:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "Assessor.IA API is up and running!"}
+
+
+@app.get("/")
+def root() -> FileResponse:
+    return FileResponse(FRONTEND / "index.html")
+
+
+app.mount("/", StaticFiles(directory=FRONTEND))
