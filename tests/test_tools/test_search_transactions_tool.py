@@ -1,9 +1,13 @@
 import pytest
 
-from app.agents.financial.tools.search_transaction import SearchTransactionsTool
-from app.model.tool_response import ToolFailure, ToolSuccess
+from app.infrastructure.agents.financial.tools.search_transaction import (
+    SearchTransactionsTool,
+)
+from app.infrastructure.agents.schema.tool_response import ToolFailure, ToolSuccess
+from app.infrastructure.agents.schema.transaction_query_params import (
+    TransactionQueryParams,
+)
 from app.model.transaction import Category, Transaction, TransactionType
-from app.model.transaction_query_params import TransactionQueryParams
 from app.services.transaction_service import TransactionService
 
 

@@ -1,4 +1,8 @@
-from app.model.specialist_output import AgendaOutput, FinancialOutput, SpecialistOutput
+from app.infrastructure.agents.schema.specialist_output import (
+    AgendaOutput,
+    FinancialOutput,
+    SpecialistOutput,
+)
 
 
 class TestSpecialistOutput:

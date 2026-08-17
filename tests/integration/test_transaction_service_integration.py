@@ -2,12 +2,14 @@ from datetime import date
 
 import pytest
 
-from app.model.transaction import Category, Transaction, TransactionType
-from app.model.transaction_query_params import TransactionQueryParams
-from app.model.update_transaction_params import (
+from app.infrastructure.agents.schema.transaction_query_params import (
+    TransactionQueryParams,
+)
+from app.infrastructure.agents.schema.update_transaction_params import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )
+from app.model.transaction import Category, Transaction, TransactionType
 
 pytestmark = [
     pytest.mark.integration,
