@@ -1,11 +1,10 @@
 import logging
 import traceback
-from typing import List
 
 from langchain_groq import ChatGroq
 
+from app.domain.model.chat_entry import ChatEntry, ChatMessage
 from app.infrastructure.execution_time_logger import log_execution_time
-from app.model.chat_session import ChatEntry, ChatMessage
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +58,7 @@ class SessionSummaryService:
     def __init__(self, llm: ChatGroq) -> None:
         self._llm = llm
 
-    def _format_conversation(self, entries: List[ChatEntry]) -> str:
+    def _format_conversation(self, entries: list[ChatEntry]) -> str:
         """Formats entries array for summary"""
         lines = []
         for entry in entries:
@@ -70,7 +69,7 @@ class SessionSummaryService:
         return "\n".join(lines)
 
     @log_execution_time
-    async def summarize_session(self, entries: List[ChatEntry]) -> str:
+    async def summarize_session(self, entries: list[ChatEntry]) -> str:
         """Summarizes the session's entries"""
         logger.debug(
             "Summarizing entries",

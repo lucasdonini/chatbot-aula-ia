@@ -4,8 +4,13 @@ from typing import List
 
 from pymongo import DESCENDING
 
+from app.domain.model.chat_entry import ChatEntry
+from app.domain.model.chat_session import ChatSessionSummarized
 from app.infrastructure.execution_time_logger import log_execution_time
-from app.model.chat_session import ChatEntry, ChatSession, ChatSessionSummarized
+from app.infrastructure.mongodb.entities.chat_session import (
+    ChatSessionDocument,
+    ChatSessionSummaryProjection,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,15 +38,16 @@ class ChatHistoryService:
         filter = {}
         if search:
             pattern = re.compile(search, re.IGNORECASE)
-            filter[ChatSession.summary] = pattern
+            filter[ChatSessionDocument.summary] = pattern
 
-        return await (
-            ChatSession.find(filter)
-            .project(ChatSessionSummarized)
-            .sort(ChatSession.updated_at, DESCENDING)  # type: ignore[arg-type]
+        sessions = await (
+            ChatSessionDocument.find(filter)
+            .project(ChatSessionSummaryProjection)
+            .sort(ChatSessionDocument.updated_at, DESCENDING)  # type: ignore[arg-type]
             .limit(limit)
             .to_list()
         )
+        return [s.to_model() for s in sessions]
 
     @log_execution_time
     async def fetch_entries(self, session_id: str) -> List[ChatEntry]:
@@ -49,7 +55,9 @@ class ChatHistoryService:
             "Fetching entries",
             extra={"details": {"session_id": session_id[:8]}},
         )
-        session = await ChatSession.find_one(ChatSession.session_id == session_id)
+        session = await ChatSessionDocument.find_one(
+            ChatSessionDocument.session_id == session_id
+        )
         entries = session.entries if session else []
 
         logger.debug(

@@ -1,11 +1,11 @@
 import logging
-from typing import Any, List
+from typing import Any
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from app.domain.model.chat_session import ChatSessionSummarized
 from app.infrastructure.execution_time_logger import log_execution_time
-from app.model.chat_session import ChatSessionSummarized
 from app.services.chat_history_service import ChatHistoryService
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class SearchHistoryTool(BaseTool):
 
     service: ChatHistoryService = Field(exclude=True)
 
-    def _format_history(self, history: List[ChatSessionSummarized]) -> str:
+    def _format_history(self, history: list[ChatSessionSummarized]) -> str:
         return "\n\n".join(f"[{h.started_at:%d/%m/%Y}] {h.summary}" for h in history)
 
     def _run(self, *args: Any, **kwargs: Any) -> str:
