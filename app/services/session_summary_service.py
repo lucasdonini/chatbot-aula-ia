@@ -5,7 +5,6 @@ from typing import List
 from langchain_groq import ChatGroq
 
 from app.infrastructure.execution_time_logger import log_execution_time
-from app.infrastructure.settings import settings
 from app.model.chat_session import ChatEntry, ChatMessage
 
 logger = logging.getLogger(__name__)
@@ -57,12 +56,8 @@ Retorne apenas o resumo.
 
 
 class SessionSummaryService:
-    def __init__(self) -> None:
-        self._llm = ChatGroq(
-            model="llama-3.3-70b-versatile",
-            temperature=0.0,
-            api_key=settings.groq_api_key,
-        )
+    def __init__(self, llm: ChatGroq) -> None:
+        self._llm = llm
 
     def _format_conversation(self, entries: List[ChatEntry]) -> str:
         """Formats entries array for summary"""
