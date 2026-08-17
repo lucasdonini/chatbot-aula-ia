@@ -10,9 +10,7 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr = SecretStr(_DUMMY_API_KEY)
     groq_api_key: SecretStr = SecretStr(_DUMMY_API_KEY)
 
-    postgres_url: SecretStr = SecretStr(
-        "postgresql://postgres:postgres@localhost:5432/acessoriadb"
-    )
+    postgres_url: SecretStr = SecretStr("postgresql://localhost:5432/acessoriadb")
 
     mongodb_uri: SecretStr = SecretStr("mongodb://localhost:27017")
     mongodb_dbname: SecretStr = SecretStr("assessoria")
@@ -22,7 +20,7 @@ class Settings(BaseSettings):
     log_file: str = "logs/app.log"
     app_timezone: str = "America/Sao_Paulo"
 
-    model_config = SettingsConfigDict(env_file=".env.app", extra="forbid")
+    model_config = SettingsConfigDict(env_file=".env", extra="forbid")
 
     def validate_llm_api_keys(self) -> None:
         missing_keys = [
