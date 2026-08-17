@@ -1,7 +1,9 @@
 from datetime import date
 
+from app.infrastructure.agents.schema.transaction_query_params import (
+    TransactionQueryParams,
+)
 from app.model.transaction import Category, TransactionType
-from app.model.transaction_query_params import TransactionQueryParams
 
 
 class TestTransactionQueryParams:

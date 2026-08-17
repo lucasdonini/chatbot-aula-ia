@@ -11,6 +11,10 @@ from app.infrastructure.mongodb.entities.chat_session import (
     ChatSessionDocument,
     ChatSessionSummaryProjection,
 )
+from app.infrastructure.mongodb.mappers.chat_session_mapper import (
+    ChatSessionMapper,
+    ChatSessionSummarizedMapper,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +51,7 @@ class ChatHistoryService:
             .limit(limit)
             .to_list()
         )
-        return [s.to_model() for s in sessions]
+        return [ChatSessionSummarizedMapper.document_to_model(s) for s in sessions]
 
     @log_execution_time
     async def fetch_entries(self, session_id: str) -> List[ChatEntry]:
@@ -64,4 +68,4 @@ class ChatHistoryService:
             "Entries fetched",
             extra={"details": {"count": len(entries)}},
         )
-        return entries
+        return [ChatSessionMapper.document_entry_to_model(e) for e in entries]

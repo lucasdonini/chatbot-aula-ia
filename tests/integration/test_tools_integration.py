@@ -2,20 +2,30 @@ from datetime import date
 
 import pytest
 
-from app.agents.financial.tools.add_transaction import AddTransactionTool
-from app.agents.financial.tools.daily_balance import DailyBalanceTool
-from app.agents.financial.tools.delete_transaction import DeleteTransactionTool
-from app.agents.financial.tools.restore_transaction import RestoreTransactionTool
-from app.agents.financial.tools.search_transaction import SearchTransactionsTool
-from app.agents.financial.tools.total_balance import TotalBalanceTool
-from app.agents.financial.tools.update_transaction import UpdateTransactionTool
-from app.model.tool_response import ToolSuccess
-from app.model.transaction import Category, Transaction, TransactionType
-from app.model.transaction_query_params import TransactionQueryParams
-from app.model.update_transaction_params import (
+from app.infrastructure.agents.financial.tools.add_transaction import AddTransactionTool
+from app.infrastructure.agents.financial.tools.daily_balance import DailyBalanceTool
+from app.infrastructure.agents.financial.tools.delete_transaction import (
+    DeleteTransactionTool,
+)
+from app.infrastructure.agents.financial.tools.restore_transaction import (
+    RestoreTransactionTool,
+)
+from app.infrastructure.agents.financial.tools.search_transaction import (
+    SearchTransactionsTool,
+)
+from app.infrastructure.agents.financial.tools.total_balance import TotalBalanceTool
+from app.infrastructure.agents.financial.tools.update_transaction import (
+    UpdateTransactionTool,
+)
+from app.infrastructure.agents.schema.tool_response import ToolSuccess
+from app.infrastructure.agents.schema.transaction_query_params import (
+    TransactionQueryParams,
+)
+from app.infrastructure.agents.schema.update_transaction_params import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )
+from app.model.transaction import Category, Transaction, TransactionType
 
 pytestmark = [
     pytest.mark.integration,

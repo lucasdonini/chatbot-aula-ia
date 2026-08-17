@@ -1,7 +1,7 @@
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from app.agents import execute_agent_flux
+from app.infrastructure.agents import execute_agent_flux
 
 pytestmark = [
     pytest.mark.integration,

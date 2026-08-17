@@ -3,16 +3,15 @@ from dataclasses import asdict
 
 from beanie import PydanticObjectId
 from beanie.operators import Push, Set
-from langchain_core.messages import AIMessage, HumanMessage
 
 from app.domain.model.chat_entry import (
     ChatEntry,
     ChatError,
     ChatMessage,
-    ChatMessageRole,
 )
 from app.infrastructure.clock import get_clock
 from app.infrastructure.mongodb.entities.chat_session import ChatSessionDocument
+from app.infrastructure.mongodb.mappers.chat_session_mapper import ChatSessionMapper
 
 from .session_summary_service import SessionSummaryService
 
@@ -47,29 +46,17 @@ class ChatSessionService:
 
     async def _save_entry(self, session_id: str, entry: ChatEntry) -> None:
         doc_id = _active_sessions[session_id]
+        doc_entry = ChatSessionMapper.model_entry_to_document(entry)
         await ChatSessionDocument.find_one(ChatSessionDocument.id == doc_id).update(
-            Push({ChatSessionDocument.entries: asdict(entry)}),
+            Push({ChatSessionDocument.entries: doc_entry}),
             Set({ChatSessionDocument.updated_at: get_clock().now()}),
         )
 
-    async def save_message(
-        self, session_id: str, message: AIMessage | HumanMessage
-    ) -> None:
-        role = (
-            ChatMessageRole.HUMAN
-            if isinstance(message, HumanMessage)
-            else ChatMessageRole.ASSISTANT
-        )
-        if not isinstance((content := message.content), str):
-            raise TypeError(
-                f"Received message with non-text content: {type(content).__name__!r}"
-            )
-
-        entry = ChatMessage(role=role, content=content)
-        await self._save_entry(session_id, entry)
+    async def save_message(self, session_id: str, message: ChatMessage) -> None:
+        await self._save_entry(session_id, message)
         logger.debug(
             "Message saved",
-            extra={"details": asdict(entry)},
+            extra={"details": asdict(message)},
         )
 
     async def save_error(self, session_id: str, error: Exception) -> None:
@@ -97,7 +84,10 @@ class ChatSessionService:
         if not session or not session.entries:
             return
 
-        summary = await self._service.summarize_session(session.entries)
+        entries = [
+            ChatSessionMapper.document_entry_to_model(e) for e in session.entries
+        ]
+        summary = await self._service.summarize_session(entries)
         await session.update(
             Set(
                 {

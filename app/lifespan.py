@@ -4,7 +4,8 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI
 
-from .agents.llms import fast_llm
+from .infrastructure.agents import AgentGraphImpl
+from .infrastructure.agents.llms import fast_llm
 from .infrastructure.logger import set_session_context, setup_logger
 from .infrastructure.mongodb.client import MongoManager
 from .infrastructure.settings import settings
@@ -27,8 +28,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await session_service.init_session(session_id)
     set_session_context(session_id)
 
+    graph = AgentGraphImpl()
+    graph.initialize()
+
     app.state.fast_llm = fast_llm
     app.state.session_id = session_id
+    app.state.graph = graph
 
     yield
 

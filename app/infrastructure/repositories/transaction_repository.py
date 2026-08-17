@@ -5,10 +5,14 @@ from typing import Callable, ContextManager, List, Optional
 from sqlalchemy import ScalarSelect, func, or_, select
 from sqlalchemy.orm import Session
 
+from app.infrastructure.agents.schema.transaction_query_params import (
+    TransactionQueryParams,
+)
+from app.infrastructure.agents.schema.update_transaction_params import (
+    UpdateTransactionParams,
+)
 from app.infrastructure.postgres.entities.transaction import TransactionORM
 from app.model.transaction import Transaction, TransactionType
-from app.model.transaction_query_params import TransactionQueryParams
-from app.model.update_transaction_params import UpdateTransactionParams
 
 logger = logging.getLogger(__name__)
 

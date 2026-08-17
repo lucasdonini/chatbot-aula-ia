@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.agents.guardrails.input_guardrail import _input_guardrail
+from app.infrastructure.agents.guardrails.input_guardrail import _input_guardrail
 
 
 @pytest.mark.asyncio

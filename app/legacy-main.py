@@ -6,7 +6,7 @@ import uuid
 
 from langchain_core.messages import HumanMessage
 
-from .agents import execute_agent_flux
+from .infrastructure.agents import execute_agent_flux
 from .infrastructure.console_utils import clear_console
 from .infrastructure.logger import set_session_context, setup_logger
 from .infrastructure.md_console import print

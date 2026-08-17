@@ -1,6 +1,6 @@
 import pytest
 
-from app.model.guardrail_result import GuardrailResult
+from app.infrastructure.agents.schema.guardrail_result import GuardrailResult
 
 
 class TestGuardrailResult:
