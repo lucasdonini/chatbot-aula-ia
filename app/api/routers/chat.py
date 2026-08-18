@@ -3,8 +3,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from app.api.dependencies import get_chat_session_service, get_graph, get_session_id
 from app.application.ports.agent_graph import AgentGraph
-from app.dependencies import get_chat_session_service, get_graph, get_session_id
 from app.domain.model.chat_entry import HumanMessage
 from app.services.chat_session_service import ChatSessionService
 

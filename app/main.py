@@ -2,10 +2,10 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .api.middleware.exception_handler import register_exception_handlers
+from .api.routers import ROUTERS
 from .infrastructure.paths import FRONTEND
 from .lifespan import lifespan
-from .middleware.exception_handler import register_exception_handlers
-from .routers import ROUTERS
 
 app = FastAPI(
     title="Assessor.IA API",
