@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .api.middleware.exception_handler import register_exception_handlers
-from .api.routers import ROUTERS
+from .api.routes import ROUTES
 from .infrastructure.paths import FRONTEND
 from .lifespan import lifespan
 
@@ -21,7 +21,7 @@ app = FastAPI(
 
 register_exception_handlers(app)
 
-for router in ROUTERS:
+for router in ROUTES:
     app.include_router(router, prefix="/api")
 
 
