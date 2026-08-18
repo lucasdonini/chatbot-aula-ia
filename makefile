@@ -2,7 +2,7 @@ help:
 	@echo 'First, run `make prepare-environment` and create .env.app/.env.compose from their examples'
 	@echo 'Now you are ready to run with `make up`'
 
-up: check upgrade-db build-frontend
+up: check
 	uv run python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 
 prepare-environment:
@@ -22,3 +22,5 @@ check:
 
 build-frontend:
 	npm run --prefix frontend build
+
+build: upgrade-db build-frontend up
