@@ -9,3 +9,5 @@ services:
     environment:
       - 'POSTGRES_URL=postgresql://host.docker.internal:5432/assessoriadb'
       - 'MONGODB_URI=mongodb://host.docker.internal:27017/assessoria'
+      - 'LOG_LEVEL=INFO'
+      - 'LOG_TO_FILE=false'

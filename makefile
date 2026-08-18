@@ -23,4 +23,5 @@ check:
 build-frontend:
 	npm run --prefix frontend build
 
-build: upgrade-db build-frontend up
+build: upgrade-db check
+	docker compose up --build
