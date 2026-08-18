@@ -43,7 +43,7 @@ def test_context_filter_reads_context_values() -> None:
     assert record.session_id == "session-123"
     assert record.trace_id == "trace-456"
     assert record.interaction == 1
-    assert record.agent == "graph"
+    assert record.agent == "agents.graph"
 
 
 @pytest.mark.asyncio
@@ -106,7 +106,7 @@ def test_console_formatter_hides_details_outside_debug() -> None:
 
     content = logger_module.ConsoleFormatter(debug=False).format(record)
 
-    assert "INFO: Message" in content
+    assert "INFO:     Message" in content
     assert "agents.graph" not in content
     assert "key" not in content
 
@@ -118,8 +118,36 @@ def test_console_formatter_shows_details_in_debug() -> None:
 
     content = logger_module.ConsoleFormatter(debug=True).format(record)
 
-    assert "[agents.graph] INFO: Message" in content
+    assert "INFO:     [agents.graph] Message" in content
     assert '"key": "value"' in content
+
+
+def test_console_formatter_shows_agent_name_for_info_flow_events() -> None:
+    record = _record()
+    record.details = {"name": "faq", "input": "Question"}
+
+    content = logger_module.ConsoleFormatter(debug=False).format(record)
+
+    assert content == "INFO:     [faq] Message"
+    assert "Question" not in content
+
+
+def test_console_formatter_shows_agent_chain_for_info_flow_events() -> None:
+    record = _record()
+    record.details = {"chain": "router -> faq"}
+
+    content = logger_module.ConsoleFormatter(debug=False).format(record)
+
+    assert content == "INFO:     [router -> faq] Message"
+
+
+def test_console_formatter_colors_only_level_prefix() -> None:
+    formatter = logger_module.ConsoleFormatter(debug=False)
+    formatter.use_colors = True
+
+    content = formatter.format(_record())
+
+    assert content == "\033[32mINFO\033[0m:     Message"
 
 
 def test_console_formatter_preserves_traceback() -> None:
@@ -138,7 +166,7 @@ def test_console_formatter_preserves_traceback() -> None:
 
     content = logger_module.ConsoleFormatter(debug=False).format(record)
 
-    assert "ERROR: Failed" in content
+    assert "ERROR:    Failed" in content
     assert "RuntimeError: failure" in content
 
 
@@ -156,5 +184,5 @@ def test_setup_logger_uses_debug_console_format() -> None:
         )
 
     content = output.getvalue()
-    assert "[graph] INFO: Message" in content
+    assert "INFO:     [agents.graph] Message" in content
     assert '"key": "value"' in content

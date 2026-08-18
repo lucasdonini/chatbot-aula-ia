@@ -3,8 +3,11 @@ import logging
 import re
 import sys
 from contextvars import ContextVar
+from copy import copy
 from pathlib import Path
 from typing import Any, Optional, cast
+
+from uvicorn.logging import DefaultFormatter
 
 from .paths import SRC
 from .settings import settings
@@ -99,40 +102,37 @@ class StructuredFormatter(logging.Formatter):
         )
 
 
-class ConsoleFormatter(logging.Formatter):
-    _COLORS = {
-        logging.DEBUG: "\033[36m",
-        logging.INFO: "\033[32m",
-        logging.WARNING: "\033[33m",
-        logging.ERROR: "\033[31m",
-        logging.CRITICAL: "\033[35m",
-    }
-    _RESET = "\033[0m"
-
+class ConsoleFormatter(DefaultFormatter):
     def __init__(self, debug: bool) -> None:
-        super().__init__()
+        super().__init__(
+            fmt="%(levelprefix)s %(message)s",
+            use_colors=sys.stdout.isatty(),
+        )
         self._debug = debug
 
     def format(self, record: logging.LogRecord) -> str:
         record = cast(StructuredLogRecord, record)
-        prefix = f"{record.levelname}:"
-        color = self._COLORS.get(record.levelno, "")
         message = record.getMessage()
+        details = getattr(record, "details", None)
 
         if self._debug:
             agent = record.agent or _short_module_name(record.name)
-            details = ""
-            if record.details:
-                details = " | " + json.dumps(
-                    record.details, default=str, ensure_ascii=False
-                )
-            line = f"[{agent}] {prefix} {message}{details}"
+            context = f"[{agent}] "
+            if details:
+                message += " | " + json.dumps(details, default=str, ensure_ascii=False)
         else:
-            line = f"{prefix} {message}"
+            context = ""
+            if details:
+                for key in ("name", "from", "chain"):
+                    value = details.get(key)
+                    if isinstance(value, str) and value:
+                        context = f"[{value}] "
+                        break
 
-        if record.exc_info:
-            line = f"{line}\n{self.formatException(record.exc_info)}"
-        return f"{color}{line}{self._RESET}" if color else line
+        record_copy = copy(record)
+        record_copy.msg = f"{context}{message}"
+        record_copy.args = ()
+        return super().format(record_copy)
 
 
 def _get_log_level() -> int:
