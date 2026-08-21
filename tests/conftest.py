@@ -45,13 +45,16 @@ from app.application.models.transaction_update import (  # noqa: E402
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )
+from app.application.repositories.transaction_repository import (  # noqa: E402
+    TransactionRepository,
+)
 from app.domain.model.transaction import (  # noqa: E402
     Category,
     Transaction,
     TransactionType,
 )
-from app.infrastructure.repositories.transaction_repository import (  # noqa: E402
-    TransactionRepository,
+from app.infrastructure.postgres.repositories.transaction_repository import (  # noqa: E402
+    SQLAlchemyTransactionRepository,
 )
 from app.services.transaction_service import TransactionService  # noqa: E402
 
@@ -142,8 +145,8 @@ def mock_session_factory(mock_session) -> Callable[[], ContextManager[Session]]:
 
 
 @pytest.fixture
-def repository(mock_session_factory) -> TransactionRepository:
-    return TransactionRepository(session_factory=mock_session_factory)
+def repository(mock_session_factory) -> SQLAlchemyTransactionRepository:
+    return SQLAlchemyTransactionRepository(session_factory=mock_session_factory)
 
 
 @pytest.fixture

@@ -17,7 +17,7 @@ from app.infrastructure.postgres.entities.transaction import TransactionORM
 logger = logging.getLogger(__name__)
 
 
-class TransactionRepository:
+class SQLAlchemyTransactionRepository:
     def __init__(self, session_factory: Callable[[], ContextManager[Session]]):
         self._session_factory = session_factory
 
@@ -68,10 +68,10 @@ class TransactionRepository:
 
         return stmt.scalar_subquery()
 
-    def get_balance(self, date: Optional[date] = None) -> float:
+    def get_balance(self, day: Optional[date] = None) -> float:
         "Returns the balance of the user at the end of the requested date"
         period_end = (
-            datetime.combine(date + timedelta(days=1), time.min) if date else None
+            datetime.combine(day + timedelta(days=1), time.min) if day else None
         )
 
         income = self._build_sum_amounts_of_transaction_type_subquery(
