@@ -3,15 +3,15 @@ import logging
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from app.infrastructure.agents.schema.tool_response import (
+from app.application.models.transaction_query import (
+    TransactionQueryParams,
+)
+from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolResponse,
     ToolSuccess,
 )
-from app.infrastructure.agents.schema.transaction import TransactionOutput
-from app.infrastructure.agents.schema.transaction_query_params import (
-    TransactionQueryParams,
-)
+from app.infrastructure.agents.financial.schemas.transaction import TransactionOutput
 from app.services.transaction_service import TransactionService
 
 logger = logging.getLogger(__name__)

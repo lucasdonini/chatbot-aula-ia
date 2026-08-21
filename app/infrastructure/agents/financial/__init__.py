@@ -1,6 +1,3 @@
-from .financial_agent import FINANCIAL_NODE_NAME, financial_node
+from .financial_agent import FinancialAgentNode
 
-__all__ = [
-    "financial_node",
-    "FINANCIAL_NODE_NAME",
-]
+__all__ = ["FinancialAgentNode"]

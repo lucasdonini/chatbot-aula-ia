@@ -1,9 +1,7 @@
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from app.infrastructure.agents.financial.financial_agent import financial_node
-from app.infrastructure.agents.financial.financial_prompt import FINANCIAL_NODE_NAME
-from app.infrastructure.agents.schema.graph_state import GraphState
+from app.infrastructure.agents._core.state import GraphState
 
 pytestmark = [
     pytest.mark.integration,
@@ -12,18 +10,18 @@ pytestmark = [
 
 
 class TestFinancialAgentNode:
-    async def _run_node(self) -> dict:
+    async def _run_node(self, financial_agent_node) -> dict:
         state = GraphState(
             messages=[HumanMessage(content="qual meu saldo?")],
             called_agents=[],
             route="financial",
             pii_map={},
         )
-        return await financial_node(state)
+        return await financial_agent_node(state)
 
     @pytest.mark.asyncio
     async def test_calls_total_balance_tool(
-        self, mock_gemini_ainvoke, seed_transactions
+        self, financial_agent_node, mock_gemini_ainvoke, seed_transactions
     ):
         from langchain_core.messages import ToolCall
 
@@ -34,14 +32,14 @@ class TestFinancialAgentNode:
             ],
         )
 
-        result = await self._run_node()
+        result = await self._run_node(financial_agent_node)
 
-        assert FINANCIAL_NODE_NAME in result["called_agents"]
+        assert financial_agent_node.name in result["called_agents"]
         assert len(result["messages"]) > 0
 
     @pytest.mark.asyncio
     async def test_calls_daily_balance_tool(
-        self, mock_gemini_ainvoke, seed_transactions
+        self, financial_agent_node, mock_gemini_ainvoke, seed_transactions
     ):
         mock_gemini_ainvoke.return_value = AIMessage(
             content="",
@@ -54,12 +52,14 @@ class TestFinancialAgentNode:
             ],
         )
 
-        result = await self._run_node()
+        result = await self._run_node(financial_agent_node)
 
-        assert FINANCIAL_NODE_NAME in result["called_agents"]
+        assert financial_agent_node.name in result["called_agents"]
 
     @pytest.mark.asyncio
-    async def test_calls_search_tool(self, mock_gemini_ainvoke, seed_transactions):
+    async def test_calls_search_tool(
+        self, financial_agent_node, mock_gemini_ainvoke, seed_transactions
+    ):
         mock_gemini_ainvoke.return_value = AIMessage(
             content="",
             tool_calls=[
@@ -71,12 +71,14 @@ class TestFinancialAgentNode:
             ],
         )
 
-        result = await self._run_node()
+        result = await self._run_node(financial_agent_node)
 
-        assert FINANCIAL_NODE_NAME in result["called_agents"]
+        assert financial_agent_node.name in result["called_agents"]
 
     @pytest.mark.asyncio
-    async def test_calls_add_tool(self, mock_gemini_ainvoke, seed_transactions):
+    async def test_calls_add_tool(
+        self, financial_agent_node, mock_gemini_ainvoke, seed_transactions
+    ):
         mock_gemini_ainvoke.return_value = AIMessage(
             content="",
             tool_calls=[
@@ -93,19 +95,19 @@ class TestFinancialAgentNode:
             ],
         )
 
-        result = await self._run_node()
+        result = await self._run_node(financial_agent_node)
 
-        assert FINANCIAL_NODE_NAME in result["called_agents"]
+        assert financial_agent_node.name in result["called_agents"]
 
     @pytest.mark.asyncio
     async def test_direct_response_no_tool_call(
-        self, mock_gemini_ainvoke, seed_transactions
+        self, financial_agent_node, mock_gemini_ainvoke, seed_transactions
     ):
         mock_gemini_ainvoke.return_value = AIMessage(
             content="Seu saldo atual é de R$ 7.600,00.",
             tool_calls=[],
         )
 
-        result = await self._run_node()
+        result = await self._run_node(financial_agent_node)
 
         assert len(result["messages"]) > 0

@@ -1,44 +1,45 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.domain.model.chat_entry import ChatError, ChatMessage
+from app.domain.model.chat_entry import (
+    AssistantMessage,
+    ChatError,
+    HumanMessage,
+)
 from app.services.session_summary_service import SessionSummaryService
 
 
 class TestSessionSummaryService:
     @pytest.fixture
     def service(self):
-        with patch("app.services.session_summary_service.ChatGroq") as mock_groq:
-            mock_llm = AsyncMock()
-            mock_groq.return_value = mock_llm
-            service = SessionSummaryService()
-            service._llm = mock_llm
-            yield service
+        text_generator = MagicMock()
+        text_generator.generate = AsyncMock()
+        return SessionSummaryService(text_generator)
 
     @pytest.mark.asyncio
     async def test_summarize_session(self, service):
         entries = [
-            ChatMessage(role="human", content="Gastei 100 reais"),
-            ChatMessage(role="assistant", content="Registrado como despesa"),
+            HumanMessage(content="Gastei 100 reais"),
+            AssistantMessage(content="Registrado como despesa"),
         ]
-        mock_response = AsyncMock()
-        mock_response.content = "Usuário registrou despesa de 100 reais."
-        service._llm.ainvoke.return_value = mock_response
+        service._text_generator.generate.return_value = (
+            "Usuário registrou despesa de 100 reais."
+        )
 
         result = await service.summarize_session(entries)
 
         assert result == "Usuário registrou despesa de 100 reais."
-        service._llm.ainvoke.assert_called_once()
+        service._text_generator.generate.assert_awaited_once()
 
     def test_format_conversation(self, service):
         entries = [
-            ChatMessage(role="human", content="Olá"),
+            HumanMessage(content="Olá"),
             ChatError(
                 exception="ValueError",
                 summary="Ocorreu um erro interno inesperado.",
             ),
-            ChatMessage(role="assistant", content="Oi!"),
+            AssistantMessage(content="Oi!"),
         ]
         expected = (
             "human: Olá\n"
@@ -50,33 +51,29 @@ class TestSessionSummaryService:
 
     @pytest.mark.asyncio
     async def test_summarize_session_empty(self, service):
-        mock_response = AsyncMock()
-        mock_response.content = "Nenhuma conversa para resumir."
-        service._llm.ainvoke.return_value = mock_response
+        service._text_generator.generate.return_value = "Nenhuma conversa para resumir."
 
         result = await service.summarize_session([])
 
         assert result == "Nenhuma conversa para resumir."
 
     @pytest.mark.asyncio
-    async def test_summarize_session_calls_groq(self, service):
-        entries = [ChatMessage(role="human", content="teste")]
-        mock_response = AsyncMock()
-        mock_response.content = "resumo"
-        service._llm.ainvoke.return_value = mock_response
+    async def test_summarize_session_calls_text_generator(self, service):
+        entries = [HumanMessage(content="teste")]
+        service._text_generator.generate.return_value = "resumo"
 
         await service.summarize_session(entries)
 
-        service._llm.ainvoke.assert_called_once()
-        prompt_arg = service._llm.ainvoke.call_args[0][0]
+        service._text_generator.generate.assert_awaited_once()
+        prompt_arg = service._text_generator.generate.call_args[0][0]
         assert "{conversa}" not in prompt_arg
         assert "teste" in prompt_arg
 
     @pytest.mark.asyncio
     async def test_summarize_exception(self, service):
-        mock_response = AsyncMock()
-        mock_response.content = "Ocorreu um erro interno inesperado."
-        service._llm.ainvoke.return_value = mock_response
+        service._text_generator.generate.return_value = (
+            "Ocorreu um erro interno inesperado."
+        )
 
         try:
             raise ValueError("Algo deu errado")
@@ -84,4 +81,4 @@ class TestSessionSummaryService:
             result = await service.summarize_exception(exc)
 
         assert result == "Ocorreu um erro interno inesperado."
-        service._llm.ainvoke.assert_called_once()
+        service._text_generator.generate.assert_awaited_once()

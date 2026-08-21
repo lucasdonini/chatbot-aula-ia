@@ -1,6 +1,3 @@
-from .router_agent import ROUTER_NODE_NAME, router_node
+from .router_agent import RouterAgentNode
 
-__all__ = [
-    "router_node",
-    "ROUTER_NODE_NAME",
-]
+__all__ = ["RouterAgentNode"]

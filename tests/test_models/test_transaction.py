@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import pytest
 
 from app.domain.model.transaction import Category, Transaction, TransactionType
-from app.infrastructure.agents.schema.transaction import (
+from app.infrastructure.agents.financial.schemas.transaction import (
     TransactionInput,
     TransactionOutput,
 )

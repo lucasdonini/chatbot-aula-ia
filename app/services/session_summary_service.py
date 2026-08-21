@@ -1,8 +1,7 @@
 import logging
 import traceback
 
-from langchain_groq import ChatGroq
-
+from app.application.ports.text_generator import TextGenerator
 from app.domain.model.chat_entry import ChatEntry, ChatMessage
 from app.infrastructure.execution_time_logger import log_execution_time
 
@@ -55,8 +54,8 @@ Retorne apenas o resumo.
 
 
 class SessionSummaryService:
-    def __init__(self, llm: ChatGroq) -> None:
-        self._llm = llm
+    def __init__(self, text_generator: TextGenerator) -> None:
+        self._text_generator = text_generator
 
     def _format_conversation(self, entries: list[ChatEntry]) -> str:
         """Formats entries array for summary"""
@@ -77,16 +76,9 @@ class SessionSummaryService:
         )
 
         conversation = self._format_conversation(entries)
-        response = (
-            await self._llm.ainvoke(
-                _MESSAGES_SUMMARY_PROMPT.format(conversa=conversation)
-            )
-        ).content
-
-        if not isinstance(response, str):
-            raise TypeError(
-                f"Summarizer returned non-text content: {type(response).__name__!r}"
-            )
+        response = await self._text_generator.generate(
+            _MESSAGES_SUMMARY_PROMPT.format(conversa=conversation)
+        )
 
         return response.strip()
 
@@ -97,13 +89,8 @@ class SessionSummaryService:
         )
 
         stack_trace = traceback.format_exception(type(exc), exc, exc.__traceback__)
-        response = (
-            await self._llm.ainvoke(_EXCEPTION_SUMMARY_PROMPT.format(stack_trace))
-        ).content
-
-        if not isinstance(response, str):
-            raise TypeError(
-                f"Summarizer returned non-text content: {type(response).__name__!r}"
-            )
+        response = await self._text_generator.generate(
+            _EXCEPTION_SUMMARY_PROMPT.format(stack_trace)
+        )
 
         return response.strip()

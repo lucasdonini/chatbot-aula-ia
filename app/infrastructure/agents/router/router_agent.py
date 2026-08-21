@@ -1,34 +1,22 @@
 import copy
 import json
 import logging
-from typing import Any, Dict, List, Set, cast
+from collections.abc import Collection, Sequence
+from typing import Any, ClassVar, cast
 
-from langchain.agents import create_agent
 from langchain_core.messages import AIMessage, AnyMessage, SystemMessage, ToolMessage
+from langgraph.graph.state import CompiledStateGraph
 
 from app.infrastructure.execution_time_logger import log_execution_time
-from app.services.chat_history_service import ChatHistoryService
 
-from ..llms import fast_llm
-from ..schema.graph_state import GraphState, GraphStateKeys
-from ..temporal_context import build_temporal_context
-from .router_prompt import PROMPT
-from .tools import SearchHistoryTool
+from .._core.contracts.agent_factory import AgentFactory
+from .._core.contracts.agent_node import AgentNode
+from .._core.prompting.temporal_context import build_temporal_context
+from .._core.specialist import SpecialistRegistration
+from .._core.state import GraphState, GraphStateKeys
+from .router_prompt import build_router_prompt
 
 logger = logging.getLogger(__name__)
-
-history_service = ChatHistoryService()
-history_tool = SearchHistoryTool(service=history_service)
-
-TOOLS = [history_tool]
-
-ROUTER_NODE_NAME = "router"
-router_agent = create_agent(
-    model=fast_llm,  # type: ignore[arg-type]
-    system_prompt=PROMPT,
-    tools=TOOLS,
-)
-
 
 SPECIALIST_JSON_KEYS = {"dominio"}
 
@@ -46,26 +34,27 @@ def _is_specialist_json(content: Any) -> bool:
     return isinstance(data, dict) and bool(SPECIALIST_JSON_KEYS & data.keys())
 
 
-def _filter_messages_for_router(messages: List[AnyMessage]) -> List[AnyMessage]:
-    """
-    Remove tool calls/results from other agents so that
-    the router does not think he has access to them.
-    """
-    allowed_tools = {t.name for t in TOOLS}
-    tool_ids_to_skip: Set[str] = set()
-    filtered: List[AnyMessage] = []
+def _filter_messages_for_router(
+    messages: list[AnyMessage],
+    allowed_tool_names: Collection[str],
+) -> list[AnyMessage]:
+    tool_ids_to_skip: set[str] = set()
+    filtered: list[AnyMessage] = []
 
     for msg in messages:
         if isinstance(msg, AIMessage) and msg.tool_calls:
             foreign_ids = {
-                cast(str, tc["id"])
-                for tc in msg.tool_calls
-                if tc["name"] not in allowed_tools and tc.get("id")
+                cast(str, tool_call["id"])
+                for tool_call in msg.tool_calls
+                if tool_call["name"] not in allowed_tool_names and tool_call.get("id")
             }
-            if foreign_ids:
-                tool_ids_to_skip.update(foreign_ids)
+            tool_ids_to_skip.update(foreign_ids)
 
-            own_calls = [tc for tc in msg.tool_calls if tc["name"] in allowed_tools]
+            own_calls = [
+                tool_call
+                for tool_call in msg.tool_calls
+                if tool_call["name"] in allowed_tool_names
+            ]
             if not own_calls:
                 continue
 
@@ -90,32 +79,53 @@ def _filter_messages_for_router(messages: List[AnyMessage]) -> List[AnyMessage]:
     return filtered
 
 
-@log_execution_time
-async def router_node(state: GraphState) -> Dict[GraphStateKeys, Any]:
-    input_text = state["messages"][-1].content[:500]
-    logger.info(
-        "Agent called",
-        extra={"details": {"name": ROUTER_NODE_NAME, "input": input_text}},
-    )
-    filtered_state = {
-        **state,
-        "messages": [
-            SystemMessage(content=build_temporal_context()),
-            *_filter_messages_for_router(state["messages"]),
-        ],
-    }
-    response = await router_agent.ainvoke(filtered_state)  # type: ignore[call-overload]
-    output = response["messages"][-1].content[:500] if response.get("messages") else ""
-    logger.info(
-        "Agent response",
-        extra={
-            "details": {
-                "from": ROUTER_NODE_NAME,
-                "output": output or "(tool call)",
-            }
-        },
-    )
-    return {
-        GraphStateKeys.MESSAGES: response.get("messages") or [],
-        GraphStateKeys.CALLED_AGENTS: [ROUTER_NODE_NAME],
-    }
+class RouterAgentNode(AgentNode):
+    _agent: CompiledStateGraph
+    name: ClassVar[str] = "router"
+
+    def __init__(
+        self,
+        *,
+        agent_factory: AgentFactory,
+        specialists: Sequence[SpecialistRegistration],
+        allowed_tool_names: Collection[str],
+    ) -> None:
+        self._allowed_tool_names = frozenset(allowed_tool_names)
+        self._agent = agent_factory.create(
+            system_prompt=build_router_prompt(specialists)
+        )
+
+    @log_execution_time
+    async def __call__(self, state: GraphState) -> dict[GraphStateKeys, Any]:
+        input_text = state["messages"][-1].content[:500]
+        logger.info(
+            "Agent called",
+            extra={"details": {"name": self.name, "input": input_text}},
+        )
+        filtered_state: GraphState = {
+            **state,
+            "messages": [
+                SystemMessage(content=build_temporal_context()),
+                *_filter_messages_for_router(
+                    state["messages"],
+                    self._allowed_tool_names,
+                ),
+            ],
+        }
+        response = await self._agent.ainvoke(filtered_state)  # type: ignore[arg-type]
+        output = (
+            response["messages"][-1].content[:500] if response.get("messages") else ""
+        )
+        logger.info(
+            "Agent response",
+            extra={
+                "details": {
+                    "from": self.name,
+                    "output": output or "(tool call)",
+                }
+            },
+        )
+        return {
+            GraphStateKeys.MESSAGES: response.get("messages") or [],
+            GraphStateKeys.CALLED_AGENTS: [self.name],
+        }

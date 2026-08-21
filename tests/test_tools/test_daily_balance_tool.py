@@ -2,8 +2,11 @@ from datetime import date
 
 import pytest
 
+from app.infrastructure.agents.financial.schemas.tool_response import (
+    ToolFailure,
+    ToolSuccess,
+)
 from app.infrastructure.agents.financial.tools.daily_balance import DailyBalanceTool
-from app.infrastructure.agents.schema.tool_response import ToolFailure, ToolSuccess
 from app.services.transaction_service import TransactionService
 
 

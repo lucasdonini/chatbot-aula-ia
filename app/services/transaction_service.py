@@ -3,13 +3,13 @@ from dataclasses import asdict
 from datetime import date
 from typing import List, Optional
 
-from app.domain.model.transaction import Transaction
-from app.infrastructure.agents.schema.transaction_query_params import (
+from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
-from app.infrastructure.agents.schema.update_transaction_params import (
+from app.application.models.transaction_update import (
     UpdateTransactionParams,
 )
+from app.domain.model.transaction import Transaction
 from app.infrastructure.execution_time_logger import log_execution_time
 from app.infrastructure.repositories.transaction_repository import TransactionRepository
 

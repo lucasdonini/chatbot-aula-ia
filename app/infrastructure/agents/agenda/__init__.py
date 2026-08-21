@@ -1,6 +1,3 @@
-from .agenda_agent import AGENDA_NODE_NAME, agenda_node
+from .agenda_agent import AgendaAgentNode
 
-__all__ = [
-    "agenda_node",
-    "AGENDA_NODE_NAME",
-]
+__all__ = ["AgendaAgentNode"]

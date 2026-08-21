@@ -1,7 +1,10 @@
 import pytest
 from pydantic import BaseModel
 
-from app.infrastructure.agents.schema.tool_response import ToolFailure, ToolSuccess
+from app.infrastructure.agents.financial.schemas.tool_response import (
+    ToolFailure,
+    ToolSuccess,
+)
 
 
 class _DummyData(BaseModel):

@@ -1,9 +1,9 @@
 from datetime import date
 
-from app.domain.model.transaction import Category, TransactionType
-from app.infrastructure.agents.schema.transaction_query_params import (
+from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
+from app.domain.model.transaction import Category, TransactionType
 
 
 class TestTransactionQueryParams:

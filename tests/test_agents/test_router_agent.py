@@ -5,6 +5,8 @@ from app.infrastructure.agents.router.router_agent import (
     _is_specialist_json,
 )
 
+ALLOWED_TOOL_NAMES = {"search_history"}
+
 
 class TestIsSpecialistJson:
     def test_valid_json_with_dominio(self):
@@ -48,7 +50,7 @@ class TestFilterMessagesForRouter:
                 {"name": "total_balance", "args": {}, "id": "call_tb"},
             ],
         )
-        result = _filter_messages_for_router([msg])
+        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
         assert len(result) == 0
 
     def test_keeps_own_tool_calls(self):
@@ -58,17 +60,17 @@ class TestFilterMessagesForRouter:
                 {"name": "search_history", "args": {"search": "test"}, "id": "call_sh"},
             ],
         )
-        result = _filter_messages_for_router([msg])
+        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
         assert len(result) == 1
 
     def test_filters_specialist_json_aimessage(self):
         msg = AIMessage(content='{"dominio": "financeiro", "resposta": "saldo ok"}')
-        result = _filter_messages_for_router([msg])
+        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
         assert len(result) == 0
 
     def test_keeps_non_specialist_aimessage(self):
         msg = AIMessage(content="Olá, como posso ajudar?")
-        result = _filter_messages_for_router([msg])
+        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
         assert len(result) == 1
         assert result[0].content == "Olá, como posso ajudar?"
 
@@ -82,12 +84,12 @@ class TestFilterMessagesForRouter:
             ),
             ToolMessage(content="5000", tool_call_id="call_tb"),
         ]
-        result = _filter_messages_for_router(msgs)
+        result = _filter_messages_for_router(msgs, ALLOWED_TOOL_NAMES)
         assert len(result) == 0
 
     def test_keeps_toolmessage_for_own_tool(self):
         msg = ToolMessage(content='[{"summary": "teste"}]', tool_call_id="call_sh")
-        result = _filter_messages_for_router([msg])
+        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
         assert len(result) == 1
 
     def test_removes_foreign_calls_but_keeps_own_mixed(self):
@@ -98,14 +100,14 @@ class TestFilterMessagesForRouter:
                 {"name": "search_history", "args": {"search": "test"}, "id": "call_sh"},
             ],
         )
-        result = _filter_messages_for_router([msg])
+        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
         assert len(result) == 1
         assert len(result[0].tool_calls) == 1
         assert result[0].tool_calls[0]["name"] == "search_history"
 
     def test_keeps_human_message(self):
         msg = HumanMessage(content="Qual meu saldo?")
-        result = _filter_messages_for_router([msg])
+        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
         assert len(result) == 1
 
     def test_foreign_tool_call_without_id_is_ignored(self):
@@ -115,7 +117,7 @@ class TestFilterMessagesForRouter:
                 {"name": "total_balance", "args": {}, "id": "call_tb_no_id"},
             ],
         )
-        result = _filter_messages_for_router([msg])
+        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
         assert len(result) == 0
 
     def test_complex_scenario(self):
@@ -130,6 +132,6 @@ class TestFilterMessagesForRouter:
             ToolMessage(content="5000", tool_call_id="call_tb"),
             AIMessage(content='{"dominio": "financeiro", "resposta": "R$ 5000"}'),
         ]
-        result = _filter_messages_for_router(msgs)
+        result = _filter_messages_for_router(msgs, ALLOWED_TOOL_NAMES)
         assert len(result) == 1
         assert isinstance(result[0], HumanMessage)
