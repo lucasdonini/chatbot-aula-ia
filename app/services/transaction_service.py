@@ -9,9 +9,9 @@ from app.application.models.transaction_query import (
 from app.application.models.transaction_update import (
     UpdateTransactionParams,
 )
+from app.application.repositories.transaction_repository import TransactionRepository
 from app.domain.model.transaction import Transaction
 from app.infrastructure.execution_time_logger import log_execution_time
-from app.infrastructure.repositories.transaction_repository import TransactionRepository
 
 logger = logging.getLogger(__name__)
 

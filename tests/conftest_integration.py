@@ -15,8 +15,8 @@ from testcontainers.postgres import PostgresContainer
 
 from app.domain.model.transaction import Category, TransactionType
 from app.infrastructure.postgres.entities.transaction import TransactionORM
-from app.infrastructure.repositories.transaction_repository import (
-    TransactionRepository,
+from app.infrastructure.postgres.repositories.transaction_repository import (
+    SQLAlchemyTransactionRepository,
 )
 from app.services.transaction_service import TransactionService
 
@@ -75,8 +75,8 @@ def session_factory(
 
 
 @pytest.fixture
-def transaction_repository(session_factory) -> TransactionRepository:
-    return TransactionRepository(session_factory=session_factory)
+def transaction_repository(session_factory) -> SQLAlchemyTransactionRepository:
+    return SQLAlchemyTransactionRepository(session_factory=session_factory)
 
 
 @pytest.fixture

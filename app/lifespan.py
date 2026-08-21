@@ -9,7 +9,9 @@ from .infrastructure.llms import fast_llm
 from .infrastructure.logger import set_session_context, setup_logger
 from .infrastructure.mongodb.client import MongoManager
 from .infrastructure.postgres.pg_connection import get_db
-from .infrastructure.repositories.transaction_repository import TransactionRepository
+from .infrastructure.postgres.repositories.transaction_repository import (
+    SQLAlchemyTransactionRepository,
+)
 from .infrastructure.settings import settings
 from .infrastructure.text_generator import LLMTextGenerator
 from .services.chat_session_service import ChatSessionService
@@ -33,7 +35,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await session_service.init_session(session_id)
     set_session_context(session_id)
 
-    transaction_repository = TransactionRepository(session_factory=get_db)
+    transaction_repository = SQLAlchemyTransactionRepository(session_factory=get_db)
     transaction_service = TransactionService(repository=transaction_repository)
 
     graph = build_agent_graph(
