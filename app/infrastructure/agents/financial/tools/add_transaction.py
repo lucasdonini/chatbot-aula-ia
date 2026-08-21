@@ -3,12 +3,12 @@ import logging
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from app.infrastructure.agents.schema.tool_response import (
+from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolResponse,
     ToolSuccess,
 )
-from app.infrastructure.agents.schema.transaction import (
+from app.infrastructure.agents.financial.schemas.transaction import (
     TransactionInput,
     TransactionOutput,
 )

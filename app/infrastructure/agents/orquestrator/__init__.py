@@ -1,6 +1,3 @@
-from .orquestrator_agent import ORQUESTRATOR_NODE_NAME, orquestrator_node
+from .orquestrator_agent import OrquestratorAgentNode
 
-__all__ = [
-    "orquestrator_node",
-    "ORQUESTRATOR_NODE_NAME",
-]
+__all__ = ["OrquestratorAgentNode"]

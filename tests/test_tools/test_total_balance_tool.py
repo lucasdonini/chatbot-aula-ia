@@ -1,7 +1,10 @@
 import pytest
 
+from app.infrastructure.agents.financial.schemas.tool_response import (
+    ToolFailure,
+    ToolSuccess,
+)
 from app.infrastructure.agents.financial.tools.total_balance import TotalBalanceTool
-from app.infrastructure.agents.schema.tool_response import ToolFailure, ToolSuccess
 from app.services.transaction_service import TransactionService
 
 

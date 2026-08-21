@@ -1,13 +1,10 @@
 import logging
 import uuid
+from collections.abc import Sequence
 from typing import cast
 
-from langchain_core.messages import (
-    AIMessage as LangGraphAIMessage,
-)
-from langchain_core.messages import (
-    HumanMessage as LangGraphHumanMessage,
-)
+from langchain_core.messages import AIMessage as LangGraphAIMessage
+from langchain_core.messages import HumanMessage as LangGraphHumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
@@ -16,84 +13,105 @@ from langgraph.graph.state import CompiledStateGraph
 from app.domain.model.chat_entry import AssistantMessage, HumanMessage
 from app.infrastructure.logger import increment_interaction, set_trace_context
 
-from .agenda import AGENDA_NODE_NAME, agenda_node
-from .faq import FAQ_NODE_NAME, faq_node
-from .financial import FINANCIAL_NODE_NAME, financial_node
-from .guardrails import (
-    INPUT_GUARDRAIL_NODE_NAME,
-    OUTPUT_GUARDRAIL_NODE_NAME,
-    input_guardrail_node,
-    output_guardrail_node,
-)
-from .orquestrator import ORQUESTRATOR_NODE_NAME, orquestrator_node
-from .router import ROUTER_NODE_NAME, router_node
-from .schema.graph_state import GraphState
+from ._core.contracts.agent_node import AgentNode
+from ._core.specialist import SpecialistRegistration
+from ._core.state import GraphState, GraphStateKeys
 
 logger = logging.getLogger(__name__)
 
 
 class AgentGraphImpl:
-    def __init__(self) -> None:
-        self._SPECIALIST_NODES = {
-            FAQ_NODE_NAME,
-            FINANCIAL_NODE_NAME,
-            AGENDA_NODE_NAME,
+    def __init__(
+        self,
+        *,
+        input_guardrail: AgentNode,
+        router: AgentNode,
+        specialists: Sequence[SpecialistRegistration],
+        orquestrator: AgentNode,
+        output_guardrail: AgentNode,
+    ) -> None:
+        self._input_guardrail = input_guardrail
+        self._router = router
+        self._specialists = tuple(specialists)
+        self._orquestrator = orquestrator
+        self._output_guardrail = output_guardrail
+        self._specialists_by_name = {
+            specialist.name: specialist for specialist in self._specialists
         }
 
-    def _build_graph(self) -> CompiledStateGraph:
-        def _chose_specialist(state: GraphState) -> str:
-            """Lê o protocolo do roteador e devolve o nome do próximo nó."""
-            text = state["messages"][-1].text.strip()
+        self._validate_nodes()
+        self._graph = StateGraph(GraphState)
+        self._add_nodes()
+        self._add_edges()
+        self._add_conditional_edges()
+        self._agent_flux = self._compile_graph()
 
+    def _validate_nodes(self) -> None:
+        nodes = [
+            self._input_guardrail,
+            self._router,
+            *(specialist.node for specialist in self._specialists),
+            self._orquestrator,
+            self._output_guardrail,
+        ]
+        names = [node.name for node in nodes]
+        duplicate_names = {name for name in names if names.count(name) > 1}
+        if duplicate_names:
+            duplicates = ", ".join(sorted(duplicate_names))
+            raise ValueError(f"Agent node names must be unique: {duplicates}")
+        if not self._specialists:
+            raise ValueError("Agent graph requires at least one specialist")
+
+    def _add_nodes(self) -> None:
+        self._graph.add_node(self._input_guardrail.name, self._input_guardrail)
+        self._graph.add_node(self._router.name, self._router)
+        for specialist in self._specialists:
+            self._graph.add_node(specialist.name, specialist.node)
+        self._graph.add_node(self._orquestrator.name, self._orquestrator)
+        self._graph.add_node(self._output_guardrail.name, self._output_guardrail)
+
+    def _add_edges(self) -> None:
+        self._graph.add_edge(START, self._input_guardrail.name)
+        for specialist in self._specialists:
+            self._graph.add_edge(specialist.name, specialist.destination)
+        self._graph.add_edge(self._orquestrator.name, self._output_guardrail.name)
+        self._graph.add_edge(self._output_guardrail.name, END)
+
+    def _add_conditional_edges(self) -> None:
+        def choose_specialist(state: GraphState) -> str:
+            text = state["messages"][-1].text.strip()
             if not text.startswith("ROUTE="):
-                return END  # resposta direta já foi escrita no nó do roteador
+                return END
 
             route = text.split("\n", 1)[0].split("=", 1)[1].strip()
-            return route if route and route in self._SPECIALIST_NODES else END
+            return route if route in self._specialists_by_name else END
 
-        def _redirect_from_input_guardrail(state: GraphState) -> str:
+        def redirect_from_input_guardrail(state: GraphState) -> str:
             route = state["route"]
-            return route if route and route == ROUTER_NODE_NAME else END
+            return self._router.name if route == self._router.name else END
 
-        graph = StateGraph(GraphState)
-
-        graph.add_node(ROUTER_NODE_NAME, router_node)
-        graph.add_node(FINANCIAL_NODE_NAME, financial_node)
-        graph.add_node(AGENDA_NODE_NAME, agenda_node)
-        graph.add_node(FAQ_NODE_NAME, faq_node)
-        graph.add_node(ORQUESTRATOR_NODE_NAME, orquestrator_node)
-        graph.add_node(INPUT_GUARDRAIL_NODE_NAME, input_guardrail_node)
-        graph.add_node(OUTPUT_GUARDRAIL_NODE_NAME, output_guardrail_node)
-
-        graph.add_edge(START, INPUT_GUARDRAIL_NODE_NAME)
-        graph.add_conditional_edges(
-            INPUT_GUARDRAIL_NODE_NAME, _redirect_from_input_guardrail
+        self._graph.add_conditional_edges(self._router.name, choose_specialist)
+        self._graph.add_conditional_edges(
+            self._input_guardrail.name,
+            redirect_from_input_guardrail,
         )
-        graph.add_conditional_edges(ROUTER_NODE_NAME, _chose_specialist)
-        graph.add_edge(FINANCIAL_NODE_NAME, ORQUESTRATOR_NODE_NAME)
-        graph.add_edge(AGENDA_NODE_NAME, ORQUESTRATOR_NODE_NAME)
-        graph.add_edge(ORQUESTRATOR_NODE_NAME, OUTPUT_GUARDRAIL_NODE_NAME)
-        graph.add_edge(OUTPUT_GUARDRAIL_NODE_NAME, END)
-        graph.add_edge(FAQ_NODE_NAME, END)
 
-        # Memória centralizada no grafo — persiste o Estado inteiro entre turns
-        json_serializer = JsonPlusSerializer(
-            allowed_msgpack_modules=[
-                ("app.infrastructure.agents.schema.graph_state", "GraphStateKeys")
-            ]
+    def _compile_graph(self) -> CompiledStateGraph:
+        serializer = JsonPlusSerializer(
+            allowed_msgpack_modules=[(GraphState.__module__, GraphStateKeys.__name__)]
         )
-        memory = MemorySaver(serde=json_serializer)
-        return graph.compile(checkpointer=memory)
-
-    def initialize(self) -> None:
-        self._agent_flux = self._build_graph()
+        memory = MemorySaver(serde=serializer)
+        return self._graph.compile(checkpointer=memory)
 
     async def execute_agent_flux(
-        self, user_input: HumanMessage, session_id: str
+        self,
+        user_input: HumanMessage,
+        session_id: str,
     ) -> AssistantMessage:
         increment_interaction()
         trace_id = str(uuid.uuid4())
         set_trace_context(trace_id)
+
         message = LangGraphHumanMessage(id=trace_id, content=user_input.content)
         logger.info(
             "User input received",
@@ -108,7 +126,8 @@ class AgentGraphImpl:
         }
 
         final_state_raw = await self._agent_flux.ainvoke(
-            initial_state, config={"configurable": {"thread_id": session_id}}
+            initial_state,
+            config={"configurable": {"thread_id": session_id}},
         )
         final_state = cast(GraphState, final_state_raw)
 
@@ -125,7 +144,7 @@ class AgentGraphImpl:
             )
         if not isinstance(last.content, str):
             raise ValueError(
-                "Excepted last message's content to be str, "
+                "Expected last message content to be str, "
                 f"received {type(last.content).__name__!r}"
             )
         return AssistantMessage(content=last.content)

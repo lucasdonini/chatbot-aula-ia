@@ -1,16 +1,16 @@
 import logging
 import re
-from typing import Any, Optional
+from typing import Any, ClassVar, Final
 
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
 from langgraph.graph import END
 
-from app.infrastructure.agents.llms import fast_llm
-from app.infrastructure.agents.router import ROUTER_NODE_NAME
-from app.infrastructure.agents.schema.graph_state import GraphState, GraphStateKeys
-from app.infrastructure.agents.schema.guardrail_result import GuardrailResult
+from app.application.ports.text_generator import TextGenerator
+from app.infrastructure.agents._core.state import GraphState, GraphStateKeys
+from app.infrastructure.agents.guardrails.result import GuardrailResult
 from app.infrastructure.execution_time_logger import log_execution_time
 
+from .._core.contracts.agent_node import AgentNode
 from .anonymization import anonymize_input
 from .guardrails_config import BLOCK_RESPONSES, INJECTION_PATTERNS, INTERN_DATA_KEYWORDS
 from .guardrails_prompts import CLASSIFIER_PROMPT
@@ -18,137 +18,145 @@ from .guardrails_prompts import CLASSIFIER_PROMPT
 logger = logging.getLogger(__name__)
 
 
-async def _input_guardrail(input: str) -> GuardrailResult:
-    """Run input checks in ascendent cost order:
-    Deterministic first, then LLM only if needed.
-    """
+class InputGuardrailNode(AgentNode):
+    name: ClassVar[str] = "input_guardrail"
+    _text_generator: Final[TextGenerator]
 
-    logger.debug(
-        "Verifying input compliance",
-        extra={"details": {"input_len": len(input)}},
-    )
+    def __init__(self, *, text_generator: TextGenerator, approved_route: str) -> None:
+        self._text_generator = text_generator
+        self._approved_route = approved_route
 
-    # 1. Prompt injection
-    for pattern in INJECTION_PATTERNS:
-        if re.search(pattern, input, re.IGNORECASE):
+    def _check_prompt_injection(self, input: str) -> bool:
+        for pattern in INJECTION_PATTERNS:
+            if re.search(pattern, input, re.IGNORECASE):
+                logger.debug(
+                    "Input blocked for prompt injection",
+                    extra={"details": {"reason": "prompt_injection", "input": input}},
+                )
+                return False
+        return True
+
+    def _check_pii_access(self, input: str) -> bool:
+        text_lower = input.lower()
+        for keyword in INTERN_DATA_KEYWORDS:
+            if keyword in text_lower:
+                logger.debug(
+                    "Input blocked for PII",
+                    extra={"details": {"reason": "acesso_dados_internos"}},
+                )
+                return False
+        return True
+
+    async def _classify_with_llm(self, input: str) -> GuardrailResult:
+        prompt = CLASSIFIER_PROMPT.format(mensagem=input)
+        response = await self._text_generator.generate(prompt)
+
+        category: str | None = None
+        for line in response.splitlines():
+            if line.strip().upper().startswith("CATEGORIA:"):
+                category = line.split(":", 1)[1].strip().upper()
+                break
+
+        if category == "APROVADO":
             logger.debug(
-                "Input blocked for prompt injection",
-                extra={"details": {"reason": "prompt_injection", "input": input}},
+                "Input approved",
+                extra={"details": {"input": input, "category": category}},
             )
+            return GuardrailResult.input_aproved(input)
+
+        if category in BLOCK_RESPONSES:
+            reason, message = BLOCK_RESPONSES[category]
+            return GuardrailResult.block(reason, message)
+
+        logger.warning(
+            "Input blocked due to undetermined classification",
+            extra={"details": {"category": category}},
+        )
+        return GuardrailResult.block(
+            "classificacao_indeterminada",
+            "Não consigo processar essa solicitação no momento. Tente reformulá-la.",
+        )
+
+    async def _guard_input(self, input: str) -> GuardrailResult:
+        """Run input checks in ascendent cost order:
+        Deterministic first, then LLM only if needed.
+        """
+
+        logger.debug(
+            "Verifying input compliance",
+            extra={"details": {"input_len": len(input)}},
+        )
+
+        if not self._check_prompt_injection(input):
             return GuardrailResult.block(
                 "prompt_injection", "Não consigo processar essa solicitação."
             )
 
-    # 2. Tentativa de acesso a dados internos
-    texto_lower = input.lower()
-    for kw in INTERN_DATA_KEYWORDS:
-        if kw in texto_lower:
-            logger.debug(
-                "Input blocked for PII",
-                extra={"details": {"reason": "acesso_dados_internos"}},
-            )
+        if not self._check_pii_access(input):
             return GuardrailResult.block(
                 "acesso_dados_internos",
                 "Não tenho como compartilhar informações internas do sistema.",
             )
 
-    # 3. Classificação semântica via LLM
-    try:
-        response = (
-            await fast_llm.ainvoke(CLASSIFIER_PROMPT.format(mensagem=input))
-        ).content
-
-        if not isinstance(response, str):
-            raise TypeError(
-                f"Classifier returned non-text content: {type(response).__name__!r}"
+        try:
+            return await self._classify_with_llm(input)
+        except Exception:
+            logger.exception(
+                "Input classifier failed",
+                extra={"details": {"stage": "classification"}},
             )
-    except Exception:
-        logger.exception(
-            "Input classifier failed",
-            extra={"details": {"stage": "classification"}},
-        )
-        return GuardrailResult.block(
-            "classificador_indisponivel",
-            (
-                "Não consigo processar essa solicitação no momento. "
-                "Tente novamente mais tarde."
-            ),
-        )
+            return GuardrailResult.block(
+                "classificador_indisponivel",
+                (
+                    "Não consigo processar essa solicitação no momento. "
+                    "Tente novamente mais tarde."
+                ),
+            )
 
-    category: Optional[str] = None
-    for line in response.splitlines():
-        if line.strip().upper().startswith("CATEGORIA:"):
-            category = line.split(":", 1)[1].strip().upper()
-            break
+    @log_execution_time
+    async def __call__(self, state: GraphState) -> dict[GraphStateKeys, Any]:
+        user_input = state["messages"][-1]
+        assert user_input.id is not None
 
-    if category == "APROVADO":
-        logger.debug(
-            "Input approved",
-            extra={"details": {"input": input, "category": category}},
-        )
-        return GuardrailResult.input_aproved(input)
-
-    if category in BLOCK_RESPONSES:
-        reason, message = BLOCK_RESPONSES[category]
-        return GuardrailResult.block(reason, message)
-
-    logger.warning(
-        "Input blocked due to undetermined classification",
-        extra={"details": {"category": category}},
-    )
-    return GuardrailResult.block(
-        "classificacao_indeterminada",
-        "Não consigo processar essa solicitação no momento. Tente reformulá-la.",
-    )
-
-
-INPUT_GUARDRAIL_NODE_NAME = "input_guardrail"
-
-
-@log_execution_time
-async def input_guardrail_node(state: GraphState) -> dict[GraphStateKeys, Any]:
-    user_input = state["messages"][-1]
-    assert user_input.id is not None
-
-    anonymized, pii_map = anonymize_input(user_input.text)
-    logger.info(
-        "Agent called",
-        extra={
-            "details": {
-                "name": INPUT_GUARDRAIL_NODE_NAME,
-                "input_anonymized": anonymized,
-            }
-        },
-    )
-    result = await _input_guardrail(anonymized)
-
-    if result.blocked:
+        anonymized, pii_map = anonymize_input(user_input.text)
         logger.info(
-            "Agent response",
+            "Agent called",
             extra={
                 "details": {
-                    "from": INPUT_GUARDRAIL_NODE_NAME,
-                    "status": "blocked",
-                    "reason": result.blocked,
+                    "name": self.name,
+                    "input_anonymized": anonymized,
                 }
             },
         )
-        return {
-            GraphStateKeys.ROUTE: END,
-            GraphStateKeys.CALLED_AGENTS: [INPUT_GUARDRAIL_NODE_NAME],
-            GraphStateKeys.MESSAGES: [AIMessage(content=result.message)],
-        }
+        result = await self._guard_input(anonymized)
 
-    logger.info(
-        "Agent response",
-        extra={"details": {"from": INPUT_GUARDRAIL_NODE_NAME, "status": "approved"}},
-    )
-    return {
-        GraphStateKeys.ROUTE: ROUTER_NODE_NAME,
-        GraphStateKeys.CALLED_AGENTS: [INPUT_GUARDRAIL_NODE_NAME],
-        GraphStateKeys.PII_MAP: pii_map,
-        GraphStateKeys.MESSAGES: [
-            RemoveMessage(id=user_input.id),
-            HumanMessage(content=result.message),
-        ],
-    }
+        if result.blocked:
+            logger.info(
+                "Agent response",
+                extra={
+                    "details": {
+                        "from": self.name,
+                        "status": "blocked",
+                        "reason": result.blocked,
+                    }
+                },
+            )
+            return {
+                GraphStateKeys.ROUTE: END,
+                GraphStateKeys.CALLED_AGENTS: [self.name],
+                GraphStateKeys.MESSAGES: [AIMessage(content=result.message)],
+            }
+
+        logger.info(
+            "Agent response",
+            extra={"details": {"from": self.name, "status": "approved"}},
+        )
+        return {
+            GraphStateKeys.ROUTE: self._approved_route,
+            GraphStateKeys.CALLED_AGENTS: [self.name],
+            GraphStateKeys.PII_MAP: pii_map,
+            GraphStateKeys.MESSAGES: [
+                RemoveMessage(id=user_input.id),
+                HumanMessage(content=result.message),
+            ],
+        }

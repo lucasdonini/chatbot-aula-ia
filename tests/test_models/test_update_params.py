@@ -1,11 +1,11 @@
 from datetime import date, datetime
 from uuid import uuid4
 
-from app.domain.model.transaction import Category, TransactionType
-from app.infrastructure.agents.schema.update_transaction_params import (
+from app.application.models.transaction_update import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )
+from app.domain.model.transaction import Category, TransactionType
 
 
 class TestUpdateTransactionQuery:

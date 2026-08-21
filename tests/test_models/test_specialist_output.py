@@ -1,4 +1,4 @@
-from app.infrastructure.agents.schema.specialist_output import (
+from app.infrastructure.agents._core.schemas.specialist_output import (
     AgendaOutput,
     FinancialOutput,
     SpecialistOutput,

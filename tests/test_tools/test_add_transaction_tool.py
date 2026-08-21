@@ -1,12 +1,15 @@
 import pytest
 
 from app.domain.model.transaction import Category, TransactionType
-from app.infrastructure.agents.financial.tools.add_transaction import AddTransactionTool
-from app.infrastructure.agents.schema.tool_response import ToolFailure, ToolSuccess
-from app.infrastructure.agents.schema.transaction import (
+from app.infrastructure.agents.financial.schemas.tool_response import (
+    ToolFailure,
+    ToolSuccess,
+)
+from app.infrastructure.agents.financial.schemas.transaction import (
     TransactionInput,
     TransactionOutput,
 )
+from app.infrastructure.agents.financial.tools.add_transaction import AddTransactionTool
 from app.services.transaction_service import TransactionService
 
 

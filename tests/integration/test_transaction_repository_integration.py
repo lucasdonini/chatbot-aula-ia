@@ -2,14 +2,14 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from app.domain.model.transaction import Category, Transaction, TransactionType
-from app.infrastructure.agents.schema.transaction_query_params import (
+from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
-from app.infrastructure.agents.schema.update_transaction_params import (
+from app.application.models.transaction_update import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )
+from app.domain.model.transaction import Category, Transaction, TransactionType
 from app.infrastructure.postgres.entities.transaction import TransactionORM
 
 pytestmark = [

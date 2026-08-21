@@ -1,3 +1,3 @@
-from .faq_agent import FAQ_NODE_NAME, faq_node
+from .faq_agent import FAQAgentNode
 
-__all__ = ["faq_node", "FAQ_NODE_NAME"]
+__all__ = ["FAQAgentNode"]

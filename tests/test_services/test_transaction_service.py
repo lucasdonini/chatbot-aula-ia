@@ -2,10 +2,10 @@ from datetime import date
 
 import pytest
 
-from app.domain.model.transaction import Category
-from app.infrastructure.agents.schema.transaction_query_params import (
+from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
+from app.domain.model.transaction import Category
 
 
 class TestCalculateTotalBalance:

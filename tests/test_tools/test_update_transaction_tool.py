@@ -3,14 +3,17 @@ from uuid import uuid4
 
 import pytest
 
-from app.domain.model.transaction import Category, Transaction, TransactionType
-from app.infrastructure.agents.financial.tools.update_transaction import (
-    UpdateTransactionTool,
-)
-from app.infrastructure.agents.schema.tool_response import ToolFailure, ToolSuccess
-from app.infrastructure.agents.schema.update_transaction_params import (
+from app.application.models.transaction_update import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
+)
+from app.domain.model.transaction import Category, Transaction, TransactionType
+from app.infrastructure.agents.financial.schemas.tool_response import (
+    ToolFailure,
+    ToolSuccess,
+)
+from app.infrastructure.agents.financial.tools.update_transaction import (
+    UpdateTransactionTool,
 )
 from app.services.transaction_service import TransactionService
 

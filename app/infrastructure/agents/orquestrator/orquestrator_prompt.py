@@ -1,6 +1,6 @@
 # ruff: noqa: E501
 
-from app.infrastructure.agents.general_persona import SYSTEM_PERSONA
+from app.infrastructure.agents._core.prompting.persona import SYSTEM_PERSONA
 
 _BASE_PROMPT = f"""
 {SYSTEM_PERSONA}

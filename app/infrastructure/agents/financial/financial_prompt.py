@@ -1,7 +1,7 @@
 # ruff: noqa: E501
 
 from app.domain.model.transaction import Category
-from app.infrastructure.agents.general_persona import SYSTEM_PERSONA
+from app.infrastructure.agents._core.prompting.persona import SYSTEM_PERSONA
 
 from .tools import (
     ADD_TRANSACTION_TOOL_NAME,
@@ -12,8 +12,6 @@ from .tools import (
     TOTAL_BALANCE_TOOL_NAME,
     UPDATE_TRANSACTION_TOOL_NAME,
 )
-
-FINANCIAL_NODE_NAME = "financial"
 
 _BASE_PROMPT = f"""
 {SYSTEM_PERSONA}
