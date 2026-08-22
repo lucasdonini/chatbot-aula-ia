@@ -11,6 +11,8 @@ def test_settings_use_expected_defaults() -> None:
     assert settings.log_to_file is False
     assert settings.log_file == "logs/app.log"
     assert settings.app_timezone == "America/Sao_Paulo"
+    assert settings.agent_execution_timeout_seconds == 120.0
+    assert settings.llm_request_timeout_seconds == 30.0
 
 
 @pytest.mark.parametrize("level", ["INFO", "DEBUG"])
@@ -28,6 +30,15 @@ def test_settings_reject_invalid_log_level() -> None:
 def test_settings_reject_unknown_value() -> None:
     with pytest.raises(ValidationError, match="unexpected_setting"):
         Settings(_env_file=None, unexpected_setting="value")
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["agent_execution_timeout_seconds", "llm_request_timeout_seconds"],
+)
+def test_settings_reject_non_positive_timeouts(field: str) -> None:
+    with pytest.raises(ValidationError, match=field):
+        Settings(_env_file=None, **{field: 0})
 
 
 def test_settings_reject_dummy_api_keys_at_boot() -> None:

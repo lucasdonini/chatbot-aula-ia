@@ -32,6 +32,7 @@ def build_agent_graph(
     *,
     transaction_service: TransactionService,
     text_generator: TextGenerator,
+    execution_timeout_seconds: float = 120.0,
 ) -> AgentGraphImpl:
     specialist_fallback = FallbackOn429Middleware(llm_groq)
 
@@ -111,4 +112,5 @@ def build_agent_graph(
         specialists=specialists,
         orquestrator=orquestrator,
         output_guardrail=output_guardrail,
+        execution_timeout_seconds=execution_timeout_seconds,
     )
