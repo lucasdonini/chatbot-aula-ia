@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _DUMMY_API_KEY = "No key provided"
@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     log_to_file: bool = False
     log_file: str = "logs/app.log"
     app_timezone: str = "America/Sao_Paulo"
+    agent_execution_timeout_seconds: float = Field(default=120.0, gt=0)
+    llm_request_timeout_seconds: float = Field(default=30.0, gt=0)
 
     model_config = SettingsConfigDict(env_file=".env", extra="forbid")
 

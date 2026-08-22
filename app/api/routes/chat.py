@@ -29,6 +29,8 @@ async def chat(
         await session_service.save_message(session_id=session_id, message=response)
         assert isinstance(response.content, str)
         return response.content
+    except TimeoutError:
+        raise
     except Exception as e:
         await session_service.save_error(session_id, e)
         raise

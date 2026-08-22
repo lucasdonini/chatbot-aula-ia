@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 from collections.abc import Sequence
@@ -29,12 +30,14 @@ class AgentGraphImpl:
         specialists: Sequence[SpecialistRegistration],
         orquestrator: AgentNode,
         output_guardrail: AgentNode,
+        execution_timeout_seconds: float,
     ) -> None:
         self._input_guardrail = input_guardrail
         self._router = router
         self._specialists = tuple(specialists)
         self._orquestrator = orquestrator
         self._output_guardrail = output_guardrail
+        self._execution_timeout_seconds = execution_timeout_seconds
         self._specialists_by_name = {
             specialist.name: specialist for specialist in self._specialists
         }
@@ -125,10 +128,22 @@ class AgentGraphImpl:
             "pii_map": {},
         }
 
-        final_state_raw = await self._agent_flux.ainvoke(
-            initial_state,
-            config={"configurable": {"thread_id": session_id}},
-        )
+        try:
+            async with asyncio.timeout(self._execution_timeout_seconds):
+                final_state_raw = await self._agent_flux.ainvoke(
+                    initial_state,
+                    config={"configurable": {"thread_id": session_id}},
+                )
+        except TimeoutError:
+            logger.error(
+                "Agent chain timed out",
+                extra={
+                    "details": {
+                        "timeout_seconds": self._execution_timeout_seconds,
+                    }
+                },
+            )
+            raise
         final_state = cast(GraphState, final_state_raw)
 
         logger.info(

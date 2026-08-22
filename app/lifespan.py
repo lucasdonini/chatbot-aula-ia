@@ -41,6 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     graph = build_agent_graph(
         transaction_service=transaction_service,
         text_generator=text_generator,
+        execution_timeout_seconds=settings.agent_execution_timeout_seconds,
     )
 
     app.state.session_summary_service = summary_service

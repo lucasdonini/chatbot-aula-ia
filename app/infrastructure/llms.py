@@ -12,6 +12,7 @@ llm_gemini = ChatGoogleGenerativeAI(
     temperature=SPECIALIST_TEMPERATURE,
     top_p=SPECIALIST_TOP_P,
     google_api_key=settings.gemini_api_key,
+    timeout=settings.llm_request_timeout_seconds,
 )
 
 llm_groq = ChatGroq(
@@ -19,8 +20,12 @@ llm_groq = ChatGroq(
     temperature=SPECIALIST_TEMPERATURE,
     api_key=settings.groq_api_key,
     model_kwargs={"top_p": SPECIALIST_TOP_P},
+    timeout=settings.llm_request_timeout_seconds,
 )
 
 fast_llm = ChatGroq(
-    model="openai/gpt-oss-120b", temperature=0.0, api_key=settings.groq_api_key
+    model="openai/gpt-oss-120b",
+    temperature=0.0,
+    api_key=settings.groq_api_key,
+    timeout=settings.llm_request_timeout_seconds,
 )
