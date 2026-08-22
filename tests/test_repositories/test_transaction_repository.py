@@ -13,36 +13,38 @@ from app.application.models.transaction_update import (
 )
 from app.domain.model.transaction import Category, Transaction, TransactionType
 
+pytestmark = pytest.mark.asyncio
+
 
 class TestGetBalance:
-    def test_get_balance_no_date(self, repository, mock_session):
+    async def test_get_balance_no_date(self, repository, mock_session):
         mock_session.scalar.return_value = 7600.0
 
-        result = repository.get_balance(None)
+        result = await repository.get_balance(None)
 
         assert result == 7600.0
 
-    def test_get_balance_with_date(self, repository, mock_session):
+    async def test_get_balance_with_date(self, repository, mock_session):
         mock_session.scalar.return_value = 4850.0
 
-        result = repository.get_balance(date(2026, 6, 1))
+        result = await repository.get_balance(date(2026, 6, 1))
 
         assert result == 4850.0
 
-    def test_get_balance_scalar_none_returns_zero(
+    async def test_get_balance_scalar_none_returns_zero(
         self,
         repository,
         mock_session,
     ):
         mock_session.scalar.return_value = None
 
-        result = repository.get_balance(date(2020, 1, 1))
+        result = await repository.get_balance(date(2020, 1, 1))
 
         assert result == 0.0
 
 
 class TestFind:
-    def test_find_with_params(self, repository, mock_session):
+    async def test_find_with_params(self, repository, mock_session):
 
         params = TransactionQueryParams(
             source_text="almoço",
@@ -51,27 +53,27 @@ class TestFind:
         )
         mock_session.scalars.return_value.all.return_value = []
 
-        result = repository.find(params)
+        result = await repository.find(params)
 
         assert result == []
 
-    def test_find_empty_no_results(self, repository, mock_session):
+    async def test_find_empty_no_results(self, repository, mock_session):
         params = TransactionQueryParams(source_text="inexistente")
         mock_session.scalars.return_value.all.return_value = []
 
-        result = repository.find(params)
+        result = await repository.find(params)
 
         assert result == []
 
-    def test_find_limit_zero(self, repository, mock_session):
+    async def test_find_limit_zero(self, repository, mock_session):
         params = TransactionQueryParams(limit=0)
 
-        result = repository.find(params)
+        result = await repository.find(params)
 
         assert result == []
         mock_session.scalars.assert_not_called()
 
-    def test_find_returns_correct_amount(self, repository, mock_session):
+    async def test_find_returns_correct_amount(self, repository, mock_session):
         orm_objects = []
         for i in range(3):
             orm = MagicMock()
@@ -88,26 +90,28 @@ class TestFind:
         mock_session.scalars.return_value.all.return_value = orm_objects
         params = TransactionQueryParams(limit=50)
 
-        result = repository.find(params)
+        result = await repository.find(params)
 
         assert len(result) == 3
         for t in result:
             assert isinstance(t, Transaction)
 
-    def test_find_applies_limit(self, repository, mock_session):
+    async def test_find_applies_limit(self, repository, mock_session):
         params = TransactionQueryParams(limit=5)
         mock_session.scalars.return_value.all.return_value = []
 
-        repository.find(params)
+        await repository.find(params)
 
         stmt = mock_session.scalars.call_args[0][0]
         assert stmt._limit == 5
 
-    def test_find_orders_by_occurred_at_desc_by_default(self, repository, mock_session):
+    async def test_find_orders_by_occurred_at_desc_by_default(
+        self, repository, mock_session
+    ):
         params = TransactionQueryParams(limit=10)
         mock_session.scalars.return_value.all.return_value = []
 
-        repository.find(params)
+        await repository.find(params)
 
         stmt = mock_session.scalars.call_args[0][0]
         order_by_clauses = stmt._order_by_clauses
@@ -115,40 +119,42 @@ class TestFind:
 
 
 class TestAddTransaction:
-    def test_add_transaction(self, repository, mock_session, sample_transaction):
+    async def test_add_transaction(self, repository, mock_session, sample_transaction):
         mock_session.add.return_value = None
         mock_session.commit.return_value = None
         mock_session.refresh.return_value = None
 
-        result = repository.add_transaction(sample_transaction)
+        result = await repository.add_transaction(sample_transaction)
 
         mock_session.add.assert_called_once()
         mock_session.commit.assert_called_once()
         mock_session.refresh.assert_called_once()
         assert isinstance(result, Transaction)
 
-    def test_add_calls_session_commit_and_refresh(
+    async def test_add_calls_session_commit_and_refresh(
         self, repository, mock_session, sample_transaction
     ):
         mock_session.add.return_value = None
         mock_session.commit.return_value = None
         mock_session.refresh.return_value = None
 
-        repository.add_transaction(sample_transaction)
+        await repository.add_transaction(sample_transaction)
 
         mock_session.add.assert_called_once()
         mock_session.commit.assert_called_once()
         mock_session.refresh.assert_called_once()
 
-    def test_add_raises_exception(self, repository, mock_session, sample_transaction):
+    async def test_add_raises_exception(
+        self, repository, mock_session, sample_transaction
+    ):
         mock_session.add.side_effect = Exception("DB error")
 
         with pytest.raises(Exception, match="DB error"):
-            repository.add_transaction(sample_transaction)
+            await repository.add_transaction(sample_transaction)
 
 
 class TestUpdateTransaction:
-    def test_update_by_id(self, repository, mock_session):
+    async def test_update_by_id(self, repository, mock_session):
         target_id = uuid4()
         params = UpdateTransactionParams(
             query=UpdateTransactionQuery(id=target_id),
@@ -169,33 +175,33 @@ class TestUpdateTransaction:
         mock_session.commit.return_value = None
         mock_session.refresh.return_value = None
 
-        result = repository.update_transaction(params)
+        result = await repository.update_transaction(params)
 
         assert result is not None
         assert isinstance(result, Transaction)
         mock_session.commit.assert_called_once()
         mock_session.refresh.assert_called_once()
 
-    def test_update_nothing_to_update(self, repository, mock_session):
+    async def test_update_nothing_to_update(self, repository, mock_session):
         params = UpdateTransactionParams(
             query=UpdateTransactionQuery(
                 match_text="teste", date_local=date(2026, 1, 1)
             ),
         )
 
-        result = repository.update_transaction(params)
+        result = await repository.update_transaction(params)
 
         assert result is None
         mock_session.scalar.assert_not_called()
         mock_session.commit.assert_not_called()
 
-    def test_update_no_reference_raises(self, repository, mock_session):
+    async def test_update_no_reference_raises(self, repository, mock_session):
         params = UpdateTransactionParams(query=UpdateTransactionQuery(), amount=100.0)
 
         with pytest.raises(ValueError, match="reference"):
-            repository.update_transaction(params)
+            await repository.update_transaction(params)
 
-    def test_update_by_match_text(self, repository, mock_session):
+    async def test_update_by_match_text(self, repository, mock_session):
         params = UpdateTransactionParams(
             query=UpdateTransactionQuery(
                 match_text="almoço",
@@ -217,20 +223,20 @@ class TestUpdateTransaction:
         mock_session.commit.return_value = None
         mock_session.refresh.return_value = None
 
-        result = repository.update_transaction(params)
+        result = await repository.update_transaction(params)
 
         assert result is not None
         mock_session.commit.assert_called_once()
         mock_session.refresh.assert_called_once()
 
-    def test_update_not_found_returns_none(self, repository, mock_session):
+    async def test_update_not_found_returns_none(self, repository, mock_session):
         params = UpdateTransactionParams(
             query=UpdateTransactionQuery(id=uuid4()),
             amount=200.0,
         )
         mock_session.scalar.return_value = None
 
-        result = repository.update_transaction(params)
+        result = await repository.update_transaction(params)
 
         assert result is None
         mock_session.commit.assert_not_called()

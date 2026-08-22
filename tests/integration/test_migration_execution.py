@@ -8,13 +8,13 @@ pytestmark = [
 
 
 class TestMigrationExecution:
-    def test_upgrade_head_creates_transactions_table(self, raw_engine):
-        inspector = inspect(raw_engine)
+    def test_upgrade_head_creates_transactions_table(self, migration_engine):
+        inspector = inspect(migration_engine)
         tables = inspector.get_table_names()
         assert "transactions" in tables
 
-    def test_upgrade_head_creates_category_enum(self, raw_engine):
-        with raw_engine.connect() as conn:
+    def test_upgrade_head_creates_category_enum(self, migration_engine):
+        with migration_engine.connect() as conn:
             result = conn.execute(
                 text(
                     "SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'category_enum')"  # noqa: E501
@@ -22,8 +22,8 @@ class TestMigrationExecution:
             )
             assert result.scalar() is True
 
-    def test_upgrade_head_creates_transaction_type_enum(self, raw_engine):
-        with raw_engine.connect() as conn:
+    def test_upgrade_head_creates_transaction_type_enum(self, migration_engine):
+        with migration_engine.connect() as conn:
             result = conn.execute(
                 text(
                     "SELECT EXISTS ("
@@ -33,8 +33,8 @@ class TestMigrationExecution:
             )
             assert result.scalar() is True
 
-    def test_transactions_columns(self, raw_engine):
-        inspector = inspect(raw_engine)
+    def test_transactions_columns(self, migration_engine):
+        inspector = inspect(migration_engine)
         columns = {c["name"]: c for c in inspector.get_columns("transactions")}
 
         assert columns["id"]["type"].__class__.__name__ == "UUID"
@@ -45,14 +45,14 @@ class TestMigrationExecution:
         assert columns["description"]["nullable"] is True
         assert columns["payment_method"]["nullable"] is True
 
-    def test_transactions_indexes(self, raw_engine):
-        inspector = inspect(raw_engine)
+    def test_transactions_indexes(self, migration_engine):
+        inspector = inspect(migration_engine)
         indexes = {ix["name"] for ix in inspector.get_indexes("transactions")}
         assert "idx_transactions_occurred_at" in indexes
         assert "idx_transactions_category_time" in indexes
 
-    def test_enum_values_are_correct(self, raw_engine):
-        with raw_engine.connect() as conn:
+    def test_enum_values_are_correct(self, migration_engine):
+        with migration_engine.connect() as conn:
             result = conn.execute(text("SELECT enum_range(NULL::category_enum)::text"))
             enum_range = result.scalar()
             assert "FOOD" in enum_range
@@ -60,13 +60,14 @@ class TestMigrationExecution:
             assert "BILLS" in enum_range
             assert "OTHER" in enum_range
 
-    def test_dictionary_tables_do_not_exist(self, raw_engine):
-        inspector = inspect(raw_engine)
+    def test_dictionary_tables_do_not_exist(self, migration_engine):
+        inspector = inspect(migration_engine)
         tables = inspector.get_table_names()
         assert "categories" not in tables
         assert "transaction_types" not in tables
 
-    def test_insert_and_read_transaction(self, db_session):
+    @pytest.mark.asyncio
+    async def test_insert_and_read_transaction(self, db_session):
         from decimal import Decimal
 
         from app.domain.model.transaction import Category, TransactionType
@@ -79,14 +80,15 @@ class TestMigrationExecution:
             source_text="teste insert",
         )
         db_session.add(orm)
-        db_session.commit()
+        await db_session.commit()
 
-        fetched = db_session.get(TransactionORM, orm.id)
+        fetched = await db_session.get(TransactionORM, orm.id)
         assert fetched is not None
         assert fetched.amount == Decimal("99.90")
         assert fetched.category == Category.FOOD
 
-    def test_insert_with_enum_filter(self, db_session):
+    @pytest.mark.asyncio
+    async def test_insert_with_enum_filter(self, db_session):
         from sqlalchemy import select
 
         from app.domain.model.transaction import Category, TransactionType
@@ -108,9 +110,9 @@ class TestMigrationExecution:
                 ),
             ]
         )
-        db_session.commit()
+        await db_session.commit()
 
         stmt = select(TransactionORM).where(TransactionORM.category == Category.HEALTH)
-        results = db_session.scalars(stmt).all()
+        results = (await db_session.scalars(stmt)).all()
         assert len(results) == 1
         assert results[0].source_text == "health1"

@@ -1,4 +1,5 @@
 from datetime import date
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -17,6 +18,8 @@ from app.infrastructure.agents.financial.tools.update_transaction import (
 )
 from app.services.transaction_service import TransactionService
 
+pytestmark = pytest.mark.asyncio
+
 
 class TestUpdateTransactionTool:
     @pytest.fixture
@@ -25,7 +28,7 @@ class TestUpdateTransactionTool:
         object.__setattr__(service, "_repository", None)
         return UpdateTransactionTool(service=service)
 
-    def test_updates_and_returns_ok(self, tool):
+    async def test_updates_and_returns_ok(self, tool):
         params = UpdateTransactionParams(
             query=UpdateTransactionQuery(id=uuid4()),
             amount=200.0,
@@ -37,37 +40,34 @@ class TestUpdateTransactionTool:
             transaction_type=TransactionType.EXPENSE,
             source_text="original",
         )
-        tool.service.update_transaction = lambda p: updated
+        tool.service.update_transaction = AsyncMock(return_value=updated)
 
-        result = tool._run(params)
+        result = await tool._arun(params)
 
         assert isinstance(result, ToolSuccess)
         assert result.data.updated is not None
         assert result.data.updated.amount == 200.0
 
-    def test_nothing_to_update(self, tool):
+    async def test_nothing_to_update(self, tool):
         params = UpdateTransactionParams(
             query=UpdateTransactionQuery(
                 match_text="teste", date_local=date(2026, 1, 1)
             ),
         )
-        tool.service.update_transaction = lambda p: None
+        tool.service.update_transaction = AsyncMock(return_value=None)
 
-        result = tool._run(params)
+        result = await tool._arun(params)
 
         assert isinstance(result, ToolSuccess)
         assert result.data.updated is None
 
-    def test_handles_exception(self, tool):
-        def raise_error(p):
-            raise Exception("fail")
-
-        tool.service.update_transaction = raise_error
+    async def test_handles_exception(self, tool):
+        tool.service.update_transaction = AsyncMock(side_effect=Exception("fail"))
 
         params = UpdateTransactionParams(
             query=UpdateTransactionQuery(id=uuid4()),
             amount=200.0,
         )
-        result = tool._run(params)
+        result = await tool._arun(params)
 
         assert isinstance(result, ToolFailure)

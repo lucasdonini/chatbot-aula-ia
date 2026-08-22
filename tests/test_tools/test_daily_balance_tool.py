@@ -1,4 +1,5 @@
 from datetime import date
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -9,6 +10,8 @@ from app.infrastructure.agents.financial.schemas.tool_response import (
 from app.infrastructure.agents.financial.tools.daily_balance import DailyBalanceTool
 from app.services.transaction_service import TransactionService
 
+pytestmark = pytest.mark.asyncio
+
 
 class TestDailyBalanceTool:
     @pytest.fixture
@@ -17,33 +20,25 @@ class TestDailyBalanceTool:
         object.__setattr__(service, "_repository", None)
         return DailyBalanceTool(service=service)
 
-    def test_returns_daily_balance(self, tool):
-        tool.service.calculate_daily_balance = lambda d: 300.0
+    async def test_returns_daily_balance(self, tool):
+        tool.service.calculate_daily_balance = AsyncMock(return_value=300.0)
 
-        result = tool._run(target_date=date(2026, 6, 1))
+        result = await tool._arun(target_date=date(2026, 6, 1))
 
         assert isinstance(result, ToolSuccess)
         assert result.data.balance == 300.0
 
-    def test_passes_date_correctly(self, tool):
-        captured = []
+    async def test_passes_date_correctly(self, tool):
+        calculate_balance = AsyncMock(return_value=0.0)
+        tool.service.calculate_daily_balance = calculate_balance
 
-        def capture(d):
-            captured.append(d)
-            return 0.0
+        await tool._arun(target_date=date(2026, 6, 15))
 
-        tool.service.calculate_daily_balance = capture
+        calculate_balance.assert_awaited_once_with(date(2026, 6, 15))
 
-        tool._run(target_date=date(2026, 6, 15))
+    async def test_handles_exception(self, tool):
+        tool.service.calculate_daily_balance = AsyncMock(side_effect=Exception("fail"))
 
-        assert captured == [date(2026, 6, 15)]
-
-    def test_handles_exception(self, tool):
-        def raise_error():
-            raise Exception("fail")
-
-        tool.service.calculate_daily_balance = raise_error
-
-        result = tool._run(target_date=date(2026, 6, 1))
+        result = await tool._arun(target_date=date(2026, 6, 1))
 
         assert isinstance(result, ToolFailure)

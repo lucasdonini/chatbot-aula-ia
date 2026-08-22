@@ -47,12 +47,15 @@ class DailyBalanceTool(BaseTool):
     service: TransactionService = Field(exclude=True)
 
     def _run(self, target_date: date) -> ToolResponse[_DailyBalanceResponse]:
+        raise NotImplementedError("This tool only supports asynchronous execution")
+
+    async def _arun(self, target_date: date) -> ToolResponse[_DailyBalanceResponse]:
         logger.debug(
             "Tool called",
             extra={"details": {"tool": self.name, "target_date": str(target_date)}},
         )
         try:
-            balance = self.service.calculate_daily_balance(target_date)
+            balance = await self.service.calculate_daily_balance(target_date)
             logger.debug(
                 "Tool succeeded",
                 extra={"details": {"tool": self.name, "balance": balance}},

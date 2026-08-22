@@ -1,20 +1,25 @@
-from collections.abc import Generator
-from contextlib import contextmanager
+from collections.abc import AsyncGenerator, AsyncIterator, Generator
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, ContextManager
+from typing import Callable
 from unittest.mock import patch
 
 import pytest
+import pytest_asyncio
 from alembic.command import downgrade, upgrade
 from alembic.config import Config as AlembicConfig
 from pydantic import SecretStr
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
 from app.domain.model.transaction import Category, TransactionType
 from app.infrastructure.postgres.entities.transaction import TransactionORM
+from app.infrastructure.postgres.pg_connection import (
+    build_async_postgres_url,
+    build_sync_postgres_url,
+)
 from app.infrastructure.postgres.repositories.transaction_repository import (
     SQLAlchemyTransactionRepository,
 )
@@ -42,33 +47,40 @@ def apply_migrations(db_url: str) -> Generator[None, None, None]:
         downgrade(ALEMBIC_CFG, "base")
 
 
+@pytest_asyncio.fixture
+async def raw_engine(db_url: str) -> AsyncGenerator[AsyncEngine]:
+    engine = create_async_engine(build_async_postgres_url(db_url), pool_pre_ping=True)
+    yield engine
+    await engine.dispose()
+
+
 @pytest.fixture
-def raw_engine(db_url: str) -> Generator:
-    engine = create_engine(db_url, pool_pre_ping=True)
+def migration_engine(db_url: str) -> Generator[Engine]:
+    engine = create_engine(build_sync_postgres_url(db_url), pool_pre_ping=True)
     yield engine
     engine.dispose()
 
 
-@pytest.fixture
-def db_session(raw_engine) -> Generator[Session, None, None]:
-    connection = raw_engine.connect()
-    transaction = connection.begin()
-    SessionLocal = sessionmaker(bind=connection)
-    session = SessionLocal()
+@pytest_asyncio.fixture
+async def db_session(raw_engine: AsyncEngine) -> AsyncGenerator[AsyncSession]:
+    connection = await raw_engine.connect()
+    transaction = await connection.begin()
+    session = AsyncSession(bind=connection, expire_on_commit=False)
 
     yield session
 
-    session.close()
-    transaction.rollback()
-    connection.close()
+    await session.close()
+    if transaction.is_active:
+        await transaction.rollback()
+    await connection.close()
 
 
 @pytest.fixture
 def session_factory(
-    db_session: Session,
-) -> Callable[[], ContextManager[Session]]:
-    @contextmanager
-    def factory() -> Generator[Session, None, None]:
+    db_session: AsyncSession,
+) -> Callable[[], AsyncIterator[AsyncSession]]:
+    @asynccontextmanager
+    async def factory() -> AsyncIterator[AsyncSession]:
         yield db_session
 
     return factory
@@ -84,7 +96,9 @@ def transaction_service(transaction_repository) -> TransactionService:
     return TransactionService(repository=transaction_repository)
 
 
-def _insert_seed_transactions(session: Session) -> list[TransactionORM]:
+async def _insert_seed_transactions(
+    session: AsyncSession,
+) -> list[TransactionORM]:
     seeds = [
         TransactionORM(
             amount=5000.00,
@@ -135,14 +149,13 @@ def _insert_seed_transactions(session: Session) -> list[TransactionORM]:
             source_text="Transferi 1000 para investimentos",
         ),
     ]
+    session.add_all(seeds)
+    await session.commit()
     for orm in seeds:
-        session.add(orm)
-    session.commit()
-    for orm in seeds:
-        session.refresh(orm)
+        await session.refresh(orm)
     return seeds
 
 
-@pytest.fixture
-def seed_transactions(db_session: Session) -> list[TransactionORM]:
-    return _insert_seed_transactions(db_session)
+@pytest_asyncio.fixture
+async def seed_transactions(db_session: AsyncSession) -> list[TransactionORM]:
+    return await _insert_seed_transactions(db_session)

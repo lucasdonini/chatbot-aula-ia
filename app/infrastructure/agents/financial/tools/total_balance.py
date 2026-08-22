@@ -35,12 +35,15 @@ class TotalBalanceTool(BaseTool):
     service: TransactionService = Field(exclude=True)
 
     def _run(self) -> ToolResponse[_TotalBalanceResponse]:
+        raise NotImplementedError("This tool only supports asynchronous execution")
+
+    async def _arun(self) -> ToolResponse[_TotalBalanceResponse]:
         logger.debug(
             "Tool called",
             extra={"details": {"tool": self.name}},
         )
         try:
-            balance = self.service.calculate_total_balance()
+            balance = await self.service.calculate_total_balance()
             logger.debug(
                 "Tool succeeded",
                 extra={"details": {"tool": self.name, "balance": balance}},

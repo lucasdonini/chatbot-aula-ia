@@ -1,4 +1,5 @@
 from datetime import date
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -16,6 +17,8 @@ from app.infrastructure.agents.financial.tools.restore_transaction import (
 )
 from app.services.transaction_service import TransactionService
 
+pytestmark = pytest.mark.asyncio
+
 
 class TestRestoreTransactionTool:
     @pytest.fixture
@@ -24,7 +27,7 @@ class TestRestoreTransactionTool:
         object.__setattr__(service, "_repository", None)
         return RestoreTransactionTool(service=service)
 
-    def test_restores_by_id_returns_true(self, tool):
+    async def test_restores_by_id_returns_true(self, tool):
         query = UpdateTransactionQuery(id=uuid4())
         updated = Transaction(
             amount=100.00,
@@ -32,33 +35,30 @@ class TestRestoreTransactionTool:
             transaction_type=TransactionType.EXPENSE,
             source_text="restaurado",
         )
-        tool.service.update_transaction = lambda p: updated
+        tool.service.update_transaction = AsyncMock(return_value=updated)
 
-        result = tool._run(query)
+        result = await tool._arun(query)
 
         assert isinstance(result, ToolSuccess)
         assert result.data.restored is True
 
-    def test_no_transaction_found_returns_false(self, tool):
+    async def test_no_transaction_found_returns_false(self, tool):
         query = UpdateTransactionQuery(
             match_text="inexistente",
             date_local=date(2026, 1, 1),
         )
-        tool.service.update_transaction = lambda p: None
+        tool.service.update_transaction = AsyncMock(return_value=None)
 
-        result = tool._run(query)
+        result = await tool._arun(query)
 
         assert isinstance(result, ToolSuccess)
         assert result.data.restored is False
 
-    def test_handles_exception(self, tool):
-        def raise_error(p):
-            raise Exception("DB error")
-
-        tool.service.update_transaction = raise_error
+    async def test_handles_exception(self, tool):
+        tool.service.update_transaction = AsyncMock(side_effect=Exception("DB error"))
 
         query = UpdateTransactionQuery(id=uuid4())
-        result = tool._run(query)
+        result = await tool._arun(query)
 
         assert isinstance(result, ToolFailure)
         assert "DB error" in result.details["exception"]
