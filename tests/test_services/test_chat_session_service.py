@@ -2,10 +2,16 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage
+from pydantic import ValidationError
 
-from app.domain.model.chat_entry import ChatMessage
+from app.application.ports.logger import Logger
+from app.domain.model.chat_entry import (
+    AssistantMessage,
+    ChatMessageRole,
+    HumanMessage,
+)
 from app.infrastructure.clock import FixedClock, get_clock, set_clock
+from app.infrastructure.mongodb.entities.chat_session import ChatMessageDocument
 from app.services import chat_session_service
 from app.services.chat_session_service import ChatSessionService
 
@@ -24,14 +30,19 @@ class TestChatSessionService:
     @pytest.fixture
     def service(self, summary_service):
         chat_session_service._active_sessions.clear()
-        return ChatSessionService(service=summary_service)
+        return ChatSessionService(
+            service=summary_service,
+            logger=MagicMock(spec=Logger),
+        )
 
     @pytest.mark.asyncio
     async def test_init_session(self, service, summary_service):
         fixed = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
         set_clock(FixedClock(fixed))
 
-        with patch("app.services.chat_session_service.ChatSession") as mock_chat:
+        with patch(
+            "app.services.chat_session_service.ChatSessionDocument"
+        ) as mock_chat:
             mock_instance = AsyncMock()
             mock_chat.return_value = mock_instance
             mock_instance.insert = AsyncMock()
@@ -45,7 +56,9 @@ class TestChatSessionService:
 
     @pytest.mark.asyncio
     async def test_save_message_human(self, service, summary_service):
-        with patch("app.services.chat_session_service.ChatSession") as mock_chat:
+        with patch(
+            "app.services.chat_session_service.ChatSessionDocument"
+        ) as mock_chat:
             chat_session_service._active_sessions["session-123"] = "doc-id"
             mock_query = MagicMock()
             mock_query.update = AsyncMock()
@@ -58,23 +71,28 @@ class TestChatSessionService:
 
     @pytest.mark.asyncio
     async def test_save_message_ai(self, service, summary_service):
-        with patch("app.services.chat_session_service.ChatSession") as mock_chat:
+        with patch(
+            "app.services.chat_session_service.ChatSessionDocument"
+        ) as mock_chat:
             chat_session_service._active_sessions["session-123"] = "doc-id"
             mock_query = MagicMock()
             mock_query.update = AsyncMock()
             mock_chat.find_one = MagicMock(return_value=mock_query)
 
-            await service.save_message("session-123", AIMessage(content="Resposta"))
+            await service.save_message(
+                "session-123",
+                AssistantMessage(content="Resposta"),
+            )
 
             mock_chat.find_one.assert_called_once()
             mock_query.update.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_save_message_non_text_content(self, service, summary_service):
-        message = MagicMock(spec=HumanMessage)
-        message.content = {"key": "value"}
+        message = HumanMessage(content={"key": "value"})  # type: ignore[arg-type]
+        chat_session_service._active_sessions["session-123"] = "doc-id"
 
-        with pytest.raises(TypeError, match="Received message with non-text content"):
+        with pytest.raises(ValidationError):
             await service.save_message("session-123", message)
 
     @pytest.mark.asyncio
@@ -83,7 +101,9 @@ class TestChatSessionService:
             return_value="Ocorreu um erro interno."
         )
 
-        with patch("app.services.chat_session_service.ChatSession") as mock_chat:
+        with patch(
+            "app.services.chat_session_service.ChatSessionDocument"
+        ) as mock_chat:
             chat_session_service._active_sessions["session-123"] = "doc-id"
             mock_query = MagicMock()
             mock_query.update = AsyncMock()
@@ -100,12 +120,19 @@ class TestChatSessionService:
     async def test_finalize_session_with_summary(self, service, summary_service):
         summary_service.summarize_session = AsyncMock(return_value="Resumo da sessão")
 
-        with patch("app.services.chat_session_service.ChatSession") as mock_chat:
+        with patch(
+            "app.services.chat_session_service.ChatSessionDocument"
+        ) as mock_chat:
             chat_session_service._active_sessions["session-123"] = "doc-id"
 
             async def find_one_side(*args, **kwargs):
                 session = AsyncMock()
-                session.entries = [MagicMock(spec=ChatMessage)]
+                session.entries = [
+                    ChatMessageDocument(
+                        content="Olá",
+                        role=ChatMessageRole.HUMAN,
+                    )
+                ]
                 return session
 
             mock_chat.find_one = MagicMock(side_effect=find_one_side)
@@ -123,7 +150,9 @@ class TestChatSessionService:
 
     @pytest.mark.asyncio
     async def test_finalize_no_messages(self, service, summary_service):
-        with patch("app.services.chat_session_service.ChatSession") as mock_chat:
+        with patch(
+            "app.services.chat_session_service.ChatSessionDocument"
+        ) as mock_chat:
             chat_session_service._active_sessions["session-123"] = "doc-id"
 
             async def find_one_side(*args, **kwargs):

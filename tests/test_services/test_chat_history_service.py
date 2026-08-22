@@ -2,18 +2,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.application.ports.logger import Logger
+from app.domain.model.chat_entry import ChatMessageRole
+from app.infrastructure.mongodb.entities.chat_session import ChatMessageDocument
 from app.services.chat_history_service import ChatHistoryService
 
 
 class TestChatHistoryService:
     @pytest.fixture
     def service(self):
-        return ChatHistoryService()
+        return ChatHistoryService(logger=MagicMock(spec=Logger))
 
     @pytest.mark.asyncio
     async def test_fetch_history_no_search(self, service):
         with patch(
-            "app.services.chat_history_service.ChatSession"
+            "app.services.chat_history_service.ChatSessionDocument"
         ) as mock_chat_session:
             mock_find = MagicMock()
             mock_project = MagicMock()
@@ -35,7 +38,7 @@ class TestChatHistoryService:
     @pytest.mark.asyncio
     async def test_fetch_history_with_search(self, service):
         with patch(
-            "app.services.chat_history_service.ChatSession"
+            "app.services.chat_history_service.ChatSessionDocument"
         ) as mock_chat_session:
             mock_find = MagicMock()
             mock_project = MagicMock()
@@ -58,10 +61,19 @@ class TestChatHistoryService:
     @pytest.mark.asyncio
     async def test_fetch_entries_found(self, service):
         with patch(
-            "app.services.chat_history_service.ChatSession"
+            "app.services.chat_history_service.ChatSessionDocument"
         ) as mock_chat_session:
             mock_session = AsyncMock()
-            mock_session.entries = ["entry1", "entry2"]
+            mock_session.entries = [
+                ChatMessageDocument(
+                    content="Olá",
+                    role=ChatMessageRole.HUMAN,
+                ),
+                ChatMessageDocument(
+                    content="Oi!",
+                    role=ChatMessageRole.ASSISTANT,
+                ),
+            ]
 
             async def find_one_side(*args, **kwargs):
                 return mock_session
@@ -75,7 +87,7 @@ class TestChatHistoryService:
     @pytest.mark.asyncio
     async def test_fetch_entries_not_found(self, service):
         with patch(
-            "app.services.chat_history_service.ChatSession"
+            "app.services.chat_history_service.ChatSessionDocument"
         ) as mock_chat_session:
 
             async def find_one_side(*args, **kwargs):

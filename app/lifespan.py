@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 from .infrastructure.agents import build_agent_graph
 from .infrastructure.llms import fast_llm
-from .infrastructure.logger import set_session_context, setup_logger
+from .infrastructure.logger import create_logger, set_session_context, setup_logger
 from .infrastructure.mongodb.client import MongoManager
 from .infrastructure.postgres.pg_connection import PostgresManager
 from .infrastructure.postgres.repositories.transaction_repository import (
@@ -29,8 +29,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     postgres_manager = PostgresManager(settings.postgres_url.get_secret_value())
 
     text_generator = LLMTextGenerator(fast_llm)
-    summary_service = SessionSummaryService(text_generator)
-    session_service = ChatSessionService(summary_service)
+    summary_service = SessionSummaryService(
+        text_generator,
+        logger=create_logger(SessionSummaryService.__module__),
+    )
+    session_service = ChatSessionService(
+        summary_service,
+        logger=create_logger(ChatSessionService.__module__),
+    )
 
     session_id = str(uuid.uuid4())
     await session_service.init_session(session_id)
@@ -39,7 +45,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     transaction_repository = SQLAlchemyTransactionRepository(
         session_factory=postgres_manager.session_factory
     )
-    transaction_service = TransactionService(repository=transaction_repository)
+    transaction_service = TransactionService(
+        repository=transaction_repository,
+        logger=create_logger(TransactionService.__module__),
+    )
 
     graph = build_agent_graph(
         transaction_service=transaction_service,
@@ -48,6 +57,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
 
     app.state.session_summary_service = summary_service
+    app.state.chat_session_service = session_service
     app.state.session_id = session_id
     app.state.graph = graph
 

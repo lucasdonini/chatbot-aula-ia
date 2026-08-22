@@ -3,7 +3,7 @@ import io
 import logging
 import sys
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -186,3 +186,15 @@ def test_setup_logger_uses_debug_console_format() -> None:
     content = output.getvalue()
     assert "INFO:     [agents.graph] Message" in content
     assert '"key": "value"' in content
+
+
+def test_python_logger_adapter_translates_structured_details() -> None:
+    native_logger = MagicMock(spec=logging.Logger)
+    adapter = logger_module.PythonLoggerAdapter(native_logger)
+
+    adapter.debug("Message", details={"key": "value"})
+
+    native_logger.debug.assert_called_once_with(
+        "Message",
+        extra={"details": {"key": "value"}},
+    )

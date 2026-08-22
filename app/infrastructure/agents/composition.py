@@ -2,6 +2,7 @@ from langgraph.graph import END
 
 from app.application.ports.text_generator import TextGenerator
 from app.infrastructure.llms import fast_llm, llm_gemini, llm_groq
+from app.infrastructure.logger import create_logger
 from app.services.chat_history_service import ChatHistoryService
 from app.services.transaction_service import TransactionService
 
@@ -91,7 +92,11 @@ def build_agent_graph(
         ),
     )
 
-    history_tool = SearchHistoryTool(service=ChatHistoryService())
+    history_tool = SearchHistoryTool(
+        service=ChatHistoryService(
+            logger=create_logger(ChatHistoryService.__module__),
+        )
+    )
     router = RouterAgentNode(
         agent_factory=LangChainAgentFactory(
             llm=fast_llm,

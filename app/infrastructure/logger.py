@@ -2,6 +2,7 @@ import json
 import logging
 import re
 import sys
+from collections.abc import Mapping
 from contextvars import ContextVar
 from copy import copy
 from pathlib import Path
@@ -9,12 +10,69 @@ from typing import Any, Optional, cast
 
 from uvicorn.logging import DefaultFormatter
 
+from app.application.ports.logger import Logger
+
 from .paths import SRC
 from .settings import settings
 
 _interaction_counter: ContextVar[int] = ContextVar("interaction_counter", default=0)
 _session_id: ContextVar[str] = ContextVar("session_id", default="")
 _trace_id: ContextVar[str] = ContextVar("trace_id", default="")
+
+
+class PythonLoggerAdapter:
+    def __init__(self, logger: logging.Logger) -> None:
+        self._logger = logger
+
+    @staticmethod
+    def _extra(details: Mapping[str, object] | None) -> dict[str, object] | None:
+        if details is None:
+            return None
+        return {"details": dict(details)}
+
+    def debug(
+        self,
+        message: str,
+        *,
+        details: Mapping[str, object] | None = None,
+    ) -> None:
+        self._logger.debug(message, extra=self._extra(details))
+
+    def info(
+        self,
+        message: str,
+        *,
+        details: Mapping[str, object] | None = None,
+    ) -> None:
+        self._logger.info(message, extra=self._extra(details))
+
+    def warning(
+        self,
+        message: str,
+        *,
+        details: Mapping[str, object] | None = None,
+    ) -> None:
+        self._logger.warning(message, extra=self._extra(details))
+
+    def error(
+        self,
+        message: str,
+        *,
+        details: Mapping[str, object] | None = None,
+    ) -> None:
+        self._logger.error(message, extra=self._extra(details))
+
+    def exception(
+        self,
+        message: str,
+        *,
+        details: Mapping[str, object] | None = None,
+    ) -> None:
+        self._logger.exception(message, extra=self._extra(details))
+
+
+def create_logger(name: str) -> Logger:
+    return PythonLoggerAdapter(logging.getLogger(name))
 
 
 def set_session_context(session_id: str) -> None:
