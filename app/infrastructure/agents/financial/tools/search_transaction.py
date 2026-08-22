@@ -50,12 +50,17 @@ class SearchTransactionsTool(BaseTool):
     def _run(
         self, params: TransactionQueryParams
     ) -> ToolResponse[_SearchTransactionsResponse]:
+        raise NotImplementedError("This tool only supports asynchronous execution")
+
+    async def _arun(
+        self, params: TransactionQueryParams
+    ) -> ToolResponse[_SearchTransactionsResponse]:
         logger.debug(
             "Tool called",
             extra={"details": {"tool": self.name, "params": params.model_dump()}},
         )
         try:
-            result = self.service.search_transactions(params)
+            result = await self.service.search_transactions(params)
             logger.debug(
                 "Tool succeeded",
                 extra={"details": {"tool": self.name, "count": len(result)}},

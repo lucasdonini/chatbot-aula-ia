@@ -5,6 +5,7 @@ from pathlib import Path
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
+from app.infrastructure.postgres.pg_connection import build_sync_postgres_url
 
 ROOT = Path(__file__).resolve().parent.parent
 APP = ROOT / "app"
@@ -32,7 +33,11 @@ target_metadata = models.Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-config.set_main_option("sqlalchemy.url", settings.postgres_url.get_secret_value())
+postgres_url = build_sync_postgres_url(settings.postgres_url.get_secret_value())
+config.set_main_option(
+    "sqlalchemy.url",
+    postgres_url.render_as_string(hide_password=False),
+)
 
 
 def run_migrations_offline() -> None:

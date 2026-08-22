@@ -46,6 +46,11 @@ class DeleteTransactionTool(BaseTool):
     def _run(
         self, query: UpdateTransactionQuery
     ) -> ToolResponse[_DeleteTransactionResponse]:
+        raise NotImplementedError("This tool only supports asynchronous execution")
+
+    async def _arun(
+        self, query: UpdateTransactionQuery
+    ) -> ToolResponse[_DeleteTransactionResponse]:
         logger.debug(
             "Tool called",
             extra={"details": {"tool": self.name, "query": query.model_dump()}},
@@ -53,7 +58,7 @@ class DeleteTransactionTool(BaseTool):
         params = UpdateTransactionParams(query=query, is_canceled=True)
         response: _DeleteTransactionResponse
         try:
-            if self.service.update_transaction(params):
+            if await self.service.update_transaction(params):
                 logger.debug(
                     "Tool succeeded",
                     extra={"details": {"tool": self.name, "deleted": True}},

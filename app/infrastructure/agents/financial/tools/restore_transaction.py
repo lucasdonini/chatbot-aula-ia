@@ -46,6 +46,11 @@ class RestoreTransactionTool(BaseTool):
     def _run(
         self, query: UpdateTransactionQuery
     ) -> ToolResponse[_RestoreTransactionResponse]:
+        raise NotImplementedError("This tool only supports asynchronous execution")
+
+    async def _arun(
+        self, query: UpdateTransactionQuery
+    ) -> ToolResponse[_RestoreTransactionResponse]:
         logger.debug(
             "Tool called",
             extra={"details": {"tool": self.name, "query": query.model_dump()}},
@@ -53,7 +58,7 @@ class RestoreTransactionTool(BaseTool):
         params = UpdateTransactionParams(query=query, is_canceled=False)
         response: _RestoreTransactionResponse
         try:
-            if self.service.update_transaction(params):
+            if await self.service.update_transaction(params):
                 logger.debug(
                     "Tool succeeded",
                     extra={"details": {"tool": self.name, "restored": True}},

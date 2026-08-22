@@ -1,28 +1,30 @@
-import logging
-from contextlib import contextmanager
-from typing import Generator
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-
-from app.infrastructure.settings import settings
-
-logger = logging.getLogger(__name__)
-
-engine = create_engine(settings.postgres_url.get_secret_value(), pool_pre_ping=True)
-SessionLocal = sessionmaker(bind=engine, autoflush=False)
+from sqlalchemy.engine import URL, make_url
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 
-@contextmanager
-def get_db() -> Generator[Session, None, None]:
-    db = SessionLocal()
-    logger.debug("Postgres session opened")
-    try:
-        yield db
-    except Exception:
-        db.rollback()
-        logger.exception("Postgres session rolled back")
-        raise
-    finally:
-        db.close()
-        logger.debug("Postgres session closed")
+def build_async_postgres_url(database_url: str) -> URL:
+    return make_url(database_url).set(drivername="postgresql+asyncpg")
+
+
+def build_sync_postgres_url(database_url: str) -> URL:
+    return make_url(database_url).set(drivername="postgresql+psycopg")
+
+
+class PostgresManager:
+    def __init__(self, database_url: str) -> None:
+        self._engine: AsyncEngine = create_async_engine(
+            build_async_postgres_url(database_url),
+            pool_pre_ping=True,
+        )
+        self.session_factory = async_sessionmaker(
+            bind=self._engine,
+            autoflush=False,
+            expire_on_commit=False,
+        )
+
+    async def dispose(self) -> None:
+        await self._engine.dispose()

@@ -1,3 +1,5 @@
+from unittest.mock import AsyncMock
+
 import pytest
 
 from app.application.models.transaction_query import (
@@ -14,6 +16,8 @@ from app.infrastructure.agents.financial.tools.search_transaction import (
 )
 from app.services.transaction_service import TransactionService
 
+pytestmark = pytest.mark.asyncio
+
 
 class TestSearchTransactionsTool:
     @pytest.fixture
@@ -22,7 +26,7 @@ class TestSearchTransactionsTool:
         object.__setattr__(service, "_repository", None)
         return SearchTransactionsTool(service=service)
 
-    def test_returns_transactions(self, tool):
+    async def test_returns_transactions(self, tool):
         mock_result = [
             Transaction(
                 amount=100.0,
@@ -31,35 +35,32 @@ class TestSearchTransactionsTool:
                 source_text="test",
             )
         ]
-        tool.service.search_transactions = lambda p: mock_result
+        tool.service.search_transactions = AsyncMock(return_value=mock_result)
 
         params = TransactionQueryParams(category=Category.FOOD)
-        result = tool._run(params)
+        result = await tool._arun(params)
 
         assert isinstance(result, ToolSuccess)
         assert len(result.data.transactions) == 1
 
-    def test_returns_empty_list(self, tool):
-        tool.service.search_transactions = lambda p: []
+    async def test_returns_empty_list(self, tool):
+        tool.service.search_transactions = AsyncMock(return_value=[])
 
         params = TransactionQueryParams()
-        result = tool._run(params)
+        result = await tool._arun(params)
 
         assert isinstance(result, ToolSuccess)
         assert result.data.transactions == []
 
-    def test_handles_exception(self, tool):
-        def raise_error(p):
-            raise Exception("fail")
-
-        tool.service.search_transactions = raise_error
+    async def test_handles_exception(self, tool):
+        tool.service.search_transactions = AsyncMock(side_effect=Exception("fail"))
 
         params = TransactionQueryParams()
-        result = tool._run(params)
+        result = await tool._arun(params)
 
         assert isinstance(result, ToolFailure)
 
-    def test_transactions_are_typed_model(self, tool):
+    async def test_transactions_are_typed_model(self, tool):
         mock_result = [
             Transaction(
                 amount=50.0,
@@ -68,10 +69,10 @@ class TestSearchTransactionsTool:
                 source_text="source",
             )
         ]
-        tool.service.search_transactions = lambda p: mock_result
+        tool.service.search_transactions = AsyncMock(return_value=mock_result)
 
         params = TransactionQueryParams()
-        result = tool._run(params)
+        result = await tool._arun(params)
 
         assert isinstance(result, ToolSuccess)
         assert isinstance(result.data.transactions[0], TransactionOutput)

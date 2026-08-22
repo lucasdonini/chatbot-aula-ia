@@ -1,9 +1,8 @@
 import logging
 from datetime import date, datetime, time, timedelta
-from typing import Callable, ContextManager, List, Optional
 
-from sqlalchemy import ScalarSelect, func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy import ScalarSelect, func, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.application.models.transaction_query import (
     TransactionQueryParams,
@@ -18,7 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 class SQLAlchemyTransactionRepository:
-    def __init__(self, session_factory: Callable[[], ContextManager[Session]]):
+    def __init__(
+        self,
+        session_factory: async_sessionmaker[AsyncSession],
+    ) -> None:
         self._session_factory = session_factory
 
     def _orm_to_model(self, orm: TransactionORM) -> Transaction:
@@ -56,7 +58,7 @@ class SQLAlchemyTransactionRepository:
     def _build_sum_amounts_of_transaction_type_subquery(
         self,
         transaction_type: TransactionType,
-        period_end: Optional[datetime],
+        period_end: datetime | None,
     ) -> ScalarSelect[float]:
         stmt = select(func.coalesce(func.sum(TransactionORM.amount), 0)).where(
             TransactionORM.transaction_type == transaction_type,
@@ -68,7 +70,7 @@ class SQLAlchemyTransactionRepository:
 
         return stmt.scalar_subquery()
 
-    def get_balance(self, day: Optional[date] = None) -> float:
+    async def get_balance(self, day: date | None = None) -> float:
         "Returns the balance of the user at the end of the requested date"
         period_end = (
             datetime.combine(day + timedelta(days=1), time.min) if day else None
@@ -86,10 +88,10 @@ class SQLAlchemyTransactionRepository:
 
         stmt = select(income - expenses)
 
-        with self._session_factory() as session:
-            return float(session.scalar(stmt) or 0)
+        async with self._session_factory() as session:
+            return float(await session.scalar(stmt) or 0)
 
-    def find(self, params: TransactionQueryParams) -> List[Transaction]:
+    async def find(self, params: TransactionQueryParams) -> list[Transaction]:
         logger.info(
             "Searching transactions",
             extra={"details": {"params": params.model_dump()}},
@@ -136,9 +138,9 @@ class SQLAlchemyTransactionRepository:
             "Query built",
             extra={"details": {"query": str(stmt)}},
         )
-        result: List[Transaction]
-        with self._session_factory() as session:
-            docs = session.scalars(stmt).all()
+        result: list[Transaction]
+        async with self._session_factory() as session:
+            docs = (await session.scalars(stmt)).all()
             result = [self._orm_to_model(doc) for doc in docs]
         logger.info(
             "Search completed",
@@ -146,17 +148,17 @@ class SQLAlchemyTransactionRepository:
         )
         return result
 
-    def add_transaction(self, transaction: Transaction) -> Transaction:
+    async def add_transaction(self, transaction: Transaction) -> Transaction:
         orm = self._model_to_orm(transaction)
-        with self._session_factory() as session:
+        async with self._session_factory() as session:
             session.add(orm)
-            session.commit()
-            session.refresh(orm)
+            await session.commit()
+            await session.refresh(orm)
         return self._orm_to_model(orm)
 
-    def update_transaction(
+    async def update_transaction(
         self, params: UpdateTransactionParams
-    ) -> Optional[Transaction]:
+    ) -> Transaction | None:
         logger.info(
             "Updating transaction",
             extra={"details": {"params": params.model_dump()}},
@@ -175,9 +177,9 @@ class SQLAlchemyTransactionRepository:
             period_start = datetime.combine(date_local, time.min)
             period_end = datetime.combine(date_local + timedelta(days=1), time.min)
             stmt = stmt.where(
-                or_(
-                    TransactionORM.source_text.ilike(f"%{match_text}%"),
-                    TransactionORM.description.ilike(f"%{match_text}%"),
+                (
+                    TransactionORM.source_text.ilike(f"%{match_text}%")
+                    | TransactionORM.description.ilike(f"%{match_text}%")
                 ),
                 TransactionORM.occurred_at >= period_start,
                 TransactionORM.occurred_at < period_end,
@@ -199,16 +201,16 @@ class SQLAlchemyTransactionRepository:
             "Locating update target",
             extra={"details": {"query": str(stmt)}},
         )
-        with self._session_factory() as session:
-            target = session.scalar(stmt)
+        async with self._session_factory() as session:
+            target = await session.scalar(stmt)
 
             if not target:
                 return None
 
             for attr, val in to_update.items():
                 setattr(target, attr, val)
-            session.commit()
-            session.refresh(target)
+            await session.commit()
+            await session.refresh(target)
 
             logger.debug(
                 "Transaction updated",

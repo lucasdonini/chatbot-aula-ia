@@ -1,11 +1,9 @@
-from contextlib import contextmanager
 from datetime import date, datetime, timezone
-from typing import Callable, ContextManager
-from unittest.mock import MagicMock, create_autospec
+from unittest.mock import AsyncMock, MagicMock, create_autospec
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def _patch_create_agent_model_edge():
@@ -131,17 +129,16 @@ def sample_update_params_empty() -> UpdateTransactionParams:
 
 
 @pytest.fixture
-def mock_session() -> MagicMock:
-    return create_autospec(Session, instance=True)
+def mock_session() -> AsyncMock:
+    session = create_autospec(AsyncSession, instance=True)
+    session.__aenter__.return_value = session
+    session.scalars.return_value = MagicMock()
+    return session
 
 
 @pytest.fixture
-def mock_session_factory(mock_session) -> Callable[[], ContextManager[Session]]:
-    @contextmanager
-    def factory():
-        yield mock_session
-
-    return factory
+def mock_session_factory(mock_session: AsyncMock) -> MagicMock:
+    return MagicMock(return_value=mock_session)
 
 
 @pytest.fixture

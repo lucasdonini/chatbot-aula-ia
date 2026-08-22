@@ -21,40 +21,42 @@ class TransactionService:
         self._repository = repository
 
     @log_execution_time
-    def calculate_total_balance(self) -> float:
+    async def calculate_total_balance(self) -> float:
         logger.debug("Calculating total balance")
-        return self._repository.get_balance()
+        return await self._repository.get_balance()
 
     @log_execution_time
-    def calculate_daily_balance(self, day: date) -> float:
+    async def calculate_daily_balance(self, day: date) -> float:
         logger.debug(
             "Calculating daily balance",
             extra={"details": {"day": str(day)}},
         )
-        return self._repository.get_balance(day)
+        return await self._repository.get_balance(day)
 
     @log_execution_time
-    def search_transactions(self, params: TransactionQueryParams) -> List[Transaction]:
+    async def search_transactions(
+        self, params: TransactionQueryParams
+    ) -> List[Transaction]:
         logger.debug(
             "Searching transactions",
             extra={"details": {"params": params.model_dump()}},
         )
-        return self._repository.find(params)
+        return await self._repository.find(params)
 
     @log_execution_time
-    def add_transaction(self, transaction: Transaction) -> Transaction:
+    async def add_transaction(self, transaction: Transaction) -> Transaction:
         logger.debug(
             "Adding transaction",
             extra={"details": {"transaction": asdict(transaction)}},
         )
-        return self._repository.add_transaction(transaction)
+        return await self._repository.add_transaction(transaction)
 
     @log_execution_time
-    def update_transaction(
+    async def update_transaction(
         self, params: UpdateTransactionParams
     ) -> Optional[Transaction]:
         logger.debug(
             "Updating transaction",
             extra={"details": {"params": params.model_dump()}},
         )
-        return self._repository.update_transaction(params)
+        return await self._repository.update_transaction(params)

@@ -8,7 +8,7 @@ from .infrastructure.agents import build_agent_graph
 from .infrastructure.llms import fast_llm
 from .infrastructure.logger import set_session_context, setup_logger
 from .infrastructure.mongodb.client import MongoManager
-from .infrastructure.postgres.pg_connection import get_db
+from .infrastructure.postgres.pg_connection import PostgresManager
 from .infrastructure.postgres.repositories.transaction_repository import (
     SQLAlchemyTransactionRepository,
 )
@@ -26,6 +26,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     mongo_manager = MongoManager(settings=settings)
     await mongo_manager.init_database()
+    postgres_manager = PostgresManager(settings.postgres_url.get_secret_value())
 
     text_generator = LLMTextGenerator(fast_llm)
     summary_service = SessionSummaryService(text_generator)
@@ -35,7 +36,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await session_service.init_session(session_id)
     set_session_context(session_id)
 
-    transaction_repository = SQLAlchemyTransactionRepository(session_factory=get_db)
+    transaction_repository = SQLAlchemyTransactionRepository(
+        session_factory=postgres_manager.session_factory
+    )
     transaction_service = TransactionService(repository=transaction_repository)
 
     graph = build_agent_graph(
@@ -48,6 +51,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.session_id = session_id
     app.state.graph = graph
 
-    yield
-
-    await session_service.finalize_session(session_id)
+    try:
+        yield
+    finally:
+        try:
+            await session_service.finalize_session(session_id)
+        finally:
+            await postgres_manager.dispose()

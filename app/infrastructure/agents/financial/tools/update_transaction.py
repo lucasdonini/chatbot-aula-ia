@@ -46,12 +46,17 @@ class UpdateTransactionTool(BaseTool):
     def _run(
         self, params: UpdateTransactionParams
     ) -> ToolResponse[_UpdateTransactionResponse]:
+        raise NotImplementedError("This tool only supports asynchronous execution")
+
+    async def _arun(
+        self, params: UpdateTransactionParams
+    ) -> ToolResponse[_UpdateTransactionResponse]:
         logger.debug(
             "Tool called",
             extra={"details": {"tool": self.name, "params": params.model_dump()}},
         )
         try:
-            if updated := self.service.update_transaction(params):
+            if updated := await self.service.update_transaction(params):
                 logger.debug(
                     "Tool succeeded",
                     extra={

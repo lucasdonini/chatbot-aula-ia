@@ -38,6 +38,11 @@ class AddTransactionTool(BaseTool):
     def _run(
         self, transaction: TransactionInput
     ) -> ToolResponse[_AddTransactionResponse]:
+        raise NotImplementedError("This tool only supports asynchronous execution")
+
+    async def _arun(
+        self, transaction: TransactionInput
+    ) -> ToolResponse[_AddTransactionResponse]:
         logger.debug(
             "Tool called",
             extra={
@@ -48,7 +53,7 @@ class AddTransactionTool(BaseTool):
             },
         )
         try:
-            added = self.service.add_transaction(transaction.to_domain())
+            added = await self.service.add_transaction(transaction.to_domain())
             logger.debug(
                 "Tool succeeded",
                 extra={"details": {"tool": self.name, "added": added}},
