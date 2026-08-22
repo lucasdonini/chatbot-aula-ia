@@ -1,0 +1,121 @@
+import logging
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from app.infrastructure.agents._core.middleware import (
+    FallbackOn429Middleware,
+    is_rate_limit_error,
+)
+
+
+class _StatusError(Exception):
+    def __init__(self, status_code: int) -> None:
+        self.status_code = status_code
+        super().__init__(f"HTTP {status_code}")
+
+
+class _CodeError(Exception):
+    def __init__(self, code: int) -> None:
+        self.code = code
+        super().__init__(f"HTTP {code}")
+
+
+def _wrap_exception(cause: Exception) -> Exception:
+    try:
+        raise cause
+    except Exception as exc:
+        try:
+            raise RuntimeError("LLM adapter error") from exc
+        except RuntimeError as wrapper:
+            return wrapper
+
+
+def test_detects_direct_rate_limit_error() -> None:
+    assert is_rate_limit_error(_StatusError(429)) is True
+
+
+def test_detects_rate_limit_in_wrapped_cause() -> None:
+    wrapped = _wrap_exception(_CodeError(429))
+
+    assert is_rate_limit_error(wrapped) is True
+
+
+def test_ignores_non_rate_limit_in_wrapped_cause() -> None:
+    wrapped = _wrap_exception(_CodeError(409))
+
+    assert is_rate_limit_error(wrapped) is False
+
+
+def test_exception_chain_handles_cycles() -> None:
+    error = RuntimeError("cycle")
+    error.__cause__ = error
+
+    assert is_rate_limit_error(error) is False
+
+
+@pytest.mark.asyncio
+async def test_middleware_uses_fallback_for_wrapped_rate_limit() -> None:
+    fallback_llm = MagicMock()
+    middleware = FallbackOn429Middleware(fallback_llm)
+    request = MagicMock()
+    fallback_request = MagicMock()
+    request.override.return_value = fallback_request
+    expected_response = MagicMock()
+    handler = AsyncMock(
+        side_effect=[
+            _wrap_exception(_CodeError(429)),
+            expected_response,
+        ]
+    )
+
+    response = await middleware.awrap_model_call(request, handler)
+
+    assert response is expected_response
+    request.override.assert_called_once_with(model=fallback_llm)
+    assert handler.await_args_list[0].args == (request,)
+    assert handler.await_args_list[1].args == (fallback_request,)
+
+
+@pytest.mark.asyncio
+async def test_middleware_logs_fallback_activation(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    fallback_llm = MagicMock()
+    middleware = FallbackOn429Middleware(fallback_llm)
+    request = MagicMock()
+    request.override.return_value = MagicMock()
+    handler = AsyncMock(
+        side_effect=[
+            _wrap_exception(_CodeError(429)),
+            MagicMock(),
+        ]
+    )
+
+    with caplog.at_level(logging.INFO):
+        await middleware.awrap_model_call(request, handler)
+
+    record = next(
+        record
+        for record in caplog.records
+        if record.message == "Primary LLM rate limited; activating fallback"
+    )
+    assert record.levelno == logging.INFO
+    assert record.details == {
+        "status_code": 429,
+        "primary_model": "MagicMock",
+        "fallback_model": "MagicMock",
+    }
+
+
+@pytest.mark.asyncio
+async def test_middleware_reraises_non_rate_limit_error() -> None:
+    middleware = FallbackOn429Middleware(MagicMock())
+    request = MagicMock()
+    wrapped = _wrap_exception(_CodeError(409))
+    handler = AsyncMock(side_effect=wrapped)
+
+    with pytest.raises(RuntimeError, match="LLM adapter error"):
+        await middleware.awrap_model_call(request, handler)
+
+    request.override.assert_not_called()
