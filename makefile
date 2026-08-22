@@ -2,8 +2,14 @@ help:
 	@echo 'First, run `make prepare-environment` and create .env.app/.env.compose from their examples'
 	@echo 'Now you are ready to run with `make up`'
 
-up: check
-	uv run python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+dev: export LOG_LEVEL = DEBUG
+dev: check
+	uv run python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --timeout-graceful-shutdown 10
+
+up: export LOG_LEVEL = INFO
+up: export LOG_TO_FILE = false
+up:
+	uv run python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-graceful-shutdown 10
 
 prepare-environment:
 	uv sync
