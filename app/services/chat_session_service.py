@@ -1,9 +1,9 @@
-import logging
 from dataclasses import asdict
 
 from beanie import PydanticObjectId
 from beanie.operators import Push, Set
 
+from app.application.ports.logger import Logger
 from app.domain.model.chat_entry import (
     ChatEntry,
     ChatError,
@@ -15,13 +15,13 @@ from app.infrastructure.mongodb.mappers.chat_session_mapper import ChatSessionMa
 
 from .session_summary_service import SessionSummaryService
 
-logger = logging.getLogger(__name__)
 _active_sessions: dict[str, PydanticObjectId] = {}
 
 
 class ChatSessionService:
-    def __init__(self, service: SessionSummaryService):
+    def __init__(self, service: SessionSummaryService, logger: Logger) -> None:
         self._service = service
+        self._logger = logger
 
     async def init_session(self, session_id: str) -> None:
         now = get_clock().now()
@@ -36,9 +36,9 @@ class ChatSessionService:
         await session.insert()
         assert session.id is not None
         _active_sessions[session_id] = session.id
-        logger.debug(
+        self._logger.debug(
             "Session initialized",
-            extra={"details": {"session_id": session_id[:8]}},
+            details={"session_id": session_id[:8]},
         )
 
     def get_active_sessions(self) -> dict[str, PydanticObjectId]:
@@ -54,9 +54,9 @@ class ChatSessionService:
 
     async def save_message(self, session_id: str, message: ChatMessage) -> None:
         await self._save_entry(session_id, message)
-        logger.debug(
+        self._logger.debug(
             "Message saved",
-            extra={"details": asdict(message)},
+            details=asdict(message),
         )
 
     async def save_error(self, session_id: str, error: Exception) -> None:
@@ -64,7 +64,7 @@ class ChatSessionService:
         summary = await self._service.summarize_exception(error)
         entry = ChatError(exception=name, summary=summary)
         await self._save_entry(session_id, entry)
-        logger.debug("Error saved", extra={"details": asdict(entry)})
+        self._logger.debug("Error saved", details=asdict(entry))
 
     async def finalize_session(self, session_id: str) -> None:
         """
@@ -98,12 +98,10 @@ class ChatSessionService:
         )
 
         _active_sessions.pop(session_id)
-        logger.debug(
+        self._logger.debug(
             "Session finalized",
-            extra={
-                "details": {
-                    "session_id": session_id[:8],
-                    "entry_count": len(session.entries),
-                }
+            details={
+                "session_id": session_id[:8],
+                "entry_count": len(session.entries),
             },
         )

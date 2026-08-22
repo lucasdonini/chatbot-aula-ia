@@ -1,6 +1,6 @@
-from typing import Annotated, cast
+from typing import cast
 
-from fastapi import Depends, Request
+from fastapi import Request
 
 from ..application.ports.agent_graph import AgentGraph
 from ..services.chat_session_service import ChatSessionService
@@ -24,9 +24,8 @@ def get_session_summary_service(request: Request) -> SessionSummaryService:
 
 
 def get_chat_session_service(
-    session_summary_service: Annotated[
-        SessionSummaryService,
-        Depends(get_session_summary_service),
-    ],
+    request: Request,
 ) -> ChatSessionService:
-    return ChatSessionService(session_summary_service)
+    service = request.app.state.chat_session_service
+    assert isinstance(service, ChatSessionService)
+    return service

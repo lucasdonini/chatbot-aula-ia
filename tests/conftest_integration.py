@@ -92,8 +92,11 @@ def transaction_repository(session_factory) -> SQLAlchemyTransactionRepository:
 
 
 @pytest.fixture
-def transaction_service(transaction_repository) -> TransactionService:
-    return TransactionService(repository=transaction_repository)
+def transaction_service(transaction_repository, mock_logger) -> TransactionService:
+    return TransactionService(
+        repository=transaction_repository,
+        logger=mock_logger,
+    )
 
 
 async def _insert_seed_transactions(

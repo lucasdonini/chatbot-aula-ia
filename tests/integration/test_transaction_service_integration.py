@@ -25,11 +25,14 @@ class TestCalculateTotalBalance:
         assert balance == 7600.00
 
     async def test_zero_balance_no_transactions(
-        self, transaction_repository, db_session
+        self, transaction_repository, db_session, mock_logger
     ):
         from app.services.transaction_service import TransactionService
 
-        service = TransactionService(repository=transaction_repository)
+        service = TransactionService(
+            repository=transaction_repository,
+            logger=mock_logger,
+        )
         balance = await service.calculate_total_balance()
         assert balance == 0.0
 
@@ -48,11 +51,14 @@ class TestCalculateDailyBalance:
         assert balance == 7800.00
 
     async def test_daily_balance_no_transactions(
-        self, transaction_repository, db_session
+        self, transaction_repository, db_session, mock_logger
     ):
         from app.services.transaction_service import TransactionService
 
-        service = TransactionService(repository=transaction_repository)
+        service = TransactionService(
+            repository=transaction_repository,
+            logger=mock_logger,
+        )
         balance = await service.calculate_daily_balance(date(2026, 1, 1))
         assert balance == 0.0
 

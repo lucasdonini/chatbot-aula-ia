@@ -43,6 +43,7 @@ from app.application.models.transaction_update import (  # noqa: E402
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )
+from app.application.ports.logger import Logger  # noqa: E402
 from app.application.repositories.transaction_repository import (  # noqa: E402
     TransactionRepository,
 )
@@ -152,8 +153,13 @@ def mock_repository() -> MagicMock:
 
 
 @pytest.fixture
-def service(mock_repository: MagicMock) -> TransactionService:
-    return TransactionService(repository=mock_repository)
+def mock_logger() -> MagicMock:
+    return create_autospec(Logger, instance=True)
+
+
+@pytest.fixture
+def service(mock_repository: MagicMock, mock_logger: MagicMock) -> TransactionService:
+    return TransactionService(repository=mock_repository, logger=mock_logger)
 
 
 @pytest.fixture

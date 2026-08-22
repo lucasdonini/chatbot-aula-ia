@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from app.application.ports.logger import Logger
 from app.domain.model.chat_entry import (
     AssistantMessage,
     ChatError,
@@ -15,7 +16,8 @@ class TestSessionSummaryService:
     def service(self):
         text_generator = MagicMock()
         text_generator.generate = AsyncMock()
-        return SessionSummaryService(text_generator)
+        logger = MagicMock(spec=Logger)
+        return SessionSummaryService(text_generator, logger=logger)
 
     @pytest.mark.asyncio
     async def test_summarize_session(self, service):

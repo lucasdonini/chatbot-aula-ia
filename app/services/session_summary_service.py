@@ -1,11 +1,9 @@
-import logging
 import traceback
 
+from app.application.log_execution_time import log_execution_time
+from app.application.ports.logger import Logger
 from app.application.ports.text_generator import TextGenerator
 from app.domain.model.chat_entry import ChatEntry, ChatMessage
-from app.infrastructure.execution_time_logger import log_execution_time
-
-logger = logging.getLogger(__name__)
 
 _MESSAGES_SUMMARY_PROMPT = """\
 Você é um assistente que resume conversas de assessoria financeira e agenda.
@@ -54,8 +52,9 @@ Retorne apenas o resumo.
 
 
 class SessionSummaryService:
-    def __init__(self, text_generator: TextGenerator) -> None:
+    def __init__(self, text_generator: TextGenerator, logger: Logger) -> None:
         self._text_generator = text_generator
+        self._logger = logger
 
     def _format_conversation(self, entries: list[ChatEntry]) -> str:
         """Formats entries array for summary"""
@@ -70,9 +69,9 @@ class SessionSummaryService:
     @log_execution_time
     async def summarize_session(self, entries: list[ChatEntry]) -> str:
         """Summarizes the session's entries"""
-        logger.debug(
+        self._logger.debug(
             "Summarizing entries",
-            extra={"details": {"entry_count": len(entries)}},
+            details={"entry_count": len(entries)},
         )
 
         conversation = self._format_conversation(entries)
@@ -84,8 +83,8 @@ class SessionSummaryService:
 
     async def summarize_exception(self, exc: Exception) -> str:
         """Summarizes the erro's traceback into a couple of friendly lines."""
-        logger.debug(
-            "Summarizing error", extra={"details": {"exec_name": type(exc).__name__}}
+        self._logger.debug(
+            "Summarizing error", details={"exec_name": type(exc).__name__}
         )
 
         stack_trace = traceback.format_exception(type(exc), exc, exc.__traceback__)
