@@ -2,25 +2,20 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.infrastructure.clock import FixedClock, SystemClock, get_clock, set_clock
+from app.infrastructure.clock import FixedClock, SystemClock
 
-
-@pytest.fixture(autouse=True)
-def restore_clock() -> None:
-    original_clock = get_clock()
-    yield
-    set_clock(original_clock)
+APP_TIMEZONE = "America/Sao_Paulo"
 
 
 def test_system_clock_returns_utc_aware_datetime() -> None:
-    now = SystemClock().now()
+    now = SystemClock(APP_TIMEZONE).now()
 
     assert now.tzinfo is timezone.utc
 
 
 def test_fixed_clock_returns_configured_instant() -> None:
     fixed = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
-    clock = FixedClock(fixed)
+    clock = FixedClock(fixed, APP_TIMEZONE)
     local_now = clock.local_now()
 
     assert clock.now() == fixed
@@ -31,4 +26,4 @@ def test_fixed_clock_returns_configured_instant() -> None:
 
 def test_fixed_clock_rejects_naive_datetime() -> None:
     with pytest.raises(ValueError, match="timezone-aware"):
-        FixedClock(datetime(2026, 8, 12, 15, 0))
+        FixedClock(datetime(2026, 8, 12, 15, 0), APP_TIMEZONE)

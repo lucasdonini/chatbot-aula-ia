@@ -1,13 +1,13 @@
 from beanie import PydanticObjectId
 from beanie.operators import Push, Set
 
+from app.application.ports.clock import Clock
 from app.application.ports.logger import Logger
 from app.domain.model.chat_entry import (
     ChatEntry,
     ChatError,
     ChatMessage,
 )
-from app.infrastructure.clock import get_clock
 from app.infrastructure.mongodb.entities.chat_session import ChatSessionDocument
 from app.infrastructure.mongodb.mappers.chat_session_mapper import ChatSessionMapper
 
@@ -17,12 +17,18 @@ _active_sessions: dict[str, PydanticObjectId] = {}
 
 
 class ChatSessionService:
-    def __init__(self, service: SessionSummaryService, logger: Logger) -> None:
+    def __init__(
+        self,
+        service: SessionSummaryService,
+        logger: Logger,
+        clock: Clock,
+    ) -> None:
         self._service = service
         self._logger = logger
+        self._clock = clock
 
     async def init_session(self, session_id: str) -> None:
-        now = get_clock().now()
+        now = self._clock.now()
         session = ChatSessionDocument(
             session_id=session_id,
             started_at=now,
@@ -47,7 +53,7 @@ class ChatSessionService:
         doc_entry = ChatSessionMapper.model_entry_to_document(entry)
         await ChatSessionDocument.find_one(ChatSessionDocument.id == doc_id).update(
             Push({ChatSessionDocument.entries: doc_entry}),
-            Set({ChatSessionDocument.updated_at: get_clock().now()}),
+            Set({ChatSessionDocument.updated_at: self._clock.now()}),
         )
 
     async def save_message(self, session_id: str, message: ChatMessage) -> None:
@@ -95,7 +101,7 @@ class ChatSessionService:
         await session.update(
             Set(
                 {
-                    ChatSessionDocument.updated_at: get_clock().now(),
+                    ChatSessionDocument.updated_at: self._clock.now(),
                     ChatSessionDocument.summary: summary,
                 }
             )

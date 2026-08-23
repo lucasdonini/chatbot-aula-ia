@@ -5,6 +5,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 
 from .infrastructure.agents import build_agent_graph
+from .infrastructure.clock import SystemClock
 from .infrastructure.llms import fast_llm
 from .infrastructure.logger import (
     bind_session_context,
@@ -35,6 +36,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     mongo_manager = MongoManager(settings=settings)
     await mongo_manager.init_database()
     postgres_manager = PostgresManager(settings.postgres_url.get_secret_value())
+    clock = SystemClock(settings.app_timezone)
 
     text_generator = LLMTextGenerator(fast_llm)
     summary_service = SessionSummaryService(
@@ -44,6 +46,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     session_service = ChatSessionService(
         summary_service,
         logger=create_logger(ChatSessionService.__module__),
+        clock=clock,
     )
 
     session_id = str(uuid.uuid4())
@@ -68,6 +71,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger_factory=create_logger,
         trace_context_factory=bind_trace_context,
         interaction_incrementer=increment_interaction,
+        clock=clock,
         execution_timeout_seconds=settings.agent_execution_timeout_seconds,
     )
 

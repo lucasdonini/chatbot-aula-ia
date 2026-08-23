@@ -3,6 +3,7 @@ from typing import Any, ClassVar
 from langchain_core.messages import SystemMessage
 from langgraph.graph.state import CompiledStateGraph
 
+from app.application.ports.clock import Clock
 from app.application.ports.logger import Logger
 from app.infrastructure.agents._core.prompting.temporal_context import (
     build_temporal_context,
@@ -19,8 +20,14 @@ class FinancialAgentNode(AgentNode):
     _agent: CompiledStateGraph
     name: ClassVar[str] = "financial"
 
-    def __init__(self, agent_factory: AgentFactory, logger: Logger) -> None:
+    def __init__(
+        self,
+        agent_factory: AgentFactory,
+        logger: Logger,
+        clock: Clock,
+    ) -> None:
         self._logger = logger
+        self._clock = clock
         self._agent = agent_factory.create(
             system_prompt=PROMPT,
             response_format=FinancialOutput,
@@ -35,7 +42,7 @@ class FinancialAgentNode(AgentNode):
         request_state: GraphState = {
             **state,
             "messages": [
-                SystemMessage(content=build_temporal_context()),
+                SystemMessage(content=build_temporal_context(self._clock)),
                 *state["messages"],
             ],
         }
