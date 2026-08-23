@@ -1,7 +1,8 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from app.application.ports.logger import Logger
 from app.domain.model.transaction import Category, TransactionType
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
@@ -22,7 +23,7 @@ class TestAddTransactionTool:
     def tool(self):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
-        return AddTransactionTool(service=service)
+        return AddTransactionTool(service=service, logger=MagicMock(spec=Logger))
 
     async def test_adds_and_returns_ok(self, tool):
         t = TransactionInput(

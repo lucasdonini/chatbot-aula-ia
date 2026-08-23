@@ -1,10 +1,9 @@
-import logging
 from typing import Any, ClassVar
 
 from langchain_core.messages import SystemMessage
 from langgraph.graph.state import CompiledStateGraph
 
-from app.infrastructure.execution_time_logger import log_execution_time
+from app.application.ports.logger import Logger
 
 from .._core.contracts.agent_factory import AgentFactory
 from .._core.contracts.agent_node import AgentNode
@@ -12,22 +11,20 @@ from .._core.prompting.temporal_context import build_temporal_context
 from .._core.state import GraphState, GraphStateKeys
 from .orquestrator_prompt import PROMPT
 
-logger = logging.getLogger(__name__)
-
 
 class OrquestratorAgentNode(AgentNode):
     _agent: CompiledStateGraph
     name: ClassVar[str] = "orquestrator"
 
-    def __init__(self, agent_factory: AgentFactory) -> None:
+    def __init__(self, agent_factory: AgentFactory, logger: Logger) -> None:
+        self._logger = logger
         self._agent = agent_factory.create(system_prompt=PROMPT)
 
-    @log_execution_time
     async def __call__(self, state: GraphState) -> dict[GraphStateKeys, Any]:
-        input_text = state["messages"][-1].content[:500]
-        logger.info(
+        input_length = len(state["messages"][-1].content)
+        self._logger.info(
             "Agent called",
-            extra={"details": {"name": self.name, "input": input_text}},
+            details={"name": self.name, "input_length": input_length},
         )
         request_state: GraphState = {
             **state,
@@ -38,10 +35,10 @@ class OrquestratorAgentNode(AgentNode):
         }
         response = await self._agent.ainvoke(request_state)  # type: ignore[arg-type]
         last = (response.get("messages") or [None])[-1]
-        output = last.content[:500] if last and last.content else "(tool call)"
-        logger.info(
+        output_length = len(last.content) if last and last.content else 0
+        self._logger.info(
             "Agent response",
-            extra={"details": {"from": self.name, "output": output}},
+            details={"from": self.name, "output_length": output_length},
         )
         return {
             GraphStateKeys.MESSAGES: response.get("messages") or [],

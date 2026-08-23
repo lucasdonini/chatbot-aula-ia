@@ -6,7 +6,14 @@ from fastapi import FastAPI
 
 from .infrastructure.agents import build_agent_graph
 from .infrastructure.llms import fast_llm
-from .infrastructure.logger import create_logger, set_session_context, setup_logger
+from .infrastructure.logger import (
+    bind_session_context,
+    bind_trace_context,
+    clear_session_interactions,
+    create_logger,
+    increment_interaction,
+    setup_logger,
+)
 from .infrastructure.mongodb.client import MongoManager
 from .infrastructure.postgres.pg_connection import PostgresManager
 from .infrastructure.postgres.repositories.transaction_repository import (
@@ -14,6 +21,7 @@ from .infrastructure.postgres.repositories.transaction_repository import (
 )
 from .infrastructure.settings import settings
 from .infrastructure.text_generator import LLMTextGenerator
+from .services.chat_history_service import ChatHistoryService
 from .services.chat_session_service import ChatSessionService
 from .services.session_summary_service import SessionSummaryService
 from .services.transaction_service import TransactionService
@@ -39,8 +47,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
 
     session_id = str(uuid.uuid4())
-    await session_service.init_session(session_id)
-    set_session_context(session_id)
+    with bind_session_context(session_id):
+        await session_service.init_session(session_id)
 
     transaction_repository = SQLAlchemyTransactionRepository(
         session_factory=postgres_manager.session_factory
@@ -49,10 +57,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         repository=transaction_repository,
         logger=create_logger(TransactionService.__module__),
     )
+    chat_history_service = ChatHistoryService(
+        logger=create_logger(ChatHistoryService.__module__),
+    )
 
     graph = build_agent_graph(
         transaction_service=transaction_service,
+        chat_history_service=chat_history_service,
         text_generator=text_generator,
+        logger_factory=create_logger,
+        trace_context_factory=bind_trace_context,
+        interaction_incrementer=increment_interaction,
         execution_timeout_seconds=settings.agent_execution_timeout_seconds,
     )
 
@@ -65,6 +80,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         yield
     finally:
         try:
-            await session_service.finalize_session(session_id)
+            with bind_session_context(session_id):
+                await session_service.finalize_session(session_id)
         finally:
+            clear_session_interactions(session_id)
             await postgres_manager.dispose()

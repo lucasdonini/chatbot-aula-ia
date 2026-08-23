@@ -1,5 +1,3 @@
-from dataclasses import asdict
-
 from beanie import PydanticObjectId
 from beanie.operators import Push, Set
 
@@ -56,7 +54,10 @@ class ChatSessionService:
         await self._save_entry(session_id, message)
         self._logger.debug(
             "Message saved",
-            details=asdict(message),
+            details={
+                "role": message.role.value,
+                "content_length": len(message.content),
+            },
         )
 
     async def save_error(self, session_id: str, error: Exception) -> None:
@@ -64,7 +65,10 @@ class ChatSessionService:
         summary = await self._service.summarize_exception(error)
         entry = ChatError(exception=name, summary=summary)
         await self._save_entry(session_id, entry)
-        self._logger.debug("Error saved", details=asdict(entry))
+        self._logger.debug(
+            "Error saved",
+            details={"exception_type": entry.exception},
+        )
 
     async def finalize_session(self, session_id: str) -> None:
         """

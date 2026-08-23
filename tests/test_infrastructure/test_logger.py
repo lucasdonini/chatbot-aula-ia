@@ -17,6 +17,7 @@ def restore_logging() -> None:
     original_level = root.level
     original_factory = logging.getLogRecordFactory()
     root.handlers.clear()
+    logger_module._session_interactions.clear()
 
     yield
 
@@ -26,6 +27,7 @@ def restore_logging() -> None:
     root.handlers.extend(original_handlers)
     root.setLevel(original_level)
     logging.setLogRecordFactory(original_factory)
+    logger_module._session_interactions.clear()
 
 
 def _record(name: str = "app.agents.graph") -> logging.LogRecord:
@@ -33,17 +35,25 @@ def _record(name: str = "app.agents.graph") -> logging.LogRecord:
 
 
 def test_context_filter_reads_context_values() -> None:
-    logger_module.set_session_context("session-123")
-    logger_module.set_trace_context("trace-456")
-    logger_module.increment_interaction()
-    record = _record()
+    with (
+        logger_module.bind_session_context("session-123"),
+        logger_module.bind_trace_context("trace-456"),
+    ):
+        logger_module.increment_interaction()
+        record = _record()
 
-    logger_module.ContextFilter().filter(record)
+        logger_module.ContextFilter().filter(record)
 
     assert record.session_id == "session-123"
     assert record.trace_id == "trace-456"
     assert record.interaction == 1
     assert record.agent == "agents.graph"
+
+    restored_record = _record()
+    logger_module.ContextFilter().filter(restored_record)
+    assert restored_record.session_id == ""
+    assert restored_record.trace_id == ""
+    assert restored_record.interaction == 0
 
 
 @pytest.mark.asyncio
@@ -51,12 +61,14 @@ async def test_context_values_are_isolated_between_tasks() -> None:
     logger_module._interaction_counter.set(0)
 
     async def read_context(session_id: str, trace_id: str) -> tuple[str, str, int]:
-        logger_module.set_session_context(session_id)
-        logger_module.set_trace_context(trace_id)
-        logger_module.increment_interaction()
-        record = _record()
-        logger_module.ContextFilter().filter(record)
-        return record.session_id, record.trace_id, record.interaction
+        with (
+            logger_module.bind_session_context(session_id),
+            logger_module.bind_trace_context(trace_id),
+        ):
+            logger_module.increment_interaction()
+            record = _record()
+            logger_module.ContextFilter().filter(record)
+            return record.session_id, record.trace_id, record.interaction
 
     first, second = await asyncio.gather(
         read_context("session-a", "trace-a"),
@@ -65,6 +77,17 @@ async def test_context_values_are_isolated_between_tasks() -> None:
 
     assert first == ("session-a", "trace-a", 1)
     assert second == ("session-b", "trace-b", 1)
+
+
+@pytest.mark.asyncio
+async def test_interactions_are_sequential_for_the_same_session() -> None:
+    async def read_interaction() -> int:
+        with logger_module.bind_session_context("session-a"):
+            return logger_module.increment_interaction()
+
+    first, second = await asyncio.gather(read_interaction(), read_interaction())
+
+    assert sorted((first, second)) == [1, 2]
 
 
 def test_setup_logger_does_not_create_file_when_disabled(tmp_path: Path) -> None:
@@ -87,12 +110,14 @@ def test_setup_logger_writes_structured_file_when_enabled(tmp_path: Path) -> Non
         patch.object(logger_module.settings, "log_to_file", True),
         patch.object(logger_module.settings, "log_file", str(log_file)),
     ):
-        logger_module.set_session_context("session-123")
-        logger_module.set_trace_context("trace-456")
-        logger_module.setup_logger()
-        logging.getLogger("app.agents.graph").info(
-            "Message", extra={"details": {"key": "value"}}
-        )
+        with (
+            logger_module.bind_session_context("session-123"),
+            logger_module.bind_trace_context("trace-456"),
+        ):
+            logger_module.setup_logger()
+            logging.getLogger("app.agents.graph").info(
+                "Message", extra={"details": {"key": "value"}}
+            )
 
     content = log_file.read_text(encoding="utf-8")
     assert "session=session-" in content
@@ -196,5 +221,23 @@ def test_python_logger_adapter_translates_structured_details() -> None:
 
     native_logger.debug.assert_called_once_with(
         "Message",
+        extra={"details": {"key": "value"}},
+    )
+
+
+def test_python_logger_adapter_preserves_captured_exception() -> None:
+    native_logger = MagicMock(spec=logging.Logger)
+    adapter = logger_module.PythonLoggerAdapter(native_logger)
+    exception = RuntimeError("failure")
+
+    adapter.exception(
+        "Message",
+        exception=exception,
+        details={"key": "value"},
+    )
+
+    native_logger.exception.assert_called_once_with(
+        "Message",
+        exc_info=exception,
         extra={"details": {"key": "value"}},
     )

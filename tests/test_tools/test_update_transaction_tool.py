@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -8,6 +8,7 @@ from app.application.models.transaction_update import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )
+from app.application.ports.logger import Logger
 from app.domain.model.transaction import Category, Transaction, TransactionType
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
@@ -26,7 +27,7 @@ class TestUpdateTransactionTool:
     def tool(self):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
-        return UpdateTransactionTool(service=service)
+        return UpdateTransactionTool(service=service, logger=MagicMock(spec=Logger))
 
     async def test_updates_and_returns_ok(self, tool):
         params = UpdateTransactionParams(

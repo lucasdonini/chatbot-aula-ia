@@ -1,14 +1,11 @@
-import logging
 from typing import Any
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from app.application.ports.logger import Logger
 from app.domain.model.chat_session import ChatSessionSummarized
-from app.infrastructure.execution_time_logger import log_execution_time
 from app.services.chat_history_service import ChatHistoryService
-
-logger = logging.getLogger(__name__)
 
 TOOL_NAME = "search_history"
 
@@ -32,6 +29,7 @@ class SearchHistoryTool(BaseTool):
     )
 
     service: ChatHistoryService = Field(exclude=True)
+    logger: Logger = Field(exclude=True)
 
     def _format_history(self, history: list[ChatSessionSummarized]) -> str:
         return "\n\n".join(f"[{h.started_at:%d/%m/%Y}] {h.summary}" for h in history)
@@ -39,11 +37,10 @@ class SearchHistoryTool(BaseTool):
     def _run(self, *args: Any, **kwargs: Any) -> str:
         raise NotImplementedError("This tool is stricktly assyncronal. Use _arun.")
 
-    @log_execution_time
     async def _arun(self, search: str) -> str:
-        logger.debug(
+        self.logger.debug(
             "Tool called",
-            extra={"details": {"tool": self.name, "search": search}},
+            details={"tool": self.name, "search_length": len(search)},
         )
         try:
             history = await self.service.fetch_history(search=search, limit=3)
@@ -54,8 +51,9 @@ class SearchHistoryTool(BaseTool):
             )
 
         except Exception as e:
-            logger.exception(
+            self.logger.exception(
                 "Tool failed",
-                extra={"details": {"tool": self.name}},
+                exception=e,
+                details={"tool": self.name},
             )
             return f"Erro ao buscar as mensagens: {str(e)}"

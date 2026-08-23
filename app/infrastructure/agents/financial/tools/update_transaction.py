@@ -1,11 +1,10 @@
-import logging
-
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
 from app.application.models.transaction_update import (
     UpdateTransactionParams,
 )
+from app.application.ports.logger import Logger
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolResponse,
@@ -13,8 +12,6 @@ from app.infrastructure.agents.financial.schemas.tool_response import (
 )
 from app.infrastructure.agents.financial.schemas.transaction import TransactionOutput
 from app.services.transaction_service import TransactionService
-
-logger = logging.getLogger(__name__)
 
 
 class _UpdateTransactionArgsSchema(BaseModel):
@@ -42,6 +39,7 @@ class UpdateTransactionTool(BaseTool):
     )
 
     service: TransactionService = Field(exclude=True)
+    logger: Logger = Field(exclude=True)
 
     def _run(
         self, params: UpdateTransactionParams
@@ -51,20 +49,27 @@ class UpdateTransactionTool(BaseTool):
     async def _arun(
         self, params: UpdateTransactionParams
     ) -> ToolResponse[_UpdateTransactionResponse]:
-        logger.debug(
+        self.logger.debug(
             "Tool called",
-            extra={"details": {"tool": self.name, "params": params.model_dump()}},
+            details={
+                "tool": self.name,
+                "updated_fields": sorted(
+                    key
+                    for key, value in params.model_dump(exclude={"query"}).items()
+                    if value is not None
+                ),
+                "lookup_fields": sorted(
+                    key
+                    for key, value in params.query.model_dump().items()
+                    if value is not None
+                ),
+            },
         )
         try:
             if updated := await self.service.update_transaction(params):
-                logger.debug(
+                self.logger.debug(
                     "Tool succeeded",
-                    extra={
-                        "details": {
-                            "tool": self.name,
-                            "updated": updated,
-                        }
-                    },
+                    details={"tool": self.name, "updated": True},
                 )
                 return ToolSuccess(
                     data=_UpdateTransactionResponse(
@@ -72,14 +77,15 @@ class UpdateTransactionTool(BaseTool):
                     )
                 )
             else:
-                logger.debug(
+                self.logger.debug(
                     "Tool succeeded",
-                    extra={"details": {"tool": self.name, "updated": None}},
+                    details={"tool": self.name, "updated": None},
                 )
                 return ToolSuccess(data=_UpdateTransactionResponse())
         except Exception as e:
-            logger.exception(
+            self.logger.exception(
                 "Tool failed",
-                extra={"details": {"tool": self.name}},
+                exception=e,
+                details={"tool": self.name},
             )
             return ToolFailure.exception(e)

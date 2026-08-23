@@ -1,6 +1,5 @@
 import traceback
 
-from app.application.log_execution_time import log_execution_time
 from app.application.ports.logger import Logger
 from app.application.ports.text_generator import TextGenerator
 from app.domain.model.chat_entry import ChatEntry, ChatMessage
@@ -66,7 +65,6 @@ class SessionSummaryService:
                 lines.append(f"ERROR: {entry.exception} -> {entry.summary}")
         return "\n".join(lines)
 
-    @log_execution_time
     async def summarize_session(self, entries: list[ChatEntry]) -> str:
         """Summarizes the session's entries"""
         self._logger.debug(

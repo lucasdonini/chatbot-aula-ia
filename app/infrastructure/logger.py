@@ -2,11 +2,12 @@ import json
 import logging
 import re
 import sys
-from collections.abc import Mapping
+from contextlib import contextmanager
 from contextvars import ContextVar
 from copy import copy
 from pathlib import Path
-from typing import Any, Optional, cast
+from threading import Lock
+from typing import Any, Generator, Mapping, cast
 
 from uvicorn.logging import DefaultFormatter
 
@@ -18,6 +19,8 @@ from .settings import settings
 _interaction_counter: ContextVar[int] = ContextVar("interaction_counter", default=0)
 _session_id: ContextVar[str] = ContextVar("session_id", default="")
 _trace_id: ContextVar[str] = ContextVar("trace_id", default="")
+_session_interactions: dict[str, int] = {}
+_session_interactions_lock = Lock()
 
 
 class PythonLoggerAdapter:
@@ -66,25 +69,55 @@ class PythonLoggerAdapter:
         self,
         message: str,
         *,
+        exception: BaseException,
         details: Mapping[str, object] | None = None,
     ) -> None:
-        self._logger.exception(message, extra=self._extra(details))
+        self._logger.exception(
+            message,
+            exc_info=exception,
+            extra=self._extra(details),
+        )
 
 
 def create_logger(name: str) -> Logger:
     return PythonLoggerAdapter(logging.getLogger(name))
 
 
-def set_session_context(session_id: str) -> None:
-    _session_id.set(session_id)
+@contextmanager
+def bind_session_context(session_id: str) -> Generator[None, None, None]:
+    session_token = _session_id.set(session_id)
+    interaction_token = _interaction_counter.set(0)
+    try:
+        yield
+    finally:
+        _interaction_counter.reset(interaction_token)
+        _session_id.reset(session_token)
 
 
-def set_trace_context(trace_id: str) -> None:
-    _trace_id.set(trace_id)
+@contextmanager
+def bind_trace_context(trace_id: str) -> Generator[None, None, None]:
+    token = _trace_id.set(trace_id)
+    try:
+        yield
+    finally:
+        _trace_id.reset(token)
 
 
-def increment_interaction() -> None:
-    _interaction_counter.set(_interaction_counter.get() + 1)
+def increment_interaction() -> int:
+    session_id = _session_id.get()
+    if not session_id:
+        interaction = _interaction_counter.get() + 1
+    else:
+        with _session_interactions_lock:
+            interaction = _session_interactions.get(session_id, 0) + 1
+            _session_interactions[session_id] = interaction
+    _interaction_counter.set(interaction)
+    return interaction
+
+
+def clear_session_interactions(session_id: str) -> None:
+    with _session_interactions_lock:
+        _session_interactions.pop(session_id, None)
 
 
 _TOP_LEVEL_MODULES = "|".join(d.name for d in SRC.iterdir() if d.is_dir())
@@ -117,11 +150,11 @@ class ContextFilter(logging.Filter):
 
 
 class StructuredLogRecord(logging.LogRecord):
-    agent: Optional[str] = None
+    agent: str | None = None
     session_id: str = "-"
     trace_id: str = "-"
     interaction: int = 0
-    details: Optional[dict[str, Any]] = None
+    details: dict[str, Any] | None = None
 
 
 class StructuredFormatter(logging.Formatter):
@@ -229,7 +262,7 @@ def setup_logger() -> None:
     console_handler.addFilter(ContextFilter())
     root.addHandler(console_handler)
 
-    root.info("Session initialized")
+    root.info("Logging configured")
 
     silenced_loggers = [
         "groq",

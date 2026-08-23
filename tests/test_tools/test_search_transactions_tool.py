@@ -1,10 +1,11 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
+from app.application.ports.logger import Logger
 from app.domain.model.transaction import Category, Transaction, TransactionType
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
@@ -24,7 +25,7 @@ class TestSearchTransactionsTool:
     def tool(self):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
-        return SearchTransactionsTool(service=service)
+        return SearchTransactionsTool(service=service, logger=MagicMock(spec=Logger))
 
     async def test_returns_transactions(self, tool):
         mock_result = [

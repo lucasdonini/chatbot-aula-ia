@@ -1,24 +1,27 @@
 import asyncio
-import logging
+import time
 import uuid
 from collections.abc import Sequence
-from typing import cast
+from typing import Any, cast
 
 from langchain_core.messages import AIMessage as LangGraphAIMessage
 from langchain_core.messages import HumanMessage as LangGraphHumanMessage
+from langchain_core.runnables import RunnableLambda
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from app.application.ports.logger import (
+    InteractionIncrementer,
+    Logger,
+    TraceContextFactory,
+)
 from app.domain.model.chat_entry import AssistantMessage, HumanMessage
-from app.infrastructure.logger import increment_interaction, set_trace_context
 
 from ._core.contracts.agent_node import AgentNode
 from ._core.specialist import SpecialistRegistration
 from ._core.state import GraphState, GraphStateKeys
-
-logger = logging.getLogger(__name__)
 
 
 class AgentGraphImpl:
@@ -31,6 +34,9 @@ class AgentGraphImpl:
         orquestrator: AgentNode,
         output_guardrail: AgentNode,
         execution_timeout_seconds: float,
+        logger: Logger,
+        trace_context_factory: TraceContextFactory,
+        interaction_incrementer: InteractionIncrementer,
     ) -> None:
         self._input_guardrail = input_guardrail
         self._router = router
@@ -38,6 +44,9 @@ class AgentGraphImpl:
         self._orquestrator = orquestrator
         self._output_guardrail = output_guardrail
         self._execution_timeout_seconds = execution_timeout_seconds
+        self._logger = logger
+        self._trace_context_factory = trace_context_factory
+        self._interaction_incrementer = interaction_incrementer
         self._specialists_by_name = {
             specialist.name: specialist for specialist in self._specialists
         }
@@ -66,12 +75,45 @@ class AgentGraphImpl:
             raise ValueError("Agent graph requires at least one specialist")
 
     def _add_nodes(self) -> None:
-        self._graph.add_node(self._input_guardrail.name, self._input_guardrail)
-        self._graph.add_node(self._router.name, self._router)
+        self._graph.add_node(
+            self._input_guardrail.name,
+            self._timed_node(self._input_guardrail),
+        )
+        self._graph.add_node(self._router.name, self._timed_node(self._router))
         for specialist in self._specialists:
-            self._graph.add_node(specialist.name, specialist.node)
-        self._graph.add_node(self._orquestrator.name, self._orquestrator)
-        self._graph.add_node(self._output_guardrail.name, self._output_guardrail)
+            self._graph.add_node(
+                specialist.name,
+                self._timed_node(specialist.node),
+            )
+        self._graph.add_node(
+            self._orquestrator.name,
+            self._timed_node(self._orquestrator),
+        )
+        self._graph.add_node(
+            self._output_guardrail.name,
+            self._timed_node(self._output_guardrail),
+        )
+
+    def _timed_node(
+        self,
+        node: AgentNode,
+    ) -> RunnableLambda[GraphState, dict[GraphStateKeys, Any]]:
+        async def invoke(state: GraphState) -> dict[GraphStateKeys, Any]:
+            start_time = time.perf_counter()
+            try:
+                return await node(state)
+            finally:
+                elapsed_ms = round((time.perf_counter() - start_time) * 1000)
+                self._logger.debug(
+                    "Function finished",
+                    details={
+                        "function": node.name,
+                        "elapsed_ms": elapsed_ms,
+                        "kind": "Async",
+                    },
+                )
+
+        return RunnableLambda(invoke)
 
     def _add_edges(self) -> None:
         self._graph.add_edge(START, self._input_guardrail.name)
@@ -111,55 +153,50 @@ class AgentGraphImpl:
         user_input: HumanMessage,
         session_id: str,
     ) -> AssistantMessage:
-        increment_interaction()
+        self._interaction_incrementer()
         trace_id = str(uuid.uuid4())
-        set_trace_context(trace_id)
+        with self._trace_context_factory(trace_id):
+            message = LangGraphHumanMessage(id=trace_id, content=user_input.content)
+            self._logger.info(
+                "User input received",
+                details={"input_length": len(user_input.content)},
+            )
 
-        message = LangGraphHumanMessage(id=trace_id, content=user_input.content)
-        logger.info(
-            "User input received",
-            extra={"details": {"input": user_input.content}},
-        )
+            initial_state: GraphState = {
+                "messages": [message],
+                "called_agents": [],
+                "route": "",
+                "pii_map": {},
+            }
 
-        initial_state: GraphState = {
-            "messages": [message],
-            "called_agents": [],
-            "route": "",
-            "pii_map": {},
-        }
-
-        try:
-            async with asyncio.timeout(self._execution_timeout_seconds):
-                final_state_raw = await self._agent_flux.ainvoke(
-                    initial_state,
-                    config={"configurable": {"thread_id": session_id}},
+            try:
+                async with asyncio.timeout(self._execution_timeout_seconds):
+                    final_state_raw = await self._agent_flux.ainvoke(
+                        initial_state,
+                        config={"configurable": {"thread_id": session_id}},
+                    )
+            except TimeoutError:
+                self._logger.error(
+                    "Agent chain timed out",
+                    details={"timeout_seconds": self._execution_timeout_seconds},
                 )
-        except TimeoutError:
-            logger.error(
-                "Agent chain timed out",
-                extra={
-                    "details": {
-                        "timeout_seconds": self._execution_timeout_seconds,
-                    }
-                },
-            )
-            raise
-        final_state = cast(GraphState, final_state_raw)
+                raise
+            final_state = cast(GraphState, final_state_raw)
 
-        logger.info(
-            "Agent chain completed",
-            extra={"details": {"chain": " → ".join(final_state["called_agents"])}},
-        )
+            self._logger.info(
+                "Agent chain completed",
+                details={"chain": " → ".join(final_state["called_agents"])},
+            )
 
-        last = final_state["messages"][-1]
-        if not isinstance(last, LangGraphAIMessage):
-            raise ValueError(
-                "Expected last message to be AIMessage, "
-                f"received {type(last).__name__!r}"
-            )
-        if not isinstance(last.content, str):
-            raise ValueError(
-                "Expected last message content to be str, "
-                f"received {type(last.content).__name__!r}"
-            )
-        return AssistantMessage(content=last.content)
+            last = final_state["messages"][-1]
+            if not isinstance(last, LangGraphAIMessage):
+                raise ValueError(
+                    "Expected last message to be AIMessage, "
+                    f"received {type(last).__name__!r}"
+                )
+            if not isinstance(last.content, str):
+                raise ValueError(
+                    "Expected last message content to be str, "
+                    f"received {type(last.content).__name__!r}"
+                )
+            return AssistantMessage(content=last.content)

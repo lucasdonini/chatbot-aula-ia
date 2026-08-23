@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from app.application.ports.logger import Logger
 from app.infrastructure.agents.guardrails.input_guardrail import InputGuardrailNode
 
 
@@ -14,6 +15,7 @@ def _build_node(*, response: str = "", error: Exception | None = None):
     node = InputGuardrailNode(
         text_generator=text_generator,
         approved_route="router",
+        logger=MagicMock(spec=Logger),
     )
     return node, text_generator
 

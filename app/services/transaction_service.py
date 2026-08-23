@@ -1,8 +1,5 @@
-from dataclasses import asdict
 from datetime import date
-from typing import List, Optional
 
-from app.application.log_execution_time import log_execution_time
 from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
@@ -19,12 +16,10 @@ class TransactionService:
         self._repository = repository
         self._logger = logger
 
-    @log_execution_time
     async def calculate_total_balance(self) -> float:
         self._logger.debug("Calculating total balance")
         return await self._repository.get_balance()
 
-    @log_execution_time
     async def calculate_daily_balance(self, day: date) -> float:
         self._logger.debug(
             "Calculating daily balance",
@@ -32,30 +27,42 @@ class TransactionService:
         )
         return await self._repository.get_balance(day)
 
-    @log_execution_time
     async def search_transactions(
         self, params: TransactionQueryParams
-    ) -> List[Transaction]:
+    ) -> list[Transaction]:
         self._logger.debug(
             "Searching transactions",
-            details={"params": params.model_dump()},
+            details={
+                "filters": sorted(
+                    key
+                    for key, value in params.model_dump().items()
+                    if value is not None and key != "source_text"
+                )
+            },
         )
         return await self._repository.find(params)
 
-    @log_execution_time
     async def add_transaction(self, transaction: Transaction) -> Transaction:
         self._logger.debug(
             "Adding transaction",
-            details={"transaction": asdict(transaction)},
+            details={
+                "category": transaction.category.value,
+                "transaction_type": transaction.transaction_type.value,
+            },
         )
         return await self._repository.add_transaction(transaction)
 
-    @log_execution_time
     async def update_transaction(
         self, params: UpdateTransactionParams
-    ) -> Optional[Transaction]:
+    ) -> Transaction | None:
         self._logger.debug(
             "Updating transaction",
-            details={"params": params.model_dump()},
+            details={
+                "updated_fields": sorted(
+                    key
+                    for key, value in params.model_dump(exclude={"query"}).items()
+                    if value is not None
+                )
+            },
         )
         return await self._repository.update_transaction(params)

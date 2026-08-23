@@ -1,11 +1,10 @@
-import logging
-
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
 from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
+from app.application.ports.logger import Logger
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolResponse,
@@ -13,8 +12,6 @@ from app.infrastructure.agents.financial.schemas.tool_response import (
 )
 from app.infrastructure.agents.financial.schemas.transaction import TransactionOutput
 from app.services.transaction_service import TransactionService
-
-logger = logging.getLogger(__name__)
 
 
 class _SearchTransactionsArgsSchema(BaseModel):
@@ -46,6 +43,7 @@ class SearchTransactionsTool(BaseTool):
     )
 
     service: TransactionService = Field(exclude=True)
+    logger: Logger = Field(exclude=True)
 
     def _run(
         self, params: TransactionQueryParams
@@ -55,15 +53,22 @@ class SearchTransactionsTool(BaseTool):
     async def _arun(
         self, params: TransactionQueryParams
     ) -> ToolResponse[_SearchTransactionsResponse]:
-        logger.debug(
+        self.logger.debug(
             "Tool called",
-            extra={"details": {"tool": self.name, "params": params.model_dump()}},
+            details={
+                "tool": self.name,
+                "filters": sorted(
+                    key
+                    for key, value in params.model_dump().items()
+                    if value is not None and key != "source_text"
+                ),
+            },
         )
         try:
             result = await self.service.search_transactions(params)
-            logger.debug(
+            self.logger.debug(
                 "Tool succeeded",
-                extra={"details": {"tool": self.name, "count": len(result)}},
+                details={"tool": self.name, "count": len(result)},
             )
             return ToolSuccess(
                 data=_SearchTransactionsResponse(
@@ -73,8 +78,9 @@ class SearchTransactionsTool(BaseTool):
                 )
             )
         except Exception as e:
-            logger.exception(
+            self.logger.exception(
                 "Tool failed",
-                extra={"details": {"tool": self.name}},
+                exception=e,
+                details={"tool": self.name},
             )
             return ToolFailure.exception(e)

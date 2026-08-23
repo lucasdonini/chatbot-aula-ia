@@ -1,13 +1,12 @@
 import copy
 import json
-import logging
 from collections.abc import Collection, Sequence
 from typing import Any, ClassVar, cast
 
 from langchain_core.messages import AIMessage, AnyMessage, SystemMessage, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 
-from app.infrastructure.execution_time_logger import log_execution_time
+from app.application.ports.logger import Logger
 
 from .._core.contracts.agent_factory import AgentFactory
 from .._core.contracts.agent_node import AgentNode
@@ -15,8 +14,6 @@ from .._core.prompting.temporal_context import build_temporal_context
 from .._core.specialist import SpecialistRegistration
 from .._core.state import GraphState, GraphStateKeys
 from .router_prompt import build_router_prompt
-
-logger = logging.getLogger(__name__)
 
 SPECIALIST_JSON_KEYS = {"dominio"}
 
@@ -87,20 +84,21 @@ class RouterAgentNode(AgentNode):
         self,
         *,
         agent_factory: AgentFactory,
+        logger: Logger,
         specialists: Sequence[SpecialistRegistration],
         allowed_tool_names: Collection[str],
     ) -> None:
+        self._logger = logger
         self._allowed_tool_names = frozenset(allowed_tool_names)
         self._agent = agent_factory.create(
             system_prompt=build_router_prompt(specialists)
         )
 
-    @log_execution_time
     async def __call__(self, state: GraphState) -> dict[GraphStateKeys, Any]:
-        input_text = state["messages"][-1].content[:500]
-        logger.info(
+        input_length = len(state["messages"][-1].content)
+        self._logger.info(
             "Agent called",
-            extra={"details": {"name": self.name, "input": input_text}},
+            details={"name": self.name, "input_length": input_length},
         )
         filtered_state: GraphState = {
             **state,
@@ -113,16 +111,12 @@ class RouterAgentNode(AgentNode):
             ],
         }
         response = await self._agent.ainvoke(filtered_state)  # type: ignore[arg-type]
-        output = (
-            response["messages"][-1].content[:500] if response.get("messages") else ""
-        )
-        logger.info(
+        output = response["messages"][-1].content if response.get("messages") else ""
+        self._logger.info(
             "Agent response",
-            extra={
-                "details": {
-                    "from": self.name,
-                    "output": output or "(tool call)",
-                }
+            details={
+                "from": self.name,
+                "output_length": len(output),
             },
         )
         return {
