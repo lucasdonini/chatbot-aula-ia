@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.application.exceptions import AmbiguousTransactionError
 from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
@@ -174,6 +175,7 @@ class TestUpdateTransaction:
         mock_session.scalar.return_value = mock_orm
         mock_session.commit.return_value = None
         mock_session.refresh.return_value = None
+        mock_session.scalars.return_value.all.return_value = [mock_orm]
 
         result = await repository.update_transaction(params)
 
@@ -181,25 +183,6 @@ class TestUpdateTransaction:
         assert isinstance(result, Transaction)
         mock_session.commit.assert_called_once()
         mock_session.refresh.assert_called_once()
-
-    async def test_update_nothing_to_update(self, repository, mock_session):
-        params = UpdateTransactionParams(
-            query=UpdateTransactionQuery(
-                match_text="teste", date_local=date(2026, 1, 1)
-            ),
-        )
-
-        result = await repository.update_transaction(params)
-
-        assert result is None
-        mock_session.scalar.assert_not_called()
-        mock_session.commit.assert_not_called()
-
-    async def test_update_no_reference_raises(self, repository, mock_session):
-        params = UpdateTransactionParams(query=UpdateTransactionQuery(), amount=100.0)
-
-        with pytest.raises(ValueError, match="reference"):
-            await repository.update_transaction(params)
 
     async def test_update_by_match_text(self, repository, mock_session):
         params = UpdateTransactionParams(
@@ -222,6 +205,7 @@ class TestUpdateTransaction:
         mock_session.scalar.return_value = mock_orm
         mock_session.commit.return_value = None
         mock_session.refresh.return_value = None
+        mock_session.scalars.return_value.all.return_value = [mock_orm]
 
         result = await repository.update_transaction(params)
 
@@ -234,9 +218,23 @@ class TestUpdateTransaction:
             query=UpdateTransactionQuery(id=uuid4()),
             amount=200.0,
         )
-        mock_session.scalar.return_value = None
+        mock_session.scalars.return_value.all.return_value = []
 
         result = await repository.update_transaction(params)
 
         assert result is None
+        mock_session.commit.assert_not_called()
+
+    async def test_update_ambiguous_match_raises(self, repository, mock_session):
+        params = UpdateTransactionParams(
+            query=UpdateTransactionQuery(
+                match_text="almoço",
+                date_local=date(2026, 6, 1),
+            ),
+            amount=200.0,
+        )
+        mock_session.scalars.return_value.all.return_value = [MagicMock(), MagicMock()]
+
+        with pytest.raises(AmbiguousTransactionError):
+            await repository.update_transaction(params)
         mock_session.commit.assert_not_called()

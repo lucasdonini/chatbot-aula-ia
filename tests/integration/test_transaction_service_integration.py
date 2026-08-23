@@ -1,7 +1,12 @@
 from datetime import date
 
 import pytest
+from pydantic import ValidationError
 
+from app.application.exceptions import (
+    NoTransactionChangesError,
+    TransactionNotFoundError,
+)
 from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
@@ -110,15 +115,18 @@ class TestUpdateTransaction:
                 match_text="inexistente",
                 date_local=date(2026, 6, 1),
             ),
-        )
-        assert params.has_update is False
-        result = await transaction_service.update_transaction(params)
-        assert result is None
-
-    async def test_update_no_reference(self, transaction_service):
-        params = UpdateTransactionParams(
-            query=UpdateTransactionQuery(),
             amount=100.00,
         )
-        with pytest.raises(ValueError):
+        with pytest.raises(TransactionNotFoundError):
             await transaction_service.update_transaction(params)
+
+    async def test_update_without_changes(self, transaction_service, seed_transactions):
+        params = UpdateTransactionParams(
+            query=UpdateTransactionQuery(id=seed_transactions[0].id),
+        )
+        with pytest.raises(NoTransactionChangesError):
+            await transaction_service.update_transaction(params)
+
+    async def test_update_no_reference(self, transaction_service):
+        with pytest.raises(ValidationError):
+            UpdateTransactionQuery()

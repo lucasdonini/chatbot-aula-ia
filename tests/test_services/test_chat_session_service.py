@@ -113,6 +113,22 @@ class TestChatSessionService:
             summary_service.summarize_exception.assert_called_once_with(exc)
 
     @pytest.mark.asyncio
+    async def test_save_error_logs_secondary_failure_without_raising(
+        self, service, summary_service
+    ):
+        original_error = ValueError("original")
+        persistence_error = RuntimeError("summary unavailable")
+        summary_service.summarize_exception = AsyncMock(side_effect=persistence_error)
+
+        await service.save_error("session-123", original_error)
+
+        service._logger.exception.assert_called_once_with(
+            "Failed to save chat error",
+            exception=persistence_error,
+            details={"original_exception_type": "ValueError"},
+        )
+
+    @pytest.mark.asyncio
     async def test_finalize_session_with_summary(self, service, summary_service):
         summary_service.summarize_session = AsyncMock(return_value="Resumo da sessão")
 

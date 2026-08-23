@@ -2,6 +2,10 @@ from datetime import date
 
 import pytest
 
+from app.application.exceptions import (
+    NoTransactionChangesError,
+    TransactionNotFoundError,
+)
 from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
@@ -132,11 +136,17 @@ class TestUpdateTransaction:
     async def test_update_nothing(
         self, service, mock_repository, sample_update_params_empty
     ):
+        with pytest.raises(NoTransactionChangesError):
+            await service.update_transaction(sample_update_params_empty)
+        mock_repository.update_transaction.assert_not_called()
+
+    async def test_update_not_found_raises(
+        self, service, mock_repository, sample_update_params_by_id
+    ):
         mock_repository.update_transaction.return_value = None
 
-        result = await service.update_transaction(sample_update_params_empty)
-
-        assert result is None
+        with pytest.raises(TransactionNotFoundError):
+            await service.update_transaction(sample_update_params_by_id)
 
     async def test_update_raises(
         self, service, mock_repository, sample_update_params_by_id

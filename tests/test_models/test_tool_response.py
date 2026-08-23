@@ -1,6 +1,7 @@
 import pytest
 from pydantic import BaseModel
 
+from app.application.exceptions import TransactionNotFoundError
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolSuccess,
@@ -52,8 +53,14 @@ class TestToolFailure:
         exc = ValueError("invalid value")
         response = ToolFailure.exception(exc)
         assert response.status == "error"
-        assert response.error == "Exception raised"
-        assert response.details["exception"] == "invalid value"
+        assert response.code == "unexpected_error"
+        assert response.details == {}
+        assert "invalid value" not in response.error
+
+    def test_application_error_classmethod(self):
+        response = ToolFailure.application_error(TransactionNotFoundError())
+        assert response.code == "transaction_not_found"
+        assert response.error == TransactionNotFoundError.public_message
 
     def test_exception_with_non_string_details(self):
         response = ToolFailure(error="err", details={"count": 3, "active": True})

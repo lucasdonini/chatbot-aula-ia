@@ -1,5 +1,10 @@
 from datetime import date
 
+from app.application.exceptions import (
+    MissingTransactionReferenceError,
+    NoTransactionChangesError,
+    TransactionNotFoundError,
+)
 from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
@@ -52,9 +57,7 @@ class TransactionService:
         )
         return await self._repository.add_transaction(transaction)
 
-    async def update_transaction(
-        self, params: UpdateTransactionParams
-    ) -> Transaction | None:
+    async def update_transaction(self, params: UpdateTransactionParams) -> Transaction:
         self._logger.debug(
             "Updating transaction",
             details={
@@ -65,4 +68,16 @@ class TransactionService:
                 )
             },
         )
-        return await self._repository.update_transaction(params)
+        query = params.query
+        has_reference = query.id is not None or (
+            query.match_text is not None and query.date_local is not None
+        )
+        if not has_reference:
+            raise MissingTransactionReferenceError
+        if not params.has_update:
+            raise NoTransactionChangesError
+
+        transaction = await self._repository.update_transaction(params)
+        if transaction is None:
+            raise TransactionNotFoundError
+        return transaction

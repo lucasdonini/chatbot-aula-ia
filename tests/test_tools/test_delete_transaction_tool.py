@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.application.exceptions import TransactionNotFoundError
 from app.application.models.transaction_update import (
     UpdateTransactionQuery,
 )
@@ -48,12 +49,14 @@ class TestDeleteTransactionTool:
             match_text="inexistente",
             date_local=date(2026, 1, 1),
         )
-        tool.service.update_transaction = AsyncMock(return_value=None)
+        tool.service.update_transaction = AsyncMock(
+            side_effect=TransactionNotFoundError
+        )
 
         result = await tool._arun(query)
 
-        assert isinstance(result, ToolSuccess)
-        assert result.data.deleted is False
+        assert isinstance(result, ToolFailure)
+        assert result.code == "transaction_not_found"
 
     async def test_handles_exception(self, tool):
         tool.service.update_transaction = AsyncMock(side_effect=Exception("DB error"))
@@ -62,4 +65,5 @@ class TestDeleteTransactionTool:
         result = await tool._arun(query)
 
         assert isinstance(result, ToolFailure)
-        assert "DB error" in result.details["exception"]
+        assert result.code == "unexpected_error"
+        assert result.details == {}

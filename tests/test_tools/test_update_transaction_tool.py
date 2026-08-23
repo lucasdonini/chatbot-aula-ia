@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.application.exceptions import NoTransactionChangesError
 from app.application.models.transaction_update import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
@@ -55,12 +56,14 @@ class TestUpdateTransactionTool:
                 match_text="teste", date_local=date(2026, 1, 1)
             ),
         )
-        tool.service.update_transaction = AsyncMock(return_value=None)
+        tool.service.update_transaction = AsyncMock(
+            side_effect=NoTransactionChangesError
+        )
 
         result = await tool._arun(params)
 
-        assert isinstance(result, ToolSuccess)
-        assert result.data.updated is None
+        assert isinstance(result, ToolFailure)
+        assert result.code == "no_transaction_changes"
 
     async def test_handles_exception(self, tool):
         tool.service.update_transaction = AsyncMock(side_effect=Exception("fail"))
@@ -72,3 +75,5 @@ class TestUpdateTransactionTool:
         result = await tool._arun(params)
 
         assert isinstance(result, ToolFailure)
+        assert result.code == "unexpected_error"
+        assert result.details == {}
