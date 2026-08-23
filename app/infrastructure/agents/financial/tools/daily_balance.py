@@ -1,17 +1,15 @@
-import logging
 from datetime import date
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from app.application.ports.logger import Logger
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolResponse,
     ToolSuccess,
 )
 from app.services.transaction_service import TransactionService
-
-logger = logging.getLogger(__name__)
 
 
 class _DailyBalanceArgsSchema(BaseModel):
@@ -45,26 +43,28 @@ class DailyBalanceTool(BaseTool):
     )
 
     service: TransactionService = Field(exclude=True)
+    logger: Logger = Field(exclude=True)
 
     def _run(self, target_date: date) -> ToolResponse[_DailyBalanceResponse]:
         raise NotImplementedError("This tool only supports asynchronous execution")
 
     async def _arun(self, target_date: date) -> ToolResponse[_DailyBalanceResponse]:
-        logger.debug(
+        self.logger.debug(
             "Tool called",
-            extra={"details": {"tool": self.name, "target_date": str(target_date)}},
+            details={"tool": self.name, "target_date": str(target_date)},
         )
         try:
             balance = await self.service.calculate_daily_balance(target_date)
-            logger.debug(
+            self.logger.debug(
                 "Tool succeeded",
-                extra={"details": {"tool": self.name, "balance": balance}},
+                details={"tool": self.name},
             )
             response = _DailyBalanceResponse(balance=balance, date=target_date)
             return ToolSuccess(data=response)
         except Exception as e:
-            logger.exception(
+            self.logger.exception(
                 "Tool failed",
-                extra={"details": {"tool": self.name}},
+                exception=e,
+                details={"tool": self.name},
             )
             return ToolFailure.exception(e)

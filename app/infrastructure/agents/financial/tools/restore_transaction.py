@@ -1,5 +1,3 @@
-import logging
-
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
@@ -7,14 +5,13 @@ from app.application.models.transaction_update import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )
+from app.application.ports.logger import Logger
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolResponse,
     ToolSuccess,
 )
 from app.services.transaction_service import TransactionService
-
-logger = logging.getLogger(__name__)
 
 
 class _RestoreTransactionArgsSchema(BaseModel):
@@ -42,6 +39,7 @@ class RestoreTransactionTool(BaseTool):
     )
 
     service: TransactionService = Field(exclude=True)
+    logger: Logger = Field(exclude=True)
 
     def _run(
         self, query: UpdateTransactionQuery
@@ -51,29 +49,37 @@ class RestoreTransactionTool(BaseTool):
     async def _arun(
         self, query: UpdateTransactionQuery
     ) -> ToolResponse[_RestoreTransactionResponse]:
-        logger.debug(
+        self.logger.debug(
             "Tool called",
-            extra={"details": {"tool": self.name, "query": query.model_dump()}},
+            details={
+                "tool": self.name,
+                "lookup_fields": sorted(
+                    key
+                    for key, value in query.model_dump().items()
+                    if value is not None
+                ),
+            },
         )
         params = UpdateTransactionParams(query=query, is_canceled=False)
         response: _RestoreTransactionResponse
         try:
             if await self.service.update_transaction(params):
-                logger.debug(
+                self.logger.debug(
                     "Tool succeeded",
-                    extra={"details": {"tool": self.name, "restored": True}},
+                    details={"tool": self.name, "restored": True},
                 )
                 response = _RestoreTransactionResponse(restored=True)
             else:
-                logger.debug(
+                self.logger.debug(
                     "Tool succeeded",
-                    extra={"details": {"tool": self.name, "restored": False}},
+                    details={"tool": self.name, "restored": False},
                 )
                 response = _RestoreTransactionResponse(restored=False)
             return ToolSuccess(data=response)
         except Exception as e:
-            logger.exception(
+            self.logger.exception(
                 "Tool failed",
-                extra={"details": {"tool": self.name}},
+                exception=e,
+                details={"tool": self.name},
             )
             return ToolFailure.exception(e)

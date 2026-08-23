@@ -1,7 +1,8 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from app.application.ports.logger import Logger
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolSuccess,
@@ -17,7 +18,7 @@ class TestTotalBalanceTool:
     def tool(self):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
-        return TotalBalanceTool(service=service)
+        return TotalBalanceTool(service=service, logger=MagicMock(spec=Logger))
 
     async def test_returns_balance(self, tool):
         tool.service.calculate_total_balance = AsyncMock(return_value=5000.0)

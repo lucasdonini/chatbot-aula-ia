@@ -1,6 +1,4 @@
-import logging
-from collections.abc import Iterator
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, Iterator
 
 from langchain.agents.middleware import (
     AgentMiddleware,
@@ -9,7 +7,7 @@ from langchain.agents.middleware import (
 )
 from langchain.chat_models import BaseChatModel
 
-logger = logging.getLogger(__name__)
+from app.application.ports.logger import Logger
 
 
 def _iter_exception_chain(exc: BaseException) -> Iterator[BaseException]:
@@ -31,8 +29,9 @@ def is_rate_limit_error(exc: Exception) -> bool:
 
 
 class FallbackOn429Middleware(AgentMiddleware):
-    def __init__(self, fallback_llm: BaseChatModel) -> None:
+    def __init__(self, fallback_llm: BaseChatModel, logger: Logger) -> None:
         self._fallback_llm = fallback_llm
+        self._logger = logger
 
     async def awrap_model_call(
         self,
@@ -46,14 +45,12 @@ class FallbackOn429Middleware(AgentMiddleware):
             if not is_rate_limit_error(e):
                 raise
 
-            logger.info(
+            self._logger.info(
                 "Primary LLM rate limited; activating fallback",
-                extra={
-                    "details": {
-                        "status_code": 429,
-                        "primary_model": type(request.model).__name__,
-                        "fallback_model": type(self._fallback_llm).__name__,
-                    }
+                details={
+                    "status_code": 429,
+                    "primary_model": type(request.model).__name__,
+                    "fallback_model": type(self._fallback_llm).__name__,
                 },
             )
             fallback_request = request.override(model=self._fallback_llm)

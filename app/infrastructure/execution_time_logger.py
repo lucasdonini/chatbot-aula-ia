@@ -2,14 +2,11 @@ import inspect
 import time
 from functools import wraps
 from logging import Logger, getLogger
-from typing import Callable, Optional, ParamSpec, TypeVar
-
-P = ParamSpec("P")
-R = TypeVar("R")
+from typing import Callable
 
 
-def log_execution_time(
-    function: Callable[P, R], logger: Optional[Logger] = None
+def log_execution_time[**P, R](
+    function: Callable[P, R], logger: Logger | None = None
 ) -> Callable[P, R]:
     logger = logger or getLogger(function.__module__)
 

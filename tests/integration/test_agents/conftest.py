@@ -1,8 +1,10 @@
 from collections.abc import Generator
-from unittest.mock import AsyncMock, patch
+from contextlib import nullcontext
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.application.ports.logger import Logger
 from app.infrastructure.agents import build_agent_graph
 from app.infrastructure.agents._core.factories.langchain_agent_factory import (
     LangChainAgentFactory,
@@ -19,6 +21,7 @@ from app.infrastructure.agents.financial.tools import (
 )
 from app.infrastructure.llms import fast_llm, llm_gemini
 from app.infrastructure.text_generator import LLMTextGenerator
+from app.services.chat_history_service import ChatHistoryService
 
 
 def _make_aimessage(content: str = "", tool_calls: list | None = None):
@@ -66,23 +69,31 @@ def mock_all_llms(
 
 @pytest.fixture
 def financial_agent_node(transaction_service) -> FinancialAgentNode:
+    logger = MagicMock(spec=Logger)
     tools = (
-        TotalBalanceTool(service=transaction_service),
-        DailyBalanceTool(service=transaction_service),
-        SearchTransactionsTool(service=transaction_service),
-        AddTransactionTool(service=transaction_service),
-        UpdateTransactionTool(service=transaction_service),
-        DeleteTransactionTool(service=transaction_service),
-        RestoreTransactionTool(service=transaction_service),
+        TotalBalanceTool(service=transaction_service, logger=logger),
+        DailyBalanceTool(service=transaction_service, logger=logger),
+        SearchTransactionsTool(service=transaction_service, logger=logger),
+        AddTransactionTool(service=transaction_service, logger=logger),
+        UpdateTransactionTool(service=transaction_service, logger=logger),
+        DeleteTransactionTool(service=transaction_service, logger=logger),
+        RestoreTransactionTool(service=transaction_service, logger=logger),
     )
-    return FinancialAgentNode(LangChainAgentFactory(llm=llm_gemini, tools=tools))
+    return FinancialAgentNode(
+        LangChainAgentFactory(llm=llm_gemini, tools=tools),
+        logger=logger,
+    )
 
 
 @pytest.fixture
 def agent_graph(transaction_service):
     return build_agent_graph(
         transaction_service=transaction_service,
+        chat_history_service=ChatHistoryService(logger=MagicMock()),
         text_generator=LLMTextGenerator(fast_llm),
+        logger_factory=lambda _: MagicMock(spec=Logger),
+        trace_context_factory=lambda _: nullcontext(),
+        interaction_incrementer=lambda: 1,
     )
 
 

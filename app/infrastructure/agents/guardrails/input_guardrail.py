@@ -1,37 +1,44 @@
-import logging
 import re
 from typing import Any, ClassVar, Final
 
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
 from langgraph.graph import END
 
+from app.application.ports.logger import Logger
 from app.application.ports.text_generator import TextGenerator
 from app.infrastructure.agents._core.state import GraphState, GraphStateKeys
 from app.infrastructure.agents.guardrails.result import GuardrailResult
-from app.infrastructure.execution_time_logger import log_execution_time
 
 from .._core.contracts.agent_node import AgentNode
 from .anonymization import anonymize_input
 from .guardrails_config import BLOCK_RESPONSES, INJECTION_PATTERNS, INTERN_DATA_KEYWORDS
 from .guardrails_prompts import CLASSIFIER_PROMPT
 
-logger = logging.getLogger(__name__)
-
 
 class InputGuardrailNode(AgentNode):
     name: ClassVar[str] = "input_guardrail"
     _text_generator: Final[TextGenerator]
 
-    def __init__(self, *, text_generator: TextGenerator, approved_route: str) -> None:
+    def __init__(
+        self,
+        *,
+        text_generator: TextGenerator,
+        approved_route: str,
+        logger: Logger,
+    ) -> None:
         self._text_generator = text_generator
         self._approved_route = approved_route
+        self._logger = logger
 
     def _check_prompt_injection(self, input: str) -> bool:
         for pattern in INJECTION_PATTERNS:
             if re.search(pattern, input, re.IGNORECASE):
-                logger.debug(
+                self._logger.debug(
                     "Input blocked for prompt injection",
-                    extra={"details": {"reason": "prompt_injection", "input": input}},
+                    details={
+                        "reason": "prompt_injection",
+                        "input_length": len(input),
+                    },
                 )
                 return False
         return True
@@ -40,9 +47,9 @@ class InputGuardrailNode(AgentNode):
         text_lower = input.lower()
         for keyword in INTERN_DATA_KEYWORDS:
             if keyword in text_lower:
-                logger.debug(
+                self._logger.debug(
                     "Input blocked for PII",
-                    extra={"details": {"reason": "acesso_dados_internos"}},
+                    details={"reason": "acesso_dados_internos"},
                 )
                 return False
         return True
@@ -58,9 +65,9 @@ class InputGuardrailNode(AgentNode):
                 break
 
         if category == "APROVADO":
-            logger.debug(
+            self._logger.debug(
                 "Input approved",
-                extra={"details": {"input": input, "category": category}},
+                details={"input_length": len(input), "category": category},
             )
             return GuardrailResult.input_aproved(input)
 
@@ -68,9 +75,9 @@ class InputGuardrailNode(AgentNode):
             reason, message = BLOCK_RESPONSES[category]
             return GuardrailResult.block(reason, message)
 
-        logger.warning(
+        self._logger.warning(
             "Input blocked due to undetermined classification",
-            extra={"details": {"category": category}},
+            details={"category": category},
         )
         return GuardrailResult.block(
             "classificacao_indeterminada",
@@ -82,9 +89,9 @@ class InputGuardrailNode(AgentNode):
         Deterministic first, then LLM only if needed.
         """
 
-        logger.debug(
+        self._logger.debug(
             "Verifying input compliance",
-            extra={"details": {"input_len": len(input)}},
+            details={"input_len": len(input)},
         )
 
         if not self._check_prompt_injection(input):
@@ -100,10 +107,11 @@ class InputGuardrailNode(AgentNode):
 
         try:
             return await self._classify_with_llm(input)
-        except Exception:
-            logger.exception(
+        except Exception as exc:
+            self._logger.exception(
                 "Input classifier failed",
-                extra={"details": {"stage": "classification"}},
+                exception=exc,
+                details={"stage": "classification"},
             )
             return GuardrailResult.block(
                 "classificador_indisponivel",
@@ -113,32 +121,27 @@ class InputGuardrailNode(AgentNode):
                 ),
             )
 
-    @log_execution_time
     async def __call__(self, state: GraphState) -> dict[GraphStateKeys, Any]:
         user_input = state["messages"][-1]
         assert user_input.id is not None
 
         anonymized, pii_map = anonymize_input(user_input.text)
-        logger.info(
+        self._logger.info(
             "Agent called",
-            extra={
-                "details": {
-                    "name": self.name,
-                    "input_anonymized": anonymized,
-                }
+            details={
+                "name": self.name,
+                "input_length": len(anonymized),
             },
         )
         result = await self._guard_input(anonymized)
 
         if result.blocked:
-            logger.info(
+            self._logger.info(
                 "Agent response",
-                extra={
-                    "details": {
-                        "from": self.name,
-                        "status": "blocked",
-                        "reason": result.blocked,
-                    }
+                details={
+                    "from": self.name,
+                    "status": "blocked",
+                    "reason": result.blocked,
                 },
             )
             return {
@@ -147,9 +150,9 @@ class InputGuardrailNode(AgentNode):
                 GraphStateKeys.MESSAGES: [AIMessage(content=result.message)],
             }
 
-        logger.info(
+        self._logger.info(
             "Agent response",
-            extra={"details": {"from": self.name, "status": "approved"}},
+            details={"from": self.name, "status": "approved"},
         )
         return {
             GraphStateKeys.ROUTE: self._approved_route,

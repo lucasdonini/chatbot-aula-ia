@@ -1,7 +1,9 @@
-from collections.abc import Mapping
-from typing import Protocol
+from collections.abc import Callable, Mapping
+from contextlib import AbstractContextManager
+from typing import Protocol, runtime_checkable
 
 
+@runtime_checkable
 class Logger(Protocol):
     def debug(
         self,
@@ -35,5 +37,11 @@ class Logger(Protocol):
         self,
         message: str,
         *,
+        exception: BaseException,
         details: Mapping[str, object] | None = None,
     ) -> None: ...
+
+
+type LoggerFactory = Callable[[str], Logger]
+type TraceContextFactory = Callable[[str], AbstractContextManager[None]]
+type InteractionIncrementer = Callable[[], int]

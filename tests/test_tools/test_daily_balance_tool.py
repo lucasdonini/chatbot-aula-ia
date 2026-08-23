@@ -1,8 +1,9 @@
 from datetime import date
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from app.application.ports.logger import Logger
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolSuccess,
@@ -18,7 +19,7 @@ class TestDailyBalanceTool:
     def tool(self):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
-        return DailyBalanceTool(service=service)
+        return DailyBalanceTool(service=service, logger=MagicMock(spec=Logger))
 
     async def test_returns_daily_balance(self, tool):
         tool.service.calculate_daily_balance = AsyncMock(return_value=300.0)

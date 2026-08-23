@@ -1,8 +1,8 @@
-import logging
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from app.application.ports.logger import Logger
 from app.infrastructure.agents._core.middleware import (
     FallbackOn429Middleware,
     is_rate_limit_error,
@@ -57,7 +57,10 @@ def test_exception_chain_handles_cycles() -> None:
 @pytest.mark.asyncio
 async def test_middleware_uses_fallback_for_wrapped_rate_limit() -> None:
     fallback_llm = MagicMock()
-    middleware = FallbackOn429Middleware(fallback_llm)
+    middleware = FallbackOn429Middleware(
+        fallback_llm,
+        logger=MagicMock(spec=Logger),
+    )
     request = MagicMock()
     fallback_request = MagicMock()
     request.override.return_value = fallback_request
@@ -78,11 +81,13 @@ async def test_middleware_uses_fallback_for_wrapped_rate_limit() -> None:
 
 
 @pytest.mark.asyncio
-async def test_middleware_logs_fallback_activation(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+async def test_middleware_logs_fallback_activation() -> None:
     fallback_llm = MagicMock()
-    middleware = FallbackOn429Middleware(fallback_llm)
+    logger = MagicMock(spec=Logger)
+    middleware = FallbackOn429Middleware(
+        fallback_llm,
+        logger=logger,
+    )
     request = MagicMock()
     request.override.return_value = MagicMock()
     handler = AsyncMock(
@@ -92,25 +97,24 @@ async def test_middleware_logs_fallback_activation(
         ]
     )
 
-    with caplog.at_level(logging.INFO):
-        await middleware.awrap_model_call(request, handler)
+    await middleware.awrap_model_call(request, handler)
 
-    record = next(
-        record
-        for record in caplog.records
-        if record.message == "Primary LLM rate limited; activating fallback"
+    logger.info.assert_called_once_with(
+        "Primary LLM rate limited; activating fallback",
+        details={
+            "status_code": 429,
+            "primary_model": "MagicMock",
+            "fallback_model": "MagicMock",
+        },
     )
-    assert record.levelno == logging.INFO
-    assert record.details == {
-        "status_code": 429,
-        "primary_model": "MagicMock",
-        "fallback_model": "MagicMock",
-    }
 
 
 @pytest.mark.asyncio
 async def test_middleware_reraises_non_rate_limit_error() -> None:
-    middleware = FallbackOn429Middleware(MagicMock())
+    middleware = FallbackOn429Middleware(
+        MagicMock(),
+        logger=MagicMock(spec=Logger),
+    )
     request = MagicMock()
     wrapped = _wrap_exception(_CodeError(409))
     handler = AsyncMock(side_effect=wrapped)

@@ -1,8 +1,7 @@
-import logging
-
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from app.application.ports.logger import Logger
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolResponse,
@@ -13,8 +12,6 @@ from app.infrastructure.agents.financial.schemas.transaction import (
     TransactionOutput,
 )
 from app.services.transaction_service import TransactionService
-
-logger = logging.getLogger(__name__)
 
 
 class _AddTransactionArgsSchema(BaseModel):
@@ -34,6 +31,7 @@ class AddTransactionTool(BaseTool):
     description: str = "Insere uma transação financeira no banco de dados PosthreSQL."
 
     service: TransactionService = Field(exclude=True)
+    logger: Logger = Field(exclude=True)
 
     def _run(
         self, transaction: TransactionInput
@@ -43,20 +41,19 @@ class AddTransactionTool(BaseTool):
     async def _arun(
         self, transaction: TransactionInput
     ) -> ToolResponse[_AddTransactionResponse]:
-        logger.debug(
+        self.logger.debug(
             "Tool called",
-            extra={
-                "details": {
-                    "tool": self.name,
-                    "transaction": transaction.model_dump(),
-                }
+            details={
+                "tool": self.name,
+                "category": transaction.category.value,
+                "transaction_type": transaction.transaction_type.value,
             },
         )
         try:
             added = await self.service.add_transaction(transaction.to_domain())
-            logger.debug(
+            self.logger.debug(
                 "Tool succeeded",
-                extra={"details": {"tool": self.name, "added": added}},
+                details={"tool": self.name, "added": True},
             )
             return ToolSuccess(
                 data=_AddTransactionResponse(
@@ -64,8 +61,9 @@ class AddTransactionTool(BaseTool):
                 )
             )
         except Exception as e:
-            logger.exception(
+            self.logger.exception(
                 "Tool failed",
-                extra={"details": {"tool": self.name}},
+                exception=e,
+                details={"tool": self.name},
             )
             return ToolFailure.exception(e)

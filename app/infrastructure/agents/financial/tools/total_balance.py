@@ -1,16 +1,13 @@
-import logging
-
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from app.application.ports.logger import Logger
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolResponse,
     ToolSuccess,
 )
 from app.services.transaction_service import TransactionService
-
-logger = logging.getLogger(__name__)
 
 
 class _TotalBalanceArgsSchema(BaseModel):
@@ -33,25 +30,27 @@ class TotalBalanceTool(BaseTool):
     )
 
     service: TransactionService = Field(exclude=True)
+    logger: Logger = Field(exclude=True)
 
     def _run(self) -> ToolResponse[_TotalBalanceResponse]:
         raise NotImplementedError("This tool only supports asynchronous execution")
 
     async def _arun(self) -> ToolResponse[_TotalBalanceResponse]:
-        logger.debug(
+        self.logger.debug(
             "Tool called",
-            extra={"details": {"tool": self.name}},
+            details={"tool": self.name},
         )
         try:
             balance = await self.service.calculate_total_balance()
-            logger.debug(
+            self.logger.debug(
                 "Tool succeeded",
-                extra={"details": {"tool": self.name, "balance": balance}},
+                details={"tool": self.name},
             )
             return ToolSuccess(data=_TotalBalanceResponse(balance=balance))
         except Exception as e:
-            logger.exception(
+            self.logger.exception(
                 "Tool failed",
-                extra={"details": {"tool": self.name}},
+                exception=e,
+                details={"tool": self.name},
             )
             return ToolFailure.exception(e)
