@@ -142,13 +142,19 @@ Frontend:
 
 ```bash
 npm run --prefix frontend lint
+npm run --prefix frontend test
 npm run --prefix frontend type-check
 npm run --prefix frontend build
 ```
 
 A CI executa checks separados para Ruff, MyPy, testes unitários, testes de
-integração, lint do frontend, type checking do frontend e build Vite. A workflow
-é disparada em pull requests direcionados à branch `main`.
+integração, lint do frontend, testes do frontend, type checking do frontend e
+build Vite. A workflow é disparada em pull requests direcionados à branch `main`.
+
+Na última auditoria, em 2026-08-23, passaram 312 testes Python sem a marca de
+integração, 64 testes Python de integração e 10 testes do frontend. Esses números
+são um snapshot e podem crescer; a fonte de verdade continua sendo a execução das
+suítes.
 
 ## Organização do projeto
 

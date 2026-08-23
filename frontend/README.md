@@ -43,6 +43,7 @@ string JSON como resposta.
 - `npm run type-check` — valida o projeto com TypeScript sem gerar bundle;
 - `npm run build-only` — gera o bundle Vite sem repetir o type checking;
 - `npm run build` — executa type checking e build Vite em sequência;
+- `npm test` — executa a suíte Vitest uma vez;
 - `npm run preview` — serve localmente o último build para inspeção.
 
 ## Build e execução integrada
@@ -76,9 +77,14 @@ Cada validação possui um job próprio na workflow, facilitando identificar a c
 de uma falha no pull request:
 
 - `frontend-lint`;
+- `frontend-tests`;
 - `frontend-type-check`;
 - `frontend-build`.
 
-O projeto ainda não possui uma suíte automatizada de testes de componentes. Ao
-adotá-la, o teste deve ser incluído como outro job explícito, sem ser ocultado no
-job de build.
+A suíte Vitest usa Testing Library e jsdom. Ela cobre o cliente de `/api/chat`,
+incluindo falhas de rede, HTTP e formato; a renderização segura de Markdown; e os
+fluxos principais de envio, resposta, erro e bloqueio de mensagem vazia.
+
+Na última auditoria, em 2026-08-23, os 10 testes do frontend passaram. Novas
+funcionalidades devem ampliar essa suíte e continuar usando um job separado, sem
+ocultar testes no job de build.

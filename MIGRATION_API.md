@@ -60,7 +60,7 @@ registrados ao final deste documento.
 
 - a workflow usa Python 3.14, alinhado ao `pyproject.toml`;
 - Ruff, MyPy, testes unitários e testes de integração têm jobs próprios;
-- o frontend possui jobs explícitos para Oxlint, TypeScript e build Vite;
+- o frontend possui jobs explícitos para Oxlint, Vitest, TypeScript e build Vite;
 - a instalação frontend na CI usa `npm ci` e o lockfile versionado;
 - cada validação aparece separadamente no pull request para facilitar o
   diagnóstico de falhas.
@@ -121,10 +121,14 @@ de título de conversa para a interface.
 
 ### Testes de API e frontend
 
-O projeto cobre os serviços, agentes, infraestrutura e tratamento de exceções,
-mas ainda deve ampliar testes direcionados às rotas FastAPI. O frontend possui
-lint, type checking e build automatizados, porém ainda não possui testes de
-componentes.
+Após a auditoria final, os testes HTTP passaram a cobrir a rota de chat, validação,
+timeout, erro inesperado, health check, OpenAPI e entrega do frontend estático. A
+suíte Vitest cobre o cliente HTTP, a renderização segura de Markdown e os fluxos
+principais da interface.
+
+Em 2026-08-23, o snapshot verificado ficou em 312 testes Python sem a marca de
+integração, 64 testes Python de integração e 10 testes frontend. O lifespan com
+toda a infraestrutura substituída permanece sem um teste dedicado.
 
 ### CLI
 
@@ -156,8 +160,8 @@ As seguintes extensões não fazem parte da migração concluída:
 - `GET /sessions` e `GET /sessions/{id}/messages`;
 - títulos e previews de conversas;
 - política contínua de resumos por quantidade de mensagens ou inatividade;
-- testes de rota com ciclo de vida e dependências substituídas;
-- testes de componentes e integração HTTP do frontend;
+- teste do lifespan com dependências de infraestrutura substituídas;
+- expansão dos testes de componentes conforme a interface evoluir;
 - streaming de respostas.
 
 Cada evolução deve ser tratada como uma nova feature, com contrato, segurança,
