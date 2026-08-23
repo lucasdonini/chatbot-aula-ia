@@ -1,6 +1,9 @@
 from datetime import date, datetime
 from uuid import uuid4
 
+import pytest
+from pydantic import ValidationError
+
 from app.application.models.transaction_update import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
@@ -25,11 +28,9 @@ class TestUpdateTransactionQuery:
         assert query.date_local == date(2026, 6, 1)
         assert query.id is None
 
-    def test_create_empty(self):
-        query = UpdateTransactionQuery()
-        assert query.id is None
-        assert query.match_text is None
-        assert query.date_local is None
+    def test_rejects_empty_reference(self):
+        with pytest.raises(ValidationError, match="Inform either id"):
+            UpdateTransactionQuery()
 
     def test_id_only(self):
         uid = uuid4()
@@ -136,20 +137,21 @@ class TestUpdateTransactionParams:
         params = UpdateTransactionParams(query=UpdateTransactionQuery(id=uuid4()))
         assert params.has_update is False
 
-    def test_has_update_false_query_match_only(self):
-        params = UpdateTransactionParams(
-            query=UpdateTransactionQuery(match_text="busca"),
-        )
-        assert params.has_update is False
+    def test_rejects_query_match_only(self):
+        with pytest.raises(ValidationError, match="Inform either id"):
+            UpdateTransactionQuery(match_text="busca")
 
-    def test_no_id_no_match_text(self):
-        params = UpdateTransactionParams(
-            query=UpdateTransactionQuery(),
-            amount=100.0,
-        )
-        assert params.query.id is None
-        assert params.query.match_text is None
-        assert params.amount == 100.0
+    def test_rejects_query_without_reference(self):
+        with pytest.raises(ValidationError, match="Inform either id"):
+            UpdateTransactionQuery()
+
+    def test_rejects_id_and_match_reference_together(self):
+        with pytest.raises(ValidationError, match="either id"):
+            UpdateTransactionQuery(
+                id=uuid4(),
+                match_text="busca",
+                date_local=date(2026, 1, 1),
+            )
 
     def test_amount_zero_has_update_true(self):
         params = UpdateTransactionParams(

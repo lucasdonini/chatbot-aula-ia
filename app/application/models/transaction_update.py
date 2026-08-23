@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import Any, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.domain.model.transaction import Category, TransactionType
 
@@ -31,6 +31,24 @@ class UpdateTransactionQuery(BaseModel):
             "com match_text quando id ausente."
         ),
     )
+
+    @model_validator(mode="after")
+    def validate_reference(self) -> "UpdateTransactionQuery":
+        has_id = self.id is not None
+        has_match_reference = (
+            self.match_text is not None and self.date_local is not None
+        )
+        has_partial_match_reference = (
+            self.match_text is not None or self.date_local is not None
+        )
+
+        if has_id and has_partial_match_reference:
+            raise ValueError(
+                "Use either id or both match_text and date_local, not both"
+            )
+        if not has_id and not has_match_reference:
+            raise ValueError("Inform either id or both match_text and date_local")
+        return self
 
 
 class UpdateTransactionParams(BaseModel):
@@ -83,7 +101,7 @@ class UpdateTransactionParams(BaseModel):
             return datetime.fromisoformat(v)
         if isinstance(v, datetime):
             return v
-        raise ValidationError(
+        raise ValueError(
             "Invalid type for date. "
             f"Espected str or datetime, received: {type(v).__name__!r}"
         )

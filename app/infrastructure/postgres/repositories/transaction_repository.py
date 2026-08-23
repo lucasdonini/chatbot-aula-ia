@@ -4,6 +4,7 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import ScalarSelect, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.application.exceptions import AmbiguousTransactionError
 from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
@@ -164,10 +165,6 @@ class SQLAlchemyTransactionRepository:
             extra={"details": {"params": params.model_dump()}},
         )
 
-        if not params.has_update:
-            logger.warning("Nothing to update")
-            return None
-
         stmt = select(TransactionORM)
         if id := params.query.id:
             stmt = stmt.where(TransactionORM.id == id)
@@ -185,13 +182,9 @@ class SQLAlchemyTransactionRepository:
                 TransactionORM.occurred_at < period_end,
             )
         else:
-            logger.error("Update called without any reference")
-            raise ValueError(
-                "You cannot update without a reference. "
-                "Please inform either the id or both match_text and date_local"
-            )
+            raise AssertionError("Update command must contain a valid reference")
 
-        stmt = stmt.order_by(TransactionORM.occurred_at).limit(1)
+        stmt = stmt.order_by(TransactionORM.occurred_at.desc()).limit(2)
         to_update = params.model_dump(
             exclude_none=True,
             exclude={"query"},
@@ -202,10 +195,13 @@ class SQLAlchemyTransactionRepository:
             extra={"details": {"query": str(stmt)}},
         )
         async with self._session_factory() as session:
-            target = await session.scalar(stmt)
+            targets = (await session.scalars(stmt)).all()
 
-            if not target:
+            if not targets:
                 return None
+            if len(targets) > 1:
+                raise AmbiguousTransactionError
+            target = targets[0]
 
             for attr, val in to_update.items():
                 setattr(target, attr, val)

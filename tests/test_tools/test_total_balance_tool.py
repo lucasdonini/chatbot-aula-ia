@@ -52,4 +52,5 @@ class TestTotalBalanceTool:
         result = await tool._arun()
 
         assert isinstance(result, ToolFailure)
-        assert "DB error" in result.details["exception"]
+        assert result.code == "unexpected_error"
+        assert result.details == {}

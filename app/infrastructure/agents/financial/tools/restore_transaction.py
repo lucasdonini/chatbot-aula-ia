@@ -1,6 +1,7 @@
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from app.application.exceptions import ApplicationError
 from app.application.models.transaction_update import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
@@ -63,23 +64,23 @@ class RestoreTransactionTool(BaseTool):
         params = UpdateTransactionParams(query=query, is_canceled=False)
         response: _RestoreTransactionResponse
         try:
-            if await self.service.update_transaction(params):
-                self.logger.debug(
-                    "Tool succeeded",
-                    details={"tool": self.name, "restored": True},
-                )
-                response = _RestoreTransactionResponse(restored=True)
-            else:
-                self.logger.debug(
-                    "Tool succeeded",
-                    details={"tool": self.name, "restored": False},
-                )
-                response = _RestoreTransactionResponse(restored=False)
+            await self.service.update_transaction(params)
+            self.logger.debug(
+                "Tool succeeded",
+                details={"tool": self.name, "restored": True},
+            )
+            response = _RestoreTransactionResponse(restored=True)
             return ToolSuccess(data=response)
+        except ApplicationError as e:
+            self.logger.warning(
+                "Tool rejected operation",
+                details={"tool": self.name, "error_code": e.code},
+            )
+            return ToolFailure.application_error(e)
         except Exception as e:
             self.logger.exception(
                 "Tool failed",
                 exception=e,
                 details={"tool": self.name},
             )
-            return ToolFailure.exception(e)
+            return ToolFailure.unexpected_error()

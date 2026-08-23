@@ -209,25 +209,3 @@ class TestUpdateTransaction:
 
         assert result is not None
         assert result.amount == 175.00
-
-    async def test_update_nothing_to_update(
-        self, transaction_repository, seed_transactions
-    ):
-        params = UpdateTransactionParams(
-            query=UpdateTransactionQuery(
-                match_text="almoço",
-                date_local=date(2026, 6, 1),
-            ),
-        )
-        result = await transaction_repository.update_transaction(params)
-
-        assert result is None
-
-    async def test_update_no_reference_raises(self, transaction_repository):
-        params = UpdateTransactionParams(
-            query=UpdateTransactionQuery(),
-            amount=100.00,
-        )
-
-        with pytest.raises(ValueError, match="reference"):
-            await transaction_repository.update_transaction(params)

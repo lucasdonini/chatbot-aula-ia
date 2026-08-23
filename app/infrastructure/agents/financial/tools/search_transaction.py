@@ -1,6 +1,7 @@
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from app.application.exceptions import ApplicationError
 from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
@@ -77,10 +78,16 @@ class SearchTransactionsTool(BaseTool):
                     ]
                 )
             )
+        except ApplicationError as e:
+            self.logger.warning(
+                "Tool rejected operation",
+                details={"tool": self.name, "error_code": e.code},
+            )
+            return ToolFailure.application_error(e)
         except Exception as e:
             self.logger.exception(
                 "Tool failed",
                 exception=e,
                 details={"tool": self.name},
             )
-            return ToolFailure.exception(e)
+            return ToolFailure.unexpected_error()

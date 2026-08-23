@@ -67,14 +67,21 @@ class ChatSessionService:
         )
 
     async def save_error(self, session_id: str, error: Exception) -> None:
-        name = type(error).__name__
-        summary = await self._service.summarize_exception(error)
-        entry = ChatError(exception=name, summary=summary)
-        await self._save_entry(session_id, entry)
-        self._logger.debug(
-            "Error saved",
-            details={"exception_type": entry.exception},
-        )
+        try:
+            name = type(error).__name__
+            summary = await self._service.summarize_exception(error)
+            entry = ChatError(exception=name, summary=summary)
+            await self._save_entry(session_id, entry)
+            self._logger.debug(
+                "Error saved",
+                details={"exception_type": entry.exception},
+            )
+        except Exception as persistence_error:
+            self._logger.exception(
+                "Failed to save chat error",
+                exception=persistence_error,
+                details={"original_exception_type": type(error).__name__},
+            )
 
     async def finalize_session(self, session_id: str) -> None:
         """
