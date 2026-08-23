@@ -1,5 +1,6 @@
 import { type KeyboardEvent, type SubmitEvent, useState } from 'react'
 import { sendChatMessage } from './api/chat'
+import { MarkdownResponse } from './components/MarkdownResponse'
 import './App.css'
 
 function App() {
@@ -70,14 +71,16 @@ function App() {
 
         <section className="response-section" aria-labelledby="response-title">
           <h2 id="response-title">Resposta</h2>
-          <output className="response" aria-live="polite">
+          <div className="response" role="status" aria-live="polite">
             {isLoading && 'O assistente está preparando uma resposta...'}
             {!isLoading && error && <span className="error">{error}</span>}
-            {!isLoading && !error && response}
+            {!isLoading && !error && response && (
+              <MarkdownResponse content={response} />
+            )}
             {!isLoading && !error && !response && (
               <span className="placeholder">A resposta aparecerá aqui.</span>
             )}
-          </output>
+          </div>
         </section>
       </section>
     </main>
