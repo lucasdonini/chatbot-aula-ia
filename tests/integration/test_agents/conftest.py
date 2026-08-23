@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from contextlib import nullcontext
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -19,9 +20,18 @@ from app.infrastructure.agents.financial.tools import (
     TotalBalanceTool,
     UpdateTransactionTool,
 )
+from app.infrastructure.clock import FixedClock
 from app.infrastructure.llms import fast_llm, llm_gemini
 from app.infrastructure.text_generator import LLMTextGenerator
 from app.services.chat_history_service import ChatHistoryService
+
+
+@pytest.fixture
+def application_clock() -> FixedClock:
+    return FixedClock(
+        datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc),
+        "America/Sao_Paulo",
+    )
 
 
 def _make_aimessage(content: str = "", tool_calls: list | None = None):
@@ -68,7 +78,7 @@ def mock_all_llms(
 
 
 @pytest.fixture
-def financial_agent_node(transaction_service) -> FinancialAgentNode:
+def financial_agent_node(transaction_service, application_clock) -> FinancialAgentNode:
     logger = MagicMock(spec=Logger)
     tools = (
         TotalBalanceTool(service=transaction_service, logger=logger),
@@ -82,11 +92,12 @@ def financial_agent_node(transaction_service) -> FinancialAgentNode:
     return FinancialAgentNode(
         LangChainAgentFactory(llm=llm_gemini, tools=tools),
         logger=logger,
+        clock=application_clock,
     )
 
 
 @pytest.fixture
-def agent_graph(transaction_service):
+def agent_graph(transaction_service, application_clock):
     return build_agent_graph(
         transaction_service=transaction_service,
         chat_history_service=ChatHistoryService(logger=MagicMock()),
@@ -94,6 +105,7 @@ def agent_graph(transaction_service):
         logger_factory=lambda _: MagicMock(spec=Logger),
         trace_context_factory=lambda _: nullcontext(),
         interaction_incrementer=lambda: 1,
+        clock=application_clock,
     )
 
 

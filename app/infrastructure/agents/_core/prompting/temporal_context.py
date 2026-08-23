@@ -1,14 +1,14 @@
 from datetime import datetime, timedelta
 
-from app.infrastructure.clock import get_clock
+from app.application.ports.clock import Clock
 
 
 def _format_date(value: datetime) -> str:
     return value.strftime("%Y-%m-%d")
 
 
-def build_temporal_context() -> str:
-    now = get_clock().local_now()
+def build_temporal_context(clock: Clock) -> str:
+    now = clock.local_now()
     current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     previous_month = (current_month - timedelta(days=1)).replace(day=1)
     current_year = current_month.replace(month=1)

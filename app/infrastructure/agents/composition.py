@@ -1,5 +1,6 @@
 from langgraph.graph import END
 
+from app.application.ports.clock import Clock
 from app.application.ports.logger import (
     InteractionIncrementer,
     LoggerFactory,
@@ -41,6 +42,7 @@ def build_agent_graph(
     logger_factory: LoggerFactory,
     trace_context_factory: TraceContextFactory,
     interaction_incrementer: InteractionIncrementer,
+    clock: Clock,
     execution_timeout_seconds: float = 120.0,
 ) -> AgentGraphImpl:
     specialist_fallback = FallbackOn429Middleware(
@@ -85,6 +87,7 @@ def build_agent_graph(
             middlewares=(specialist_fallback,),
         ),
         logger=logger_factory(FinancialAgentNode.__module__),
+        clock=clock,
     )
     agenda = AgendaAgentNode(
         LangChainAgentFactory(
@@ -92,6 +95,7 @@ def build_agent_graph(
             middlewares=(specialist_fallback,),
         ),
         logger=logger_factory(AgendaAgentNode.__module__),
+        clock=clock,
     )
     faq = FAQAgentNode(
         LangChainAgentFactory(
@@ -107,6 +111,7 @@ def build_agent_graph(
     orquestrator = OrquestratorAgentNode(
         LangChainAgentFactory(llm=fast_llm),
         logger=logger_factory(OrquestratorAgentNode.__module__),
+        clock=clock,
     )
 
     specialists = (
@@ -146,6 +151,7 @@ def build_agent_graph(
         logger=logger_factory(RouterAgentNode.__module__),
         specialists=specialists,
         allowed_tool_names=(history_tool.name,),
+        clock=clock,
     )
     input_guardrail = InputGuardrailNode(
         text_generator=text_generator,

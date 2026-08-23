@@ -3,6 +3,7 @@ from typing import Any, ClassVar
 from langchain_core.messages import SystemMessage
 from langgraph.graph.state import CompiledStateGraph
 
+from app.application.ports.clock import Clock
 from app.application.ports.logger import Logger
 
 from .._core.contracts.agent_factory import AgentFactory
@@ -16,8 +17,14 @@ class OrquestratorAgentNode(AgentNode):
     _agent: CompiledStateGraph
     name: ClassVar[str] = "orquestrator"
 
-    def __init__(self, agent_factory: AgentFactory, logger: Logger) -> None:
+    def __init__(
+        self,
+        agent_factory: AgentFactory,
+        logger: Logger,
+        clock: Clock,
+    ) -> None:
         self._logger = logger
+        self._clock = clock
         self._agent = agent_factory.create(system_prompt=PROMPT)
 
     async def __call__(self, state: GraphState) -> dict[GraphStateKeys, Any]:
@@ -29,7 +36,7 @@ class OrquestratorAgentNode(AgentNode):
         request_state: GraphState = {
             **state,
             "messages": [
-                SystemMessage(content=build_temporal_context()),
+                SystemMessage(content=build_temporal_context(self._clock)),
                 *state["messages"],
             ],
         }

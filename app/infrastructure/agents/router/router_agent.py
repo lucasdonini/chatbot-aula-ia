@@ -6,6 +6,7 @@ from typing import Any, ClassVar, cast
 from langchain_core.messages import AIMessage, AnyMessage, SystemMessage, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 
+from app.application.ports.clock import Clock
 from app.application.ports.logger import Logger
 
 from .._core.contracts.agent_factory import AgentFactory
@@ -87,8 +88,10 @@ class RouterAgentNode(AgentNode):
         logger: Logger,
         specialists: Sequence[SpecialistRegistration],
         allowed_tool_names: Collection[str],
+        clock: Clock,
     ) -> None:
         self._logger = logger
+        self._clock = clock
         self._allowed_tool_names = frozenset(allowed_tool_names)
         self._agent = agent_factory.create(
             system_prompt=build_router_prompt(specialists)
@@ -103,7 +106,7 @@ class RouterAgentNode(AgentNode):
         filtered_state: GraphState = {
             **state,
             "messages": [
-                SystemMessage(content=build_temporal_context()),
+                SystemMessage(content=build_temporal_context(self._clock)),
                 *_filter_messages_for_router(
                     state["messages"],
                     self._allowed_tool_names,

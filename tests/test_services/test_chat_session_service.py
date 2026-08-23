@@ -10,19 +10,13 @@ from app.domain.model.chat_entry import (
     ChatMessageRole,
     HumanMessage,
 )
-from app.infrastructure.clock import FixedClock, get_clock, set_clock
+from app.infrastructure.clock import FixedClock
 from app.infrastructure.mongodb.entities.chat_session import ChatMessageDocument
 from app.services import chat_session_service
 from app.services.chat_session_service import ChatSessionService
 
 
 class TestChatSessionService:
-    @pytest.fixture(autouse=True)
-    def restore_clock(self):
-        original_clock = get_clock()
-        yield
-        set_clock(original_clock)
-
     @pytest.fixture
     def summary_service(self):
         return MagicMock()
@@ -33,13 +27,15 @@ class TestChatSessionService:
         return ChatSessionService(
             service=summary_service,
             logger=MagicMock(spec=Logger),
+            clock=FixedClock(
+                datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc),
+                "America/Sao_Paulo",
+            ),
         )
 
     @pytest.mark.asyncio
     async def test_init_session(self, service, summary_service):
         fixed = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
-        set_clock(FixedClock(fixed))
-
         with patch(
             "app.services.chat_session_service.ChatSessionDocument"
         ) as mock_chat:

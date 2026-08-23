@@ -213,8 +213,9 @@ cruzam `session/trace/int`.
 
 **Implementado (2026-08-13):**
 
-- `Clock`, `SystemClock`, `FixedClock` e o provider `get_clock()`/`set_clock()`
-  centralizam o tempo. O timezone IANA é suportado em todas as plataformas pela
+- A porta `Clock`, `SystemClock` e `FixedClock` centralizam o tempo. Uma única
+  instância é criada no composition root e injetada nos serviços e agentes. O
+  timezone IANA é suportado em todas as plataformas pela
   dependência `tzdata`.
 - Sessões MongoDB gravam `started_at` e `updated_at` em UTC timezone-aware.
 - O contexto temporal é reconstruído por execução, com períodos derivados da
@@ -229,7 +230,8 @@ Analogia ao `Clock` do Spring Boot: um provider único de "agora".
   `local_now() -> datetime` (`settings.app_timezone`), `today() -> date` (data local).
 - **`SystemClock`**: implementação default.
 - **`FixedClock(fixed)`: para testes determinísticos.**
-- **Provider singleton:** `get_clock()` / `set_clock()` (padrão do `settings`/`get_db`).
+- **Instância compartilhada:** o `lifespan` cria o `SystemClock` da aplicação e o
+  injeta explicitamente nos consumidores.
 - Aplicar:
   - `chat_session_service.py:28,52,104` — `datetime.now()` naive → `clock.now()`
     (Mongo passa a gravar tz-aware; corrige TODO "ChatMessage sem timezone").
