@@ -1,4 +1,5 @@
-import { type FormEvent, type KeyboardEvent, useState } from 'react'
+import { type KeyboardEvent, type SubmitEvent, useState } from 'react'
+import { sendChatMessage } from './api/chat'
 import './App.css'
 
 function App() {
@@ -7,7 +8,7 @@ function App() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const trimmedMessage = message.trim()
@@ -20,22 +21,7 @@ function App() {
     setResponse('')
 
     try {
-      const apiResponse = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: trimmedMessage }),
-      })
-
-      if (!apiResponse.ok) {
-        throw new Error('Não foi possível obter uma resposta do assistente.')
-      }
-
-      const responseBody: unknown = await apiResponse.json()
-      if (typeof responseBody !== 'string') {
-        throw new Error('O assistente retornou uma resposta em formato inválido.')
-      }
-
-      setResponse(responseBody)
+      setResponse(await sendChatMessage(trimmedMessage))
     } catch (caughtError: unknown) {
       setError(
         caughtError instanceof Error
