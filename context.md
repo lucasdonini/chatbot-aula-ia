@@ -96,11 +96,25 @@ os seguintes checks independentes:
 - `integration-tests` — testes com Testcontainers;
 - `type-checks` — MyPy;
 - `frontend-lint` — Oxlint;
+- `frontend-tests` — Vitest e Testing Library;
 - `frontend-type-check` — compilação TypeScript;
 - `frontend-build` — geração do bundle Vite.
 
 A separação dos jobs permite identificar diretamente qual camada falhou. O
-frontend ainda não possui testes automatizados de componentes.
+snapshot verificado em 2026-08-23 é de 312 testes Python sem a marca de
+integração, 64 testes Python de integração e 10 testes do frontend, todos verdes.
+
+Os testes HTTP cobrem o contrato da rota de chat, validação, timeout, erro
+inesperado, health check, OpenAPI e entrega dos arquivos estáticos. O frontend
+cobre o cliente HTTP, a renderização de Markdown e os fluxos principais da tela.
+O lifespan com substituição completa da infraestrutura ainda não possui teste
+dedicado.
+
+A execução ainda emite avisos de manutenção provenientes da transição futura do
+Google GenAI para Python 3.17, da descontinuação gradual de
+`langchain-community` e da camada `TestClient` atual do FastAPI. O import
+depreciado do módulo PostgreSQL do Testcontainers foi atualizado para
+`testcontainers.community.postgres` durante esta auditoria.
 
 ## 7. Estado da migração para API
 
@@ -137,8 +151,8 @@ e das diferenças entre o plano original e o escopo final.
 
 - definir uma estratégia de sessão por usuário e persistência de checkpoints;
 - decidir se lista de conversas e endpoints de histórico entrarão no produto;
-- adicionar testes de componentes e integração HTTP ao frontend;
-- ampliar a cobertura específica das rotas FastAPI;
+- ampliar os testes frontend conforme surgirem novos fluxos e componentes;
+- testar o lifespan com dependências de infraestrutura substituídas;
 - melhorar progressivamente a separação entre camadas;
 - continuar o aprimoramento de tipagem e observabilidade;
 - adicionar novas categorias e capacidades financeiras conforme a necessidade.

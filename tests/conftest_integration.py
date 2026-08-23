@@ -12,7 +12,7 @@ from alembic.config import Config as AlembicConfig
 from pydantic import SecretStr
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
-from testcontainers.postgres import PostgresContainer
+from testcontainers.community.postgres import PostgresContainer
 
 from app.domain.model.transaction import Category, TransactionType
 from app.infrastructure.postgres.entities.transaction import TransactionORM

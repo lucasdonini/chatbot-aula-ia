@@ -10,7 +10,10 @@ from app.application.models.transaction_update import (
     UpdateTransactionQuery,
 )
 from app.domain.model.transaction import Category, TransactionType
-from app.infrastructure.agents.financial.schemas.tool_response import ToolSuccess
+from app.infrastructure.agents.financial.schemas.tool_response import (
+    ToolFailure,
+    ToolSuccess,
+)
 from app.infrastructure.agents.financial.schemas.transaction import (
     TransactionInput,
     TransactionOutput,
@@ -162,8 +165,8 @@ class TestUpdateTransactionTool:
             ),
         )
         result = await update_tool._arun(params)
-        assert isinstance(result, ToolSuccess)
-        assert result.data.updated is None
+        assert isinstance(result, ToolFailure)
+        assert result.code == "no_transaction_changes"
 
 
 class TestDeleteTransactionTool:
@@ -179,8 +182,8 @@ class TestDeleteTransactionTool:
 
         query = UpdateTransactionQuery(id=uuid4())
         result = await delete_tool._arun(query)
-        assert isinstance(result, ToolSuccess)
-        assert result.data.deleted is False
+        assert isinstance(result, ToolFailure)
+        assert result.code == "transaction_not_found"
 
 
 class TestRestoreTransactionTool:
@@ -196,8 +199,8 @@ class TestRestoreTransactionTool:
 
         query = UpdateTransactionQuery(id=uuid4())
         result = await restore_tool._arun(query)
-        assert isinstance(result, ToolSuccess)
-        assert result.data.restored is False
+        assert isinstance(result, ToolFailure)
+        assert result.code == "transaction_not_found"
 
     async def test_delete_then_restore_cycle(
         self, restore_tool, delete_tool, seed_transactions
