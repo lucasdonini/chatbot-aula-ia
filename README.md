@@ -1,104 +1,173 @@
-# Chatbot Aula IA
+# Assessor.IA
 
-Assistente modular para as aulas de IA — agentes principais em `app/agents/` e infraestrutura em `app/infrastructure/`.
+Assistente web multiagente para organização financeira e apoio ao dia a dia. O
+backend usa FastAPI e LangGraph; a interface usa React, TypeScript e Vite.
 
-## Rápido (o essencial)
-- Requisitos: `python 3.12+`, `git`. Docker é opcional para execução em container.
-- Logs: `logs/`.
-- Configuração local: copie `.env.app.example` para `.env.app` e
-  `.env.compose.example` para `.env.compose`. Preencha as chaves LLM em `.env.app`.
+O PostgreSQL armazena transações e o MongoDB armazena a sessão e o histórico do
+chat. As respostas podem ser produzidas por modelos Gemini e Groq.
 
-## Como rodar (opções)
+## Requisitos
 
-1) Usando `make` (recomendado quando disponível)
+- Python 3.14;
+- [uv](https://docs.astral.sh/uv/);
+- Node.js 24 e npm;
+- PostgreSQL e MongoDB acessíveis pela aplicação;
+- chaves de API do Gemini e do Groq;
+- Docker, opcionalmente, para executar a aplicação em container.
 
-- Preparar dependências, configurar ambiente, banco e iniciar a CLI:
+O `docker-compose.yml` atual constrói e executa a aplicação, mas não provisiona
+PostgreSQL nem MongoDB. Esses serviços precisam estar disponíveis separadamente.
 
-```bash
-make prepare-environment
-# Crie .env.app e .env.compose a partir dos respectivos arquivos .example.
-make build-db
-make upgrade-db
-make run
+## Configuração inicial
+
+Na raiz do projeto, crie o arquivo de ambiente usado pela aplicação:
+
+```powershell
+Copy-Item .env.example .env
 ```
 
-- O MongoDB deve estar disponível em `MONGODB_URI` e as chaves LLM devem estar
-  configuradas em `.env.app` antes de executar `make run`.
+Em Linux ou macOS, use `cp .env.example .env`. Preencha ao menos
+`GEMINI_API_KEY`, `GROQ_API_KEY`, `POSTGRES_URL`, `MONGODB_URI` e
+`MONGODB_DBNAME`. O arquivo `.env` contém segredos e não deve ser versionado.
 
-- Rodar a CLI após a preparação:
-
-```bash
-make run
-```
-
-2) Usando `uv` (se instalado)
-
-- Sincronizar dependências/ambiente:
+Instale as dependências e prepare o frontend:
 
 ```bash
 uv sync
+npm ci --prefix frontend
+npm run --prefix frontend build
+uv run alembic upgrade head
 ```
 
-- Executar o módulo principal:
+O build inicial do frontend cria `frontend/dist`, diretório que o FastAPI monta
+para servir a interface. Por isso, ele também é necessário antes da primeira
+execução local do backend em um clone limpo.
+
+## Desenvolvimento local
+
+Inicie o backend em um terminal:
 
 ```bash
-uv run python -m app.main
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-3) Sem `make` e sem `uv` (manual, funciona em Windows/Unix)
-
-- Criar e ativar um venv (Unix/macOS):
+Em outro terminal, inicie o servidor de desenvolvimento do frontend:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-python -m app.main
+npm run --prefix frontend dev
 ```
 
-- Criar e ativar um venv (Windows PowerShell):
+A interface de desenvolvimento fica em `http://localhost:5173`. O Vite encaminha
+requisições iniciadas por `/api` para o backend em `http://localhost:8000`.
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -e .
-.\.venv\Scripts\python -m app.main
-```
-
-4) Banco PostgreSQL com Docker
+Para testar o modo integrado, gere o frontend e inicie somente o backend:
 
 ```bash
-docker compose up -d --build
+npm run --prefix frontend build
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-O PostgreSQL 18 usa o volume em `/var/lib/postgresql`. Ao atualizar de uma
-imagem anterior, recrie o volume após exportar dados que precisem ser mantidos.
+Nesse modo, a aplicação completa fica em `http://localhost:8000`.
 
-Para acessar o banco (quando o serviço estiver ativo):
+Os atalhos equivalentes estão no `makefile`: `make dev`, `make up`,
+`make build-frontend` e `make upgrade-db`.
+
+## Execução com Docker
+
+Com PostgreSQL e MongoDB já acessíveis e o `.env` configurado:
 
 ```bash
-docker exec -it assessoria-sql psql -d assessoriadb
+docker compose up --build
 ```
 
-## Comandos úteis (Makefile)
+O build multi-stage instala o frontend, gera `frontend/dist`, instala as
+dependências Python e publica a aplicação na porta 8000. As URLs de banco usadas
+pelo container podem ser ajustadas no `docker-compose.yml` conforme o ambiente.
 
-- `make build-db` — `docker compose up -d --build` (apenas DB/infra).
-- `make run` — executa `uv run python -m app.main`.
-- `make prepare-environment` — `uv sync` (sincroniza dependências).
-- `make access-db` — abre um shell psql no container do banco.
+## API
 
-## Como alterar o projeto
+### Enviar mensagem
 
-- Código: `app/` — edite agentes em `app/agents/`.
-- Dependências: se possível, adicione e remova dependências via `uv add / remove`. Se não der, altere o `pyproject.toml` e rode `pip install -e .`
-- Banco: scripts em `sql/` (ex.: `sql/init-db.sql`). Para recriar a infra, use `docker compose up -d --build`.
+`POST /api/chat`
 
-## Dicas rápidas
+Corpo da requisição:
 
-- Se não tiver `uv`: use o fluxo de venv + `python -m app.main`.
-- Se não tiver `make`: use `uv` ou os comandos manuais acima.
-- Para trocar o Python usado pelo projeto, ative o venv desejado antes de rodar.
+```json
+{
+  "message": "Quanto gastei com alimentação?"
+}
+```
+
+Em caso de sucesso, a API devolve `200` com uma string JSON contendo a resposta
+do assistente:
+
+```json
+"Você gastou R$ 150,50 com alimentação."
+```
+
+Exemplo com curl:
+
+```bash
+curl -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Quanto gastei com alimentação?"}'
+```
+
+Falhas de validação seguem o formato padrão do FastAPI. Erros conhecidos de
+aplicação usam `code` e `detail`; timeout retorna `504`; erros inesperados retornam
+uma mensagem genérica sem expor detalhes internos.
+
+### Endpoints auxiliares
+
+- `GET /health` — verifica se a API está ativa;
+- `GET /docs` — documentação interativa Swagger UI;
+- `GET /redoc` — documentação ReDoc;
+- `GET /` — interface web compilada.
+
+## Qualidade e testes
+
+Backend:
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy .
+uv run pytest
+uv run pytest -m integration
+```
+
+Os testes de integração usam Testcontainers e requerem Docker disponível.
+
+Frontend:
+
+```bash
+npm run --prefix frontend lint
+npm run --prefix frontend type-check
+npm run --prefix frontend build
+```
+
+A CI executa checks separados para Ruff, MyPy, testes unitários, testes de
+integração, lint do frontend, type checking do frontend e build Vite. A workflow
+é disparada em pull requests direcionados à branch `main`.
+
+## Organização do projeto
+
+- `app/api` — rotas, dependências e tratamento HTTP;
+- `app/application` — contratos, modelos de entrada e exceções da aplicação;
+- `app/domain` — modelos e regras do domínio;
+- `app/services` — casos de uso e coordenação de serviços;
+- `app/infrastructure` — agentes, bancos, LLMs, logging e implementações técnicas;
+- `frontend` — aplicação React/Vite;
+- `migrations` — migrações Alembic;
+- `tests` — testes unitários, arquiteturais e de integração;
+- `data` — recursos estáticos usados pelos agentes.
+
+O histórico da migração da CLI para a aplicação web está em
+[`MIGRATION_API.md`](MIGRATION_API.md), e o contexto arquitetural mais amplo está
+em [`context.md`](context.md).
 
 ## Contribuição
 
-- Abra issues e PRs. Crie uma branch por feature e escreva commits pequenos.
+Crie uma branch por alteração, mantenha commits pequenos e abra um pull request
+para `main`. Não inclua arquivos `.env`, logs, índices FAISS ou outros artefatos
+locais no versionamento.

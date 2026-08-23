@@ -1,411 +1,164 @@
-# Plano de Migração: CLI → API
+# Registro da Migração: CLI para API e Frontend
 
-> Documento operacional. Feito para que outros agentes (e o mantenedor) executem
-> a migração **em etapas independentes**, cada uma com critérios de aceite e
-> comandos de verificação. Leia também o `AGENTS.md` (regras de engajamento) e o
-> `TODO.md` (dívida auditada) antes de começar.
+> Status: concluída no escopo entregue em 2026-08-23.
 >
-> Status: **em andamento** — Fase 0.7 concluída em 2026-08-13.
+> Este arquivo é um registro histórico. Para instalar, executar e validar o
+> projeto, consulte o [`README.md`](README.md). Para a arquitetura e o estado
+> atual, consulte [`context.md`](context.md).
 
----
+## 1. Objetivo original
 
-## 1. Contexto
+O Assessor.IA era acessado por um loop de linha de comando. A migração buscou
+transformá-lo em uma aplicação web, preservando o grafo multiagente, os serviços
+de domínio e a persistência existente.
 
-O projeto hoje é um chatbot multiagente (LangGraph) executado via **CLI**
-(`app/main.py`). A meta é expô-lo como **API REST (FastAPI)** para alimentar uma
-interface de chat com: chat atual, lista de chats anteriores (com título) e
-mensagens de um chat específico.
+O plano inicial previa:
 
-Pontos de partida verificados:
+- uma API REST FastAPI;
+- um endpoint de chat;
+- sessões identificadas pelo cliente;
+- listagem de conversas e consulta de mensagens anteriores;
+- uma interface de chat;
+- ciclo de vida seguro para bancos, loggers e agentes;
+- testes e CI compatíveis com a nova arquitetura.
 
-- `app/main.py` — loop de CLI; concentra `setup_logger`, sessão e finalização.
-- `app/agents/graph.py` — grafo compilado com `MemorySaver` (thread_id = session_id).
-- `app/services/chat_session_service.py` — persistência das sessões no MongoDB (Beanie).
-- `app/services/chat_history_service.py` — leitura de histórico (contém bugs, ver Fase 0.2).
-- MongoDB guarda mensagens (`ChatSession.entries`); PostgreSQL guarda transações.
+Durante a implementação, o escopo foi reduzido para uma primeira versão funcional
+com uma sessão por processo e um único endpoint de chat. Os itens adiados estão
+registrados ao final deste documento.
 
-## 2. Decisões registradas (não reabrir sem forte motivo)
+## 2. Resultado entregue
 
-| Tema | Decisão | Motivo |
+### Backend web
+
+- `app/main.py` passou a expor a aplicação FastAPI em `app.main:app`;
+- `app/lifespan.py` tornou-se responsável por montar dependências e controlar
+  startup e shutdown;
+- `POST /api/chat` recebe uma mensagem e devolve a resposta completa;
+- `GET /health` fornece o health check;
+- Swagger UI e ReDoc são disponibilizados pelo FastAPI;
+- handlers convertem exceções de aplicação em respostas HTTP descritivas;
+- erros inesperados são registrados internamente e não vazam detalhes técnicos.
+
+### Frontend
+
+- foi criada uma aplicação React, TypeScript e Vite em `frontend`;
+- o frontend envia mensagens para `/api/chat`;
+- respostas são renderizadas como Markdown, com HTML embutido desabilitado;
+- erros de rede, HTTP e formato de resposta são apresentados de maneira
+  descritiva;
+- o Vite encaminha `/api` ao backend durante o desenvolvimento;
+- o FastAPI serve `frontend/dist` na execução integrada.
+
+### Empacotamento
+
+- o Dockerfile usa um estágio Node 24 para gerar o frontend;
+- a imagem Python 3.14 recebe somente o bundle compilado;
+- o processo final inicia o Uvicorn com `app.main:app`;
+- PostgreSQL e MongoDB permanecem serviços externos ao Compose atual.
+
+### Qualidade e CI
+
+- a workflow usa Python 3.14, alinhado ao `pyproject.toml`;
+- Ruff, MyPy, testes unitários e testes de integração têm jobs próprios;
+- o frontend possui jobs explícitos para Oxlint, TypeScript e build Vite;
+- a instalação frontend na CI usa `npm ci` e o lockfile versionado;
+- cada validação aparece separadamente no pull request para facilitar o
+  diagnóstico de falhas.
+
+## 3. Decisões mantidas durante a migração
+
+| Tema | Decisão entregue | Consequência |
 |---|---|---|
-| Framework | **FastAPI** | Async nativo (LangGraph), schemas Pydantic já em uso, docs automáticas |
-| Escopo inicial | **Chat + histórico** | `POST /chat`, `GET /sessions`, `GET /sessions/{id}/messages` |
-| Streaming | **Não** (resposta completa) | Menor complexidade nesta etapa |
-| Persistência de sessão | **MemorySaver in-memory** + fixes | Sem dependência nova; ideal p/ dev/aula. Upgrade p/ `AsyncPostgresSaver` documentado p/ depois |
-| Concorrência | **`asyncio.Lock` por `session_id`** + `contextvars` p/ logs | `MemorySaver` sobrescreve checkpoint em turnos concorrentes da mesma sessão; globals de log cruzam requests |
-| Estado de sessão na API | **Fim do `_active_sessions`**; lookup por `session_id` direto no Mongo | Dict em memória não sobrevive a restart e vaza memória |
-| Títulos de chat | Gerados na **1ª mensagem** via `fast_llm` (campo novo `title` no `ChatSession`) | UI precisa de título curto |
-| Resumos | **Manter como memória do router** (`search_history`), gerados **continuamente** (não só no fechamento) | Sem resumo, a memória entre chats morre |
-| Fuso horário | `Clock` provider + setting `APP_TIMEZONE` (default `America/Sao_Paulo`) | `temporal_context` hoje depende do timezone do servidor |
-| Loggers | ENVVAR `LOG_LEVEL`/`LOG_TO_FILE`/`LOG_FILE`; terminal estilo FastAPI; arquivo com formato atual | Ver Fase 0.5 |
-| Dívida técnica neste round | Somente Fase 3 priorizada | Restante fica documentado no TODO.md |
-
-### Persistência — por que não as outras opções (registro para o futuro)
-
-- **AsyncPostgresSaver**: sobrevive a restart e multi-worker, mas exige dependência
-  nova + tabelas + migração agora. Caminho de upgrade quando subir com `--workers > 1`.
-- **Stateless via Mongo**: sem checkpointer, grafo reconstruído por request. Mais
-  rework em `graph.py` (semântica de `RemoveMessage` e dedup de tool-calls muda).
-  Não recomendado neste round.
-
-## 3. Convenções e comandos de verificação
-
-- Lint/format: `uv run ruff check .` e `uv run ruff format .` (Ruff conf no `pyproject.toml`).
-- Type check: `uv run mypy .` (exclui `tests/` e `migrations/`).
-- Testes unitários: `uv run pytest` (default roda `-m 'not integration'`).
-- Testes de integração: `uv run pytest -m integration` (sobe PostgreSQL via testcontainers).
-- Rodar API em dev: `uv run uvicorn app.api.app:app --reload`.
-- Padrões do projeto: type hints estritos, logs em PT-BR via `extra={"details": {...}}`,
-  injeção de dependência por construtor, separação `model`/`service`/`infrastructure`/`agents`.
-- **Não** gerar código sem pedido explícito (ver `AGENTS.md`). Em dúvida, perguntar.
-
-## 4. Visão geral das fases
-
-| Fase | Conteúdo | Dependente de |
-|---|---|---|
-| 0 | Pré-migração (settings, bugs, guardrails, env) | — |
-| 0.5 | Refatoração dos loggers (terminal estilo FastAPI) | Fase 0 (settings) |
-| 0.6 | Clock centralizado | Fase 0 (settings) |
-| 1 | Núcleo da API (`app/api/`, `POST /chat`) | 0, 0.5, 0.6 |
-| 2 | Endpoints de histórico (UI) | Fase 1 |
-| 3 | Dívida técnica priorizada | Fase 0 (opcional, pode paralelizar) |
-| 4 | Testes de API + CI | Fase 1 e 2 |
-| 5 | Documentação (README, context.md, TODO.md) | todas |
-
-Cada fase termina com: `ruff check .` limpo, testes verdes e critérios de aceite da fase atendidos.
-
----
-
-## Fase 0 — Correções pré-migração
-
-### 0.1 `app/infrastructure/settings.py`
-
-**Implementado (2026-08-12):**
-
-- `Settings` agora lê exclusivamente `.env.app`, rejeita variáveis desconhecidas e
-  expõe `log_level`, `log_to_file`, `log_file` e `app_timezone`.
-- `validate_llm_api_keys()` é chamado no boot da CLI e deve ser reutilizado no
-  lifespan da futura API. A validação não ocorre no import para não bloquear
-  migrations, testes de domínio e comandos administrativos.
-- O ambiente foi separado: `.env.app` é da aplicação e `.env.compose` é do
-  PostgreSQL no Docker Compose. Os modelos versionados são
-  `.env.app.example` e `.env.compose.example`.
-- Credenciais não foram migradas automaticamente. Configure `GEMINI_API_KEY` e
-  `GROQ_API_KEY` em `.env.app` por canal seguro antes de iniciar a aplicação.
-
-- Adicionar campos:
-  - `log_level` (default `"INFO"`, validado p/ `INFO`/`DEBUG`).
-  - `log_to_file` (bool, default `False`).
-  - `log_file` (default `"logs/app.log"`).
-  - `app_timezone` (default `"America/Sao_Paulo"`).
-- Validar no boot que `gemini_api_key` e `groq_api_key` **não** são o valor dummy
-  (`"No key provided"`) — falha clara e cedo em vez de erro enigmático em runtime.
-- Trocar `model_config.extra` de `"ignore"` para `"forbid"` (typos em env param a falhar).
-- **Arquivos tocados:** `app/infrastructure/settings.py`, `.env`, `.env.example`.
-- **Aceite:** `uv run python -c "from app.infrastructure.settings import settings; print(settings.log_level)"`
-  respeita o `.env`; env desconhecida levanta `ValidationError`.
-
-### 0.2 Bug `app/services/chat_history_service.py::fetch_history`
-
-**Implementado (2026-08-12):**
-
-- A query agora ordena por `updated_at` em ordem decrescente e aplica o `limit`
-  recebido antes de materializar os resultados.
-- Os testes unitários cobrem a direção da ordenação e o limite padrão usado pelo
-  `SearchHistoryTool`.
-
-Hoje `limit` é **ignorado** (`.to_list()` sem `.limit(limit)`) e a ordenação é
-**ascendente** por `started_at` (contradiz "most recent first" da docstring).
-Consequência: `search_history` (router) puxa todo o histórico.
-
-- Aplicar `.limit(limit)` na query.
-- Ordenar `desc` por `updated_at` (mais recentes primeiro).
-- **Arquivos tocados:** `chat_history_service.py` + testes afetados.
-- **Aceite:** teste unitário provando `limit` aplicado e ordem descendente.
-
-### 0.3 Guardrails fail-closed
-
-**Implementado (2026-08-12):**
-
-- Apenas `CATEGORIA: APROVADO` aprova uma mensagem; respostas sem categoria ou
-  com categoria desconhecida são bloqueadas.
-- Falhas e conteúdo não textual do classificador são registrados e retornam um
-  bloqueio seguro, sem propagar a exceção para o grafo.
-- Testes unitários cobrem aprovação explícita, formato inválido, categoria
-  desconhecida, indisponibilidade do LLM e bloqueio determinístico sem chamada
-  ao LLM.
-
-`app/agents/guardrails/input_guardrail.py` define `category = "APROVADO"` por default:
-classificação desconhecida/vazia é aprovada, e exceção do LLM propaga sem bloqueio.
-
-- Categoria desconhecida ou ausente → `GuardrailResult.block(...)`.
-- Exceção do `fast_llm.ainvoke` → bloquear (fail-closed) e logar; **não** deixar propagar.
-- **Arquivos tocados:** `input_guardrail.py`, `guardrails_prompts.py` (ajuste de instrução se preciso).
-- **Aceite:** mock de LLM devolvendo `"sem categoria"` resulta em bloqueio.
-
-### 0.4 Configuração e ambiente
-
-**Implementado (2026-08-13):**
-
-- O ambiente da aplicação usa `POSTGRES_URL` com a porta, credenciais e banco
-  expostos pelo Compose; o PostgreSQL usa o arquivo separado `.env.compose`.
-- Os exemplos de ambiente removem a configuração morta do LangGraph e incluem
-  logging e timezone.
-- O Makefile executa Python via `uv run`, sem depender de caminhos específicos
-  de `.venv`; README e ajuda do Makefile documentam o fluxo correto e o nome
-  correto do container.
-- O volume do PostgreSQL 18 é montado em `/var/lib/postgresql`; volumes do
-  layout anterior precisam ser recriados ou migrados antes da atualização. O
-  Dockerfile não declara volume adicional no caminho legado.
-
-- `.env` precisa definir `POSTGRES_URL` correto (hoje ausente → usa default
-  `postgres:postgres@localhost:5432`, mas o container expõe `5433` com senha
-  `germinare`). `make build-db` + `make run` hoje **não conecta**.
-- `.env.example`: corrigir/remover `LANGGRAPH_ALLOWED_MSGPACK_MODULES` (config morta:
-  `graph.py:70` hardcoda `app.model.graph_state`); adicionar `LOG_LEVEL`, `LOG_TO_FILE`,
-  `LOG_FILE`, `APP_TIMEZONE`.
-- `.gitignore`: adicionar `**/.env`.
-- README/makefile: `make build` não existe (target é `build-db`); banco é
-  `assessoriadb` (README escreve `acessoriadb`).
-- **Aceite:** `make build-db && make upgrade-db && make run` conecta sem erro.
-
-### 0.5 Loggers (terminal estilo FastAPI) — `app/infrastructure/logger.py`
-
-**Implementado (2026-08-13):**
-
-- `setup_logger()` usa `settings.log_level`, só cria handler de arquivo quando
-  `log_to_file` está habilitado e fecha handlers anteriores antes de reconfigurar.
-- O console usa saída concisa com prefixo ANSI por nível; em `DEBUG`, inclui o
-  módulo reduzido e `details`. Tracebacks não são mais suprimidos.
-- Contexto de sessão, trace e interação agora usa `ContextVar`, isolando tasks
-  assíncronas concorrentes sem alterar os consumidores existentes.
-- Testes cobrem formatos de console, arquivo opcional, traceback e isolamento
-  de contexto.
-
-Comportamento alvo:
-
-- **Nível:** root level = `settings.log_level` (remover `DEBUG` hardcoded de `setup_logger`).
-- **Arquivo (`.log`):** habilitado **somente** se `settings.log_to_file`. Manter o
-  formato atual (`StructuredFormatter`: data · nível · agente · session · int · trace ·
-  details JSON · traceback).
-- **Terminal:** novo formatter estilo uvicorn, prefixo colorido `{LEVEL}:` (ANSI):
-  - `INFO+`: `INFO: mensagem` puro — sem details, sem módulo, sem data/sessão.
-    Intercala naturalmente com os requests do uvicorn.
-  - `DEBUG`: `[nome_reduzido] INFO: mensagem | {details_json}` — reusar
-    `_short_module_name` (remove `app.`, `_agent/_service/_repository`, etc.).
-  - **Traceback: nunca suprimir** no console (remover `HideConsoleTracebackFilter`).
-- `ContextFilter` continua preenchendo `agent/session/trace/interaction`.
-- Não silenciar `uvicorn`, `uvicorn.error`, `uvicorn.access`.
-- Substituir globals `_current_session_id`/`_current_trace_id`/`_INTERACTION_COUNTER`
-  por **`contextvars.ContextVar`** (ver Fase 0.5.1).
-- **Arquivos tocados:** `logger.py`, `settings.py` (já na 0.1), `.env`/`.env.example`.
-- **Aceite:** `LOG_LEVEL=DEBUG uv run ...` mostra módulo reduzido + details; `INFO`
-  mostra só `LEVEL: mensagem`; `LOG_TO_FILE=false` não cria `logs/`; exceção exibe
-  stack no terminal.
-
-#### 0.5.1 contextvars (correlação de logs em concorrência)
-
-Os três globals viram `ContextVar`. O `ContextFilter` lê as contextvars. A Fase 1
-seta os valores por request (middleware/dependency). Sem isso, requests concorrentes
-cruzam `session/trace/int`.
-
-### 0.6 Clock centralizado — novo `app/infrastructure/clock.py`
-
-**Implementado (2026-08-13):**
-
-- A porta `Clock`, `SystemClock` e `FixedClock` centralizam o tempo. Uma única
-  instância é criada no composition root e injetada nos serviços e agentes. O
-  timezone IANA é suportado em todas as plataformas pela
-  dependência `tzdata`.
-- Sessões MongoDB gravam `started_at` e `updated_at` em UTC timezone-aware.
-- O contexto temporal é reconstruído por execução, com períodos derivados da
-  data local configurada. Os nós de router, financeiro, agenda e orquestrador
-  o inserem como mensagem de sistema sem recriar agentes ou ferramentas.
-- Testes cobrem clock fixo, timezone local, contexto dinâmico e timestamps de
-  sessão determinísticos.
-
-Analogia ao `Clock` do Spring Boot: um provider único de "agora".
-
-- **`Clock` (protocol)**: `now() -> datetime` (UTC tz-aware, persistência),
-  `local_now() -> datetime` (`settings.app_timezone`), `today() -> date` (data local).
-- **`SystemClock`**: implementação default.
-- **`FixedClock(fixed)`: para testes determinísticos.**
-- **Instância compartilhada:** o `lifespan` cria o `SystemClock` da aplicação e o
-  injeta explicitamente nos consumidores.
-- Aplicar:
-  - `chat_session_service.py:28,52,104` — `datetime.now()` naive → `clock.now()`
-    (Mongo passa a gravar tz-aware; corrige TODO "ChatMessage sem timezone").
-  - `temporal_context.py:5` — `_now = datetime.now(timezone.utc).astimezone()` →
-    função `build_temporal_context()` usando `clock.local_now()` (corrige fuso do
-    servidor e a data congelada no import — crítico p/ API de longa duração).
-- `occurred_at`/`updated_at` de transações seguem com `func.now()` do banco (intencional).
-- **Arquivos tocados:** `clock.py` (novo), `chat_session_service.py`,
-  `temporal_context.py`, quem consumir `build_temporal_context` (nós do grafo).
-- **Aceite:** teste com `FixedClock` fixa `started_at`/`updated_at`/contexto temporal.
-
-### 0.7 Refatorações menores
-
-**Implementado (2026-08-13):**
-
-- O pacote raiz é `app/`; imports, patches de testes, comandos, configuração de
-  ferramentas e o serializador LangGraph usam esse namespace.
-- Imports parentais foram substituídos por imports absolutos `app.*`.
-- Migrations, documentação atual e planejamento futuro agora usam `app/`.
-
-- Manter o pacote `app/` coerente em nomes e imports por todo o projeto.
-- Remover referências a pacote pai com `..pacote_pai` pelo caminho completo
-  `app.pacote_pai.pacote_irmao`.
-
-### ✅ Fase 0 — Definição de pronto
-
-`uv run ruff check .` limpo; `uv run pytest` verde; `make build-db && make upgrade-db`
-ok; `.env`/`.env.example` consistentes; bug do `limit` coberto por teste.
-
----
-
-## Fase 1 — Núcleo da API (novo pacote `app/api/`)
-
-### 1.1 `app/api/app.py` — aplicação e lifespan
-
-- Criar `FastAPI` com `lifespan`:
-  - Startup: `setup_logger()`, `MongoManager.init_database()` (com `asyncio.Lock`
-    contra dupla inicialização), validação de chaves de API.
-  - Shutdown: fechar `AsyncMongoClient` (adicionar método de close no `MongoManager`).
-- Título/descrição da API; sem dependência do `app.main` CLI.
-
-### 1.2 `POST /chat` — `app/api/routers/chat.py`
-
-Request: `{session_id?: str, message: str}`. Fluxo:
-
-1. Normalizar `session_id` (criar `uuid4` se ausente; responder com ele).
-2. **Título na 1ª mensagem:** se o `ChatSession` ainda não tem `title`, gerar via
-   `fast_llm` (curto, < 60 chars) e salvar.
-3. Adquirir `asyncio.Lock` por `session_id` (serializa turnos do mesmo chat).
-4. Salvar mensagem do usuário (Mongo), executar `execute_agent_flux(...)`, salvar
-   resposta (Mongo).
-5. Retornar `{session_id, title, response, trace_id}`.
-
-Response model Pydantic em `app/api/schemas.py`.
-
-### 1.3 Refatorar `ChatSessionService`
-
-- **Remover `_active_sessions`:** `_save_entry`/`finalize_session` passam a localizar
-  o documento por `ChatSession.session_id` (não pelo dict).
-- **TTL/expurgo:** sessões inativas (configurável, ex.: > 1h) deixam de participar
-  do fluxo ativo; decisão de limite a confirmar com o mantenedor.
-- **Resumo contínuo:** em vez de só no fechamento, gerar `summary` a cada N mensagens
-  (ex.: 10) ou após inatividade — mantém o `search_history` do router útil.
-- Criar método de reabertura: `get_or_create_session(session_id)`.
-
-### 1.4 Erros e segurança
-
-- Exceções não tratadas → `500` genérico + log interno com traceback + registro via
-  `save_error` (comportamento atual do `main.py`).
-- **Nunca** devolver `str(e)`/stack ao usuário. Corrigir já nesta fase
-  `search_history.py:61` (`f"Erro ao buscar as mensagens: {str(e)}"`).
-
-### ✅ Fase 1 — Definição de pronto
-
-`uv run uvicorn app.api.app:app --reload` sobe; `POST /chat` cria sessão, persiste
-mensagens, responde; dois `POST /chat` na mesma sessão preservam contexto;
-dois requests em sessões diferentes não se interferem (logs com `session/trace`
-corretos via contextvars).
-
----
-
-## Fase 2 — Histórico (UI)
-
-### 2.1 `GET /sessions`
-
-- Lista de chats com `title`, `updated_at`, prévia da última mensagem.
-- Novo método em `ChatHistoryService` (ex.: `list_sessions(limit)`), sem vazar PII crua
-  (previews curtas/truncadas).
-- Ordenação `desc` por `updated_at`.
-
-### 2.2 `GET /sessions/{id}/messages`
-
-- Mensagens na ordem de ocorrência (reusa `fetch_entries` já corrigido na 0.2).
-- Retorna entradas mapeadas p/ um schema simples `{role, content, type, created_at?}`.
-
-### 2.3 `search_history` do router
-
-- Confirmar que continua consumindo `summary` (resumos contínuos da Fase 1).
-
-### ✅ Fase 2 — Definição de pronto
-
-Os 3 endpoints atendem a UI de chat (lista, mensagens, conversa em andamento);
-`GET /sessions` respeita limite e ordem; testes de rota com `TestClient`.
-
----
-
-## Fase 3 — Dívida técnica priorizada
-
-- **Typos:** `input_aproved`/`output_aproved` (`guardrail_result.py` + testes),
-  `stricktly assyncronal` (`search_history.py:40`), `Unknow error ocurred`
-  (`main.py:33`), `Espected` (`update_transaction_params.py:88`).
-- **`GuardrailResult`:** remover campo morto `_allow_direct` e o `model_validator`
-  que bloqueia instanciação direta (hack desnecessário).
-- **`anonymize_input`** (`anonymization.py`): anonimizar **todas** as ocorrências do
-  mesmo valor (hoje `replace(value, token, 1)` deixa a 2ª crua); word boundaries nos
-  padrões de `anonymization_config.py` (ex.: `CONTA` casa dentro de CPF/telefone).
-- **FAQ → output guardrail:** em `graph.py:66` `FAQ_NODE_NAME` vai direto a `END`;
-  rotear p/ `OUTPUT_GUARDRAIL` e de-anonimizar a resposta (hoje tokens `[PII_*]`
-  vazam na resposta do FAQ).
-- **`.gitignore`:** `**/.env` (já na 0.4; confirmar).
-- **`faq_store.py`:** cache do índice FAISS em memória (evitar `FAISS.load_local`
-  por chamada); documentar o `allow_dangerous_deserialization=True`.
-- **Fora do escopo (deixar no TODO.md):** `Decimal`, auto-imports dinâmicos,
-  `create_react_agent`, `String(32)`, enum migrations manuais, engine module-level,
-  singleton do Mongo, etc.
-
----
-
-## Fase 4 — Testes e CI
-
-- Testes de API com `TestClient` (FastAPI) mockando LLM (`fast_llm`, `specialist_llm`)
-  e MongoDB (Beanie). Cobrir: criação de sessão, título na 1ª msg, lock por sessão,
-  erro genérico, endpoints de histórico.
-- Atualizar testes que usam `input_aproved`/`output_aproved` junto da correção (Fase 3).
-- Atualizar testes afetados pelo `FixedClock` (Fase 0.6).
-- CI (`.github/workflows/ci.yml`): incluir os novos testes de API no job unit
-  (ou job próprio); manter ruff/mypy/integration.
-- Corrigir testes acoplados a internals (`stmt._limit`, `_order_by_clauses`,
-  `__new__` + `object.__setattr__`) **somente se** o refactor das Fases 1–2 exigir.
-
----
-
-## Fase 5 — Documentação
-
-- **README.md:** seção de API (rodar com `uvicorn app.api.app:app`, exemplos curl
-  dos 3 endpoints), CLI vira legado, correções de `make`/nome do banco (0.4).
-- **context.md:** "acesso via CLI" → CLI + API; atualizar "Estado Atual" e
-  "Próximos Passos"; typos (`sumarize`).
-- **TODO.md:**
-  - Marcar como resolvidos: UpdateTransactionTool registrada, type hint de
-    `get_active_sessions`, `os.system("cls")`/console_utils, `logger.exception` em
-    `search_history`, IndexError do `output_guardrail`, monkey-patch de `ainvoke`,
-    `sumarize` renomeado, "ChatMessage sem timezone" (via Clock).
-  - Adicionar achados novos: `fetch_history` ignora limit, `temporal_context` stale
-    no import, globals de logger → contextvars, `main()` não importável, config morta
-    (`LOG_LEVEL`/`LOG_TO_FILE`/`LANGGRAPH_ALLOWED_MSGPACK_MODULES`), `POSTGRES_URL`
-    ausente, tokens PII no FAQ, `str(e)` vazado ao usuário, `.gitignore` sem `**/.env`.
-  - Nova seção "Migração API" apontando para este documento.
-
----
-
-## Referências rápidas (arquivos-chave)
-
-| Arquivo | Papel na migração |
-|---|---|
-| `app/main.py` | CLI a ser aposentado; contém `setup_logger`/sessão hoje |
-| `app/agents/graph.py` | Grafo + `MemorySaver` (thread_id = session_id); FAQ→END (Fase 3) |
-| `app/agents/temporal_context.py` | `_now` no import (Fase 0.6) |
-| `app/services/chat_session_service.py` | Sessões/Mongo; `_active_sessions` (Fase 1) |
-| `app/services/chat_history_service.py` | Bug do `limit` (Fase 0.2); endpoints (Fase 2) |
-| `app/infrastructure/logger.py` | Refatoração console/arquivo + contextvars (Fase 0.5) |
-| `app/infrastructure/settings.py` | Novos campos env (Fase 0.1) |
-| `app/infrastructure/mongo_connection.py` | `init_database` + close no shutdown (Fase 1) |
-| `app/agents/guardrails/input_guardrail.py` | Fail-closed (Fase 0.3) |
-| `app/api/` | Novo pacote da API (Fases 1–2) |
-| `.env` / `.env.example` | Correção de config (Fase 0.4) |
-| `TODO.md` | Dívida auditada; atualizar ao longo da migração (Fase 5) |
+| Framework HTTP | FastAPI | API assíncrona, OpenAPI e handlers centralizados |
+| Resposta do chat | Completa, sem streaming | Contrato e frontend mais simples nesta versão |
+| Checkpoint do grafo | Memória do processo | Não oferece continuidade entre processos ou workers |
+| Persistência | MongoDB para chat e PostgreSQL para domínio financeiro | Mantém responsabilidades distintas |
+| Logging | Configurável e contextual com `ContextVar` | Tasks assíncronas não compartilham contexto acidentalmente |
+| Tempo | Clock centralizado e timezone configurável | Testes determinísticos e persistência coerente em UTC |
+| Segurança de erros | Mensagens públicas controladas | Tracebacks e exceções internas não chegam ao cliente |
+| Distribuição do frontend | Build estático servido pelo FastAPI | Uma única origem na execução integrada |
+
+## 4. Trabalhos preparatórios incorporados
+
+Antes e durante a exposição HTTP, foram concluídas melhorias necessárias para uma
+aplicação de longa duração:
+
+- validação explícita das chaves LLM no startup;
+- settings de logging, timeout e timezone;
+- separação do arquivo de ambiente versionado e do `.env` local;
+- correção de ordenação e limite na consulta de histórico;
+- guardrail de entrada fail-closed;
+- logging com contexto seguro para concorrência assíncrona;
+- substituição de datas capturadas no import por um Clock injetável;
+- timestamps de sessão timezone-aware;
+- padronização do namespace raiz `app`;
+- tratamento HTTP centralizado para exceções conhecidas e inesperadas.
+
+Essas alterações continuam relevantes mesmo com o escopo menor de sessões da
+primeira versão web.
+
+## 5. Diferenças em relação ao plano original
+
+### Sessão
+
+O plano previa receber ou criar um `session_id` por conversa e serializar requests
+concorrentes da mesma sessão. A implementação entregue cria um UUID no lifespan e
+o reutiliza durante toda a vida do processo.
+
+Consequências:
+
+- clientes atendidos pelo mesmo processo compartilham a sessão ativa;
+- reiniciar o processo inicia outra sessão;
+- múltiplos workers não compartilham o checkpoint em memória;
+- a versão atual é adequada a demonstração e uso controlado, não a isolamento
+  multiusuário.
+
+### Histórico e títulos
+
+Não foram implementados os endpoints originalmente propostos para listar sessões
+ou carregar mensagens de uma sessão específica. Também não foi entregue geração
+de título de conversa para a interface.
+
+### Testes de API e frontend
+
+O projeto cobre os serviços, agentes, infraestrutura e tratamento de exceções,
+mas ainda deve ampliar testes direcionados às rotas FastAPI. O frontend possui
+lint, type checking e build automatizados, porém ainda não possui testes de
+componentes.
+
+### CLI
+
+A interface de linha de comando deixou de ser a entrada documentada. O nome
+`app/main.py` foi mantido, agora como composition root da aplicação FastAPI.
+
+## 6. Operação atual
+
+O fluxo suportado é:
+
+1. configurar `.env` a partir de `.env.example`;
+2. disponibilizar PostgreSQL e MongoDB;
+3. instalar dependências Python e frontend;
+4. gerar `frontend/dist`;
+5. aplicar as migrations Alembic;
+6. iniciar `app.main:app` com Uvicorn;
+7. acessar a interface ou chamar `POST /api/chat`.
+
+Comandos e exemplos atualizados estão centralizados no README para evitar que este
+registro histórico volte a competir com a documentação operacional.
+
+## 7. Evoluções futuras
+
+As seguintes extensões não fazem parte da migração concluída:
+
+- sessão identificada por usuário ou conversa;
+- locks por sessão para turnos concorrentes;
+- checkpointer persistente compatível com múltiplos workers;
+- `GET /sessions` e `GET /sessions/{id}/messages`;
+- títulos e previews de conversas;
+- política contínua de resumos por quantidade de mensagens ou inatividade;
+- testes de rota com ciclo de vida e dependências substituídas;
+- testes de componentes e integração HTTP do frontend;
+- streaming de respostas.
+
+Cada evolução deve ser tratada como uma nova feature, com contrato, segurança,
+persistência e critérios de aceite próprios, sem reabrir a migração já concluída.

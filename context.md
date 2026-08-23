@@ -1,116 +1,144 @@
 # Contexto do Projeto: Assessor.IA
 
-## 1. Visão Geral
-Este projeto contém um sistema de assistente multiagencial com acesso via CLI. A migração gradual para uma API REST com FastAPI está planejada em `MIGRATION_API.md`; a Fase 0.1 foi concluída. O objetivo principal do assistente é ajudar na organização, tanto financeira como do dia a dia (tarefas, compromissos, etc.).
-Este projeto é o principal objeto de estudo das aulas de IA do meu curso de desenvolvimento de sistema, usado para introduzir tecnicas e ferramentas na prática ao invés de só na teoria. Cada aluno tem seu projeto, assim como o professor. Este é o meu, mas ele está versionado num repositório público no GitHub para que meus colegas tenham acesso.
-Outros colegas que acessam o repositório não necessariamente têm conhecimento sobre todas as funcionalidades extra que eu adicionei, além da arquitetura e stack que está diferente do que o professor usa em aula.
+## 1. Visão geral
 
+O Assessor.IA é uma aplicação web de estudo que demonstra um assistente
+multiagente para organização financeira e apoio ao dia a dia. O sistema combina
+uma API FastAPI, um grafo de agentes LangGraph e uma interface React.
 
-## 2.1. Stack Tecnológica (deste projeto)
-- **Sistema Multiagentes:** LangGraph
-- **Banco de Dados:**
-    - PostgreSQL: Dados do usuário (Transações registradas, compromissos, etc.)
-    - MongoDB: Dados de sessão (Mensagens, resumo da sessão, etc.)
-- **Migrations:** Alembic
-- **Acesso a Dados:**
-    - PostgreSQL: SQLAchemy 2.0
-    - MongoDB: Beanie
-- **Infraestrutura:** Docker, Docker Compose, Make e UV
+O projeto é usado em aulas de IA de um curso de desenvolvimento de sistemas. Por
+ser público e possuir uma arquitetura diferente da implementação de referência do
+curso, sua documentação deve permitir que outros alunos entendam tanto a execução
+quanto as decisões técnicas sem depender do histórico das aulas.
 
-## 2.2. Stack Tecnológica (do professor)
-- **Sistema Multiagentes:** LangGraph
-- **Banco de Dados:**
-    - PostgreSQL: Dados do usuário (Transações registradas, compromissos, etc.)
-    - MongoDB: Dados de sessão (Mensagens, resumo da sessão, etc.)
-- **Migrations:** Inicialização manual via script SQL
-- **Acesso a Dados:**
-    - PostgreSQL: Psycopg 2
-    - MongoDB: PyMongo
-- **Infraestrutura:** Pip
+## 2. Stack tecnológica
 
+### Aplicação
 
-## 3.1. Arquitetura e Organização de Pastas (deste projeto)
-O projeto segue os princípios de Arquitetura em Camadas e Domain-Driven Design (DDD).
-Estou aprendendo ainda, então a rigorosidade da arquitetura está em aprimoramento:
-- `/app`: Código fonte da aplicação
-    - `/model`: Entidades (não todas puras, alguns ORMs) e regras de negócio.
-    - `/services`: Utilização direta ou indireta via repository a ferramentas externas; lógica de negócio complexa
-    - `/infrastructure`: Implementações técnicas como repositories, alguns ORMs, loggers personalizados, variáveis de ambiente, etc.
-    - `/agents`: Grafo, agentes e tools do sistema e seus prompts
-- `/migrations`: Migrações Alembic autogeradas e configurações.
-- `/data`: Assets estáticos da applicação, como PDFs
-- `/sql`: Scripts SQL de configuração do banco local
-- `/logs`: Logs de execução do app
-- `/tests`: Testes unitários (173) e de integração (62)
+- API: FastAPI e Uvicorn;
+- orquestração de agentes: LangGraph e LangChain;
+- frontend: React 19, TypeScript, Vite e Oxlint;
+- modelos: Gemini e Groq;
+- gerenciamento Python: uv;
+- qualidade Python: Ruff, MyPy e Pytest;
+- qualidade frontend: Oxlint, TypeScript e build Vite;
+- containers: Docker e Docker Compose.
 
-## 3.2. Arquitetura e Organização de Pastas (do professor)
-Projeto praticamente monolítico, contendo apenas arquivos soltos na raiz dividos por funcionalidade no nível mais macro possível, como `main.py` para o grafo, agentes e interação com usuário; `pg_tools.py` com conexão e interação com banco PostgreSQL e tools de agentes; `faq_tools.py` para tools do agente leitor de FAQ contendo toda a lógica desde a criação da tool até os embeddings; e assim por diante.
+### Persistência
 
+- PostgreSQL: transações e demais dados estruturados de domínio;
+- SQLAlchemy assíncrono: acesso ao PostgreSQL;
+- Alembic: evolução do schema relacional;
+- MongoDB: sessão, mensagens, erros e resumo da conversa;
+- Beanie/PyMongo: acesso ao MongoDB;
+- FAISS: índice vetorial local para consulta ao FAQ.
 
-## 4. Comandos Frequentes (Para uso do Agente)
-Podem ser consultadas no `makefile`, mas para contexto:
-- Gerir dependências: `uv [add|remove|sync]`
-- Rodar o linter: `ruff check [--fix]; ruff format`
-- Gerar migrações: `alembic revision --autogenerate -m "mensagem"`
-- Rodar testes unitários: `pytest`
-- Rodar testes de integração: `pytest -m integration`
-- Rodar todos os testes: `pytest && pytest -m integration`
-- Workflow CI: `.github/workflows/ci.yml` — roda em PRs para `main` e pushes para `dev`
+## 3. Arquitetura
 
-## 5. Estado Atual
+O backend segue uma arquitetura em camadas, com separação gradual entre domínio,
+aplicação e detalhes técnicos:
 
-### Problemas por implementação errada (ainda pendentes)
-1. **Paradigmas de Arquitetura mal aplicados:** Por estar aprendendo, muitas vezes eu não consigo organizar o código da forma correta, e com o tempo esses erros começam a ficar perceptíveis.
-2. **Falta de padronização de logs e comentários:** Comentários excessivos em certos lugares, faltantes em outros. Logs foram reorganizados recentemente, mas podem precisar de mais ajustes.
+- `app/domain` contém modelos do domínio;
+- `app/application` contém portas, contratos, modelos de entrada e exceções;
+- `app/services` coordena casos de uso;
+- `app/infrastructure` implementa agentes, persistência, LLMs, relógio e logging;
+- `app/api` contém rotas, dependências e tratamento de exceções HTTP;
+- `app/main.py` é o composition root FastAPI;
+- `app/lifespan.py` inicializa bancos, serviços, grafo e sessão.
 
-### Problemas resolvidos
-1. ~~**Falta de testes:**~~ Agora existem **235 testes** (173 unitários + 62 de integração). Testes unitários rodam sem Docker; testes de integração sobem PostgreSQL via testcontainers. CI no GitHub Actions executa ambos em jobs paralelos.
-2. ~~**Chamadas síncronas a LLMs:**~~ Guardrails e serviços de sumarização agora usam `ainvoke` (assíncrono), eliminando bloqueios e permitindo mocks via `AsyncMock`.
-3. ~~**Vazamento de PII em logs:**~~ Output guardrail só loga o texto após sanitização. Input guardrail recebe texto anônimo.
-4. ~~**Configuração permissiva e ambiente compartilhado:**~~ A aplicação agora lê `.env.app` com `extra="forbid"`; o Compose lê `.env.compose`. Os exemplos versionados são `.env.app.example` e `.env.compose.example`.
+O frontend fica isolado em `frontend`. Durante o desenvolvimento, o Vite encaminha
+`/api` ao FastAPI. Em execução integrada, o backend serve o conteúdo compilado de
+`frontend/dist`.
 
-### Migração para API
-- O plano operacional está em `MIGRATION_API.md`.
-- Fase 0.1 concluída: novos settings de logging/timezone, validação explícita das chaves LLM no boot da CLI e separação entre configuração da aplicação e do Compose.
-- Fase 0.2 concluída: o histórico usado pelo router respeita o limite solicitado e retorna sessões por atualização mais recente.
-- Fase 0.3 concluída: o input guardrail bloqueia falhas, formatos inválidos e categorias desconhecidas do classificador LLM.
-- Fase 0.4 concluída: README e Makefile usam o fluxo `uv`, os ambientes da aplicação e do Compose são separados e a URL PostgreSQL local usa a porta publicada correta.
-- Fase 0.5 concluída: logs usam settings, arquivo opcional, saída de console no estilo da API e `ContextVar` para isolar sessão, trace e interação entre tasks.
-- Fase 0.6 concluída: Clock centralizado fornece UTC para persistência e timezone local para contexto temporal; prompts recebem contexto atualizado a cada execução.
-- Fase 0.7 concluída: o pacote raiz é `app`; código, testes, migrations, comandos e documentação usam esse namespace e não usam imports parentais.
-- Para executar localmente, preencher `GEMINI_API_KEY` e `GROQ_API_KEY` em `.env.app`. Credenciais nunca devem ser versionadas.
-- Próximo passo: Fase 1, criar o núcleo FastAPI e o endpoint `POST /chat` em `app/api/`.
+## 4. Fluxo atual de uma mensagem
 
-## 6. Funcionalidades Implementadas Recentemente
+1. O usuário envia uma mensagem pela interface React.
+2. O frontend chama `POST /api/chat`.
+3. A rota persiste a mensagem humana no MongoDB.
+4. O grafo executa guardrails, roteamento e o agente especialista adequado.
+5. Tools financeiras acessam o PostgreSQL por meio de serviços e repositórios.
+6. A resposta é persistida no MongoDB e devolvida como string JSON.
+7. O frontend valida o formato e renderiza a resposta como Markdown seguro.
 
-### Logging
-- Logs multi-linha permitidos (removido `InlineMessageFormatter`)
-- Prefixo `[INT N]` para correlacionar logs de uma mesma interação do usuário
-- Bloco visual `─── NODE ─── Input / Output` para cada agente no grafo
-- Logs rotineiros de tools e services rebaixados para `debug` (menos ruído)
-- Filtro `HideConsoleTracebackFilter` para não expor tracebacks no console
-- MongoDB `saslStart`/`saslContinue` silenciados
+A versão atual cria uma sessão quando o processo da API inicia e a finaliza no
+shutdown. Todos os requests atendidos pelo mesmo processo usam essa sessão. Lista
+de conversas, seleção de sessão pelo cliente e endpoints de histórico não fazem
+parte do escopo entregue.
 
-### CI/CD
-- Workflow GitHub Actions com dois jobs paralelos: `lint-and-unit` e `integration`
-- Lint com Ruff, testes unitários sem dependências externas
-- Testes de integração sobem PostgreSQL via testcontainers (Docker built-in no runner)
-- `.env.example` copiado para `.env` durante o CI
+## 5. Configuração e execução
 
-### Isolamento de Testes
-- Testes de integração marcados com `@pytest.mark.integration`
-- `apply_migrations` não é mais `autouse` — apenas testes que explicitamente usam a fixture disparam o container
-- `pytest` padrão roda só unitários; `pytest -m integration` roda os de integração
+- Python suportado: 3.14, conforme `pyproject.toml`;
+- Node.js usado no build: 24, conforme `Dockerfile` e CI;
+- arquivo de configuração da aplicação: `.env`;
+- exemplo versionado: `.env.example`;
+- entrada da API: `app.main:app`;
+- frontend de desenvolvimento: `http://localhost:5173`;
+- aplicação integrada: `http://localhost:8000`;
+- documentação OpenAPI: `/docs` e `/redoc`;
+- health check: `/health`.
 
-### Router
-- Filtro de `tool_calls` de outros agentes para evitar que o router tente chamar tools que não possui
+PostgreSQL e MongoDB são dependências externas. O Compose atual executa apenas a
+aplicação e não cria containers para esses bancos.
 
-### Async LLM
-- Guardrails (`input_guardrail.py`, `output_guardrail.py`) convertidos de `invoke` para `ainvoke`
-- `SessionSummaryService.sumarize` convertido para `async def`
+Os comandos operacionais atualizados estão no `README.md` e no `makefile`.
 
-## 7. Próximos Passos
-- Add transaction category 'SALARY'
-- Pass errors during the session to the summary agent so the session history understands some operations went wrong
-- Fix layer separation
-- Improve type safety
+## 6. Testes e CI
+
+Os testes Python estão organizados em unitários, arquiteturais e de integração.
+O Pytest padrão exclui a marca `integration`; a execução explícita dessa marca usa
+Testcontainers e requer Docker.
+
+A workflow `.github/workflows/ci.yml` roda em pull requests para `main` e apresenta
+os seguintes checks independentes:
+
+- `lint` — Ruff;
+- `unit-tests` — testes sem a marca de integração;
+- `integration-tests` — testes com Testcontainers;
+- `type-checks` — MyPy;
+- `frontend-lint` — Oxlint;
+- `frontend-type-check` — compilação TypeScript;
+- `frontend-build` — geração do bundle Vite.
+
+A separação dos jobs permite identificar diretamente qual camada falhou. O
+frontend ainda não possui testes automatizados de componentes.
+
+## 7. Estado da migração para API
+
+A migração da antiga interface de linha de comando para a aplicação web foi
+concluída no escopo atualmente entregue:
+
+- FastAPI é a entrada da aplicação;
+- startup e shutdown são controlados pelo lifespan;
+- o chat está exposto em `POST /api/chat`;
+- exceções são convertidas em respostas HTTP sem expor detalhes internos;
+- a interface React consome a API;
+- o backend serve o build do frontend;
+- Docker gera e empacota os dois componentes;
+- a CI valida backend e frontend.
+
+O documento `MIGRATION_API.md` foi preservado como registro histórico das decisões
+e das diferenças entre o plano original e o escopo final.
+
+## 8. Decisões e características relevantes
+
+- Guardrails de entrada operam de forma fail-closed.
+- Dados sensíveis são anonimizados antes do processamento que não precisa deles.
+- O contexto de logs usa `ContextVar` para evitar cruzamento entre tasks
+  assíncronas.
+- O relógio da aplicação centraliza UTC para persistência e timezone local para
+  contexto temporal.
+- Exceções inesperadas são registradas internamente, mas a API devolve mensagem
+  genérica.
+- O Markdown do frontend ignora HTML embutido.
+- O checkpointer do grafo permanece em memória e não é adequado a múltiplos
+  workers com continuidade de sessão.
+
+## 9. Próximos passos fora da migração concluída
+
+- definir uma estratégia de sessão por usuário e persistência de checkpoints;
+- decidir se lista de conversas e endpoints de histórico entrarão no produto;
+- adicionar testes de componentes e integração HTTP ao frontend;
+- ampliar a cobertura específica das rotas FastAPI;
+- melhorar progressivamente a separação entre camadas;
+- continuar o aprimoramento de tipagem e observabilidade;
+- adicionar novas categorias e capacidades financeiras conforme a necessidade.
