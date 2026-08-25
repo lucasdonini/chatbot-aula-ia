@@ -4,6 +4,7 @@ import { MarkdownResponse } from './components/MarkdownResponse'
 import './App.css'
 
 function App() {
+  const [sessionId] = useState(() => crypto.randomUUID())
   const [message, setMessage] = useState('')
   const [response, setResponse] = useState('')
   const [error, setError] = useState('')
@@ -22,7 +23,7 @@ function App() {
     setResponse('')
 
     try {
-      setResponse(await sendChatMessage(trimmedMessage))
+      setResponse(await sendChatMessage(sessionId, trimmedMessage))
     } catch (caughtError: unknown) {
       setError(
         caughtError instanceof Error

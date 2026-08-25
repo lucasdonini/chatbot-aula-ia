@@ -15,20 +15,38 @@ describe('sendChatMessage', () => {
     )
     vi.stubGlobal('fetch', fetchMock)
 
-    await expect(sendChatMessage('Minha pergunta')).resolves.toBe(
+    await expect(
+      sendChatMessage('session-123', 'Minha pergunta'),
+    ).resolves.toBe(
       'Resposta do assistente',
     )
-    expect(fetchMock).toHaveBeenCalledWith('/api/chat', {
+    expect(fetchMock).toHaveBeenCalledWith('/api/chat/session-123', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: 'Minha pergunta' }),
     })
   })
 
+  it('codifica o identificador da sessão antes de montar a URL', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify('Resposta'), { status: 200 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await sendChatMessage('sessão 123', 'Minha pergunta')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/chat/sess%C3%A3o%20123',
+      expect.any(Object),
+    )
+  })
+
   it('traduz falha de rede para uma mensagem pública', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')))
 
-    await expect(sendChatMessage('Minha pergunta')).rejects.toThrow(
+    await expect(
+      sendChatMessage('session-123', 'Minha pergunta'),
+    ).rejects.toThrow(
       'Não foi possível conectar ao assistente.',
     )
   })
@@ -36,7 +54,9 @@ describe('sendChatMessage', () => {
   it('traduz resposta HTTP malsucedida para uma mensagem pública', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 500 })))
 
-    await expect(sendChatMessage('Minha pergunta')).rejects.toThrow(
+    await expect(
+      sendChatMessage('session-123', 'Minha pergunta'),
+    ).rejects.toThrow(
       'Não foi possível obter uma resposta do assistente.',
     )
   })
@@ -50,7 +70,9 @@ describe('sendChatMessage', () => {
   ])('rejeita resposta em formato inesperado', async (response) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
 
-    await expect(sendChatMessage('Minha pergunta')).rejects.toThrow(
+    await expect(
+      sendChatMessage('session-123', 'Minha pergunta'),
+    ).rejects.toThrow(
       'O assistente retornou uma resposta em formato inválido.',
     )
   })
