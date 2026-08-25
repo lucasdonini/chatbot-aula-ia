@@ -1,17 +1,15 @@
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, create_autospec
 
 import pytest
-from pydantic import ValidationError
 
 from app.application.ports.logger import Logger
-from app.domain.model.chat_entry import (
-    AssistantMessage,
-    ChatMessageRole,
-    HumanMessage,
+from app.application.repositories.chat_session_repository import (
+    ChatSessionRepository,
 )
+from app.domain.model.chat_entry import AssistantMessage, HumanMessage
+from app.domain.model.chat_session import ChatSession
 from app.infrastructure.clock import FixedClock
-from app.infrastructure.mongodb.entities.chat_session import ChatMessageDocument
 from app.services import chat_session_service
 from app.services.chat_session_service import ChatSessionService
 
@@ -22,10 +20,15 @@ class TestChatSessionService:
         return MagicMock()
 
     @pytest.fixture
-    def service(self, summary_service):
+    def repository(self):
+        return create_autospec(ChatSessionRepository, instance=True)
+
+    @pytest.fixture
+    def service(self, summary_service, repository):
         chat_session_service._active_sessions.clear()
         return ChatSessionService(
             service=summary_service,
+            repository=repository,
             logger=MagicMock(spec=Logger),
             clock=FixedClock(
                 datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc),
@@ -34,83 +37,57 @@ class TestChatSessionService:
         )
 
     @pytest.mark.asyncio
-    async def test_init_session(self, service, summary_service):
+    async def test_init_session(self, service, repository):
         fixed = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
-        with patch(
-            "app.services.chat_session_service.ChatSessionDocument"
-        ) as mock_chat:
-            mock_instance = AsyncMock()
-            mock_chat.return_value = mock_instance
-            mock_instance.insert = AsyncMock()
 
-            await service.init_session("session-123")
+        await service.init_session("session-123")
 
-            mock_instance.insert.assert_called_once()
-            assert mock_chat.call_args.kwargs["started_at"] == fixed
-            assert mock_chat.call_args.kwargs["updated_at"] == fixed
-            assert "session-123" in chat_session_service._active_sessions
-
-    @pytest.mark.asyncio
-    async def test_save_message_human(self, service, summary_service):
-        with patch(
-            "app.services.chat_session_service.ChatSessionDocument"
-        ) as mock_chat:
-            chat_session_service._active_sessions["session-123"] = "doc-id"
-            mock_query = MagicMock()
-            mock_query.update = AsyncMock()
-            mock_chat.find_one = MagicMock(return_value=mock_query)
-
-            await service.save_message("session-123", HumanMessage(content="Olá"))
-
-            mock_chat.find_one.assert_called_once()
-            mock_query.update.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_save_message_ai(self, service, summary_service):
-        with patch(
-            "app.services.chat_session_service.ChatSessionDocument"
-        ) as mock_chat:
-            chat_session_service._active_sessions["session-123"] = "doc-id"
-            mock_query = MagicMock()
-            mock_query.update = AsyncMock()
-            mock_chat.find_one = MagicMock(return_value=mock_query)
-
-            await service.save_message(
-                "session-123",
-                AssistantMessage(content="Resposta"),
+        repository.create.assert_awaited_once_with(
+            ChatSession(
+                session_id="session-123",
+                started_at=fixed,
+                updated_at=fixed,
+                summary="",
+                entries=[],
             )
-
-            mock_chat.find_one.assert_called_once()
-            mock_query.update.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_save_message_non_text_content(self, service, summary_service):
-        message = HumanMessage(content={"key": "value"})  # type: ignore[arg-type]
-        chat_session_service._active_sessions["session-123"] = "doc-id"
-
-        with pytest.raises(ValidationError):
-            await service.save_message("session-123", message)
+        )
+        assert "session-123" in chat_session_service._active_sessions
 
     @pytest.mark.asyncio
-    async def test_save_error(self, service, summary_service):
+    @pytest.mark.parametrize(
+        "message",
+        [
+            HumanMessage(content="Olá"),
+            AssistantMessage(content="Resposta"),
+        ],
+    )
+    async def test_save_message(self, service, repository, message):
+        fixed = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
+        chat_session_service._active_sessions["session-123"] = "session-123"
+
+        await service.save_message("session-123", message)
+
+        repository.append_entry.assert_awaited_once_with(
+            "session-123",
+            message,
+            fixed,
+        )
+
+    @pytest.mark.asyncio
+    async def test_save_error(self, service, summary_service, repository):
         summary_service.summarize_exception = AsyncMock(
             return_value="Ocorreu um erro interno."
         )
+        chat_session_service._active_sessions["session-123"] = "session-123"
+        error = ValueError("Algo deu errado")
 
-        with patch(
-            "app.services.chat_session_service.ChatSessionDocument"
-        ) as mock_chat:
-            chat_session_service._active_sessions["session-123"] = "doc-id"
-            mock_query = MagicMock()
-            mock_query.update = AsyncMock()
-            mock_chat.find_one = MagicMock(return_value=mock_query)
+        await service.save_error("session-123", error)
 
-            exc = ValueError("Algo deu errado")
-            await service.save_error("session-123", exc)
-
-            mock_chat.find_one.assert_called_once()
-            mock_query.update.assert_called_once()
-            summary_service.summarize_exception.assert_called_once_with(exc)
+        repository.append_entry.assert_awaited_once()
+        saved_entry = repository.append_entry.await_args.args[1]
+        assert saved_entry.exception == "ValueError"
+        assert saved_entry.summary == "Ocorreu um erro interno."
+        summary_service.summarize_exception.assert_awaited_once_with(error)
 
     @pytest.mark.asyncio
     async def test_save_error_logs_secondary_failure_without_raising(
@@ -129,57 +106,56 @@ class TestChatSessionService:
         )
 
     @pytest.mark.asyncio
-    async def test_finalize_session_with_summary(self, service, summary_service):
+    async def test_finalize_session_with_summary(
+        self, service, summary_service, repository
+    ):
+        fixed = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
+        entries = [HumanMessage(content="Olá")]
         summary_service.summarize_session = AsyncMock(return_value="Resumo da sessão")
+        repository.find_by_session_id.return_value = ChatSession(
+            session_id="session-123",
+            started_at=fixed,
+            updated_at=fixed,
+            entries=entries,
+        )
+        chat_session_service._active_sessions["session-123"] = "session-123"
 
-        with patch(
-            "app.services.chat_session_service.ChatSessionDocument"
-        ) as mock_chat:
-            chat_session_service._active_sessions["session-123"] = "doc-id"
+        result = await service.finalize_session("session-123")
 
-            async def find_one_side(*args, **kwargs):
-                session = AsyncMock()
-                session.entries = [
-                    ChatMessageDocument(
-                        content="Olá",
-                        role=ChatMessageRole.HUMAN,
-                    )
-                ]
-                return session
-
-            mock_chat.find_one = MagicMock(side_effect=find_one_side)
-
-            result = await service.finalize_session("session-123")
-
-            assert result is None
-            assert "session-123" not in chat_session_service._active_sessions
-            summary_service.summarize_session.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_finalize_session_no_active(self, service, summary_service):
-        result = await service.finalize_session("unknown")
         assert result is None
+        assert "session-123" not in chat_session_service._active_sessions
+        summary_service.summarize_session.assert_awaited_once_with(entries)
+        repository.update_summary.assert_awaited_once_with(
+            "session-123",
+            "Resumo da sessão",
+            fixed,
+        )
 
     @pytest.mark.asyncio
-    async def test_finalize_no_messages(self, service, summary_service):
-        with patch(
-            "app.services.chat_session_service.ChatSessionDocument"
-        ) as mock_chat:
-            chat_session_service._active_sessions["session-123"] = "doc-id"
+    async def test_finalize_session_no_active(self, service, repository):
+        result = await service.finalize_session("unknown")
 
-            async def find_one_side(*args, **kwargs):
-                session = AsyncMock()
-                session.entries = []
-                return session
+        assert result is None
+        repository.find_by_session_id.assert_not_awaited()
 
-            mock_chat.find_one = MagicMock(side_effect=find_one_side)
+    @pytest.mark.asyncio
+    async def test_finalize_no_messages(self, service, repository):
+        fixed = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
+        repository.find_by_session_id.return_value = ChatSession(
+            session_id="session-123",
+            started_at=fixed,
+            entries=[],
+        )
+        chat_session_service._active_sessions["session-123"] = "session-123"
 
-            result = await service.finalize_session("session-123")
+        result = await service.finalize_session("session-123")
 
-            assert result is None
+        assert result is None
+        repository.update_summary.assert_not_awaited()
 
-    def test_get_active_sessions_returns_copy(self, service, summary_service):
-        chat_session_service._active_sessions["s1"] = "d1"
+    def test_get_active_sessions_returns_copy(self, service):
+        chat_session_service._active_sessions["s1"] = "s1"
         sessions = service.get_active_sessions()
-        sessions["new"] = "d2"
+        sessions["new"] = "new"
+
         assert "new" not in chat_session_service._active_sessions

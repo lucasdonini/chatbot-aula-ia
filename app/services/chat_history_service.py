@@ -1,22 +1,14 @@
-import re
-
-from pymongo import DESCENDING
-
 from app.application.ports.logger import Logger
+from app.application.repositories.chat_session_repository import (
+    ChatSessionRepository,
+)
 from app.domain.model.chat_entry import ChatEntry
 from app.domain.model.chat_session import ChatSessionSummarized
-from app.infrastructure.mongodb.entities.chat_session import (
-    ChatSessionDocument,
-    ChatSessionSummaryProjection,
-)
-from app.infrastructure.mongodb.mappers.chat_session_mapper import (
-    ChatSessionMapper,
-    ChatSessionSummarizedMapper,
-)
 
 
 class ChatHistoryService:
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, repository: ChatSessionRepository, logger: Logger) -> None:
+        self._repository = repository
         self._logger = logger
 
     async def fetch_history(
@@ -37,32 +29,18 @@ class ChatHistoryService:
             details={"search_length": len(search), "limit": limit},
         )
 
-        filter = {}
-        if search:
-            pattern = re.compile(search, re.IGNORECASE)
-            filter[ChatSessionDocument.summary] = pattern
-
-        sessions = await (
-            ChatSessionDocument.find(filter)
-            .project(ChatSessionSummaryProjection)
-            .sort(ChatSessionDocument.updated_at, DESCENDING)  # type: ignore[arg-type]
-            .limit(limit)
-            .to_list()
-        )
-        return [ChatSessionSummarizedMapper.document_to_model(s) for s in sessions]
+        return await self._repository.find_summaries(search=search, limit=limit)
 
     async def fetch_entries(self, session_id: str) -> list[ChatEntry]:
         self._logger.debug(
             "Fetching entries",
             details={"session_id": session_id[:8]},
         )
-        session = await ChatSessionDocument.find_one(
-            ChatSessionDocument.session_id == session_id
-        )
+        session = await self._repository.find_by_session_id(session_id)
         entries = session.entries if session else []
 
         self._logger.debug(
             "Entries fetched",
             details={"count": len(entries)},
         )
-        return [ChatSessionMapper.document_entry_to_model(e) for e in entries]
+        return entries

@@ -1,11 +1,14 @@
 from collections.abc import Generator
 from contextlib import nullcontext
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
 
 import pytest
 
 from app.application.ports.logger import Logger
+from app.application.repositories.chat_session_repository import (
+    ChatSessionRepository,
+)
 from app.infrastructure.agents import build_agent_graph
 from app.infrastructure.agents._core.factories.langchain_agent_factory import (
     LangChainAgentFactory,
@@ -100,7 +103,10 @@ def financial_agent_node(transaction_service, application_clock) -> FinancialAge
 def agent_graph(transaction_service, application_clock):
     return build_agent_graph(
         transaction_service=transaction_service,
-        chat_history_service=ChatHistoryService(logger=MagicMock()),
+        chat_history_service=ChatHistoryService(
+            repository=create_autospec(ChatSessionRepository, instance=True),
+            logger=MagicMock(),
+        ),
         text_generator=LLMTextGenerator(fast_llm),
         logger_factory=lambda _: MagicMock(spec=Logger),
         trace_context_factory=lambda _: nullcontext(),
