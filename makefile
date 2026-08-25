@@ -8,7 +8,7 @@ dev: check
 
 up: export LOG_LEVEL = INFO
 up: export LOG_TO_FILE = false
-up:
+up: build-frontend
 	uv run python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-graceful-shutdown 10
 
 prepare-environment:
