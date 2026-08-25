@@ -1,0 +1,31 @@
+from datetime import datetime
+from typing import Protocol
+
+from app.domain.model.chat_entry import ChatEntry
+from app.domain.model.chat_session import ChatSession, ChatSessionSummarized
+
+
+class ChatSessionRepository(Protocol):
+    async def create(self, session: ChatSession) -> None: ...
+
+    async def append_entry(
+        self,
+        session_id: str,
+        entry: ChatEntry,
+        updated_at: datetime,
+    ) -> None: ...
+
+    async def find_by_session_id(self, session_id: str) -> ChatSession | None: ...
+
+    async def update_summary(
+        self,
+        session_id: str,
+        summary: str,
+        updated_at: datetime,
+    ) -> None: ...
+
+    async def find_summaries(
+        self,
+        search: str = "",
+        limit: int = 3,
+    ) -> list[ChatSessionSummarized]: ...

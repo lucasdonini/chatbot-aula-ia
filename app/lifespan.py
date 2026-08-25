@@ -16,6 +16,9 @@ from .infrastructure.logger import (
     setup_logger,
 )
 from .infrastructure.mongodb.client import MongoManager
+from .infrastructure.mongodb.repositories.chat_session_repository import (
+    BeanieChatSessionRepository,
+)
 from .infrastructure.postgres.pg_connection import PostgresManager
 from .infrastructure.postgres.repositories.transaction_repository import (
     SQLAlchemyTransactionRepository,
@@ -35,6 +38,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     mongo_manager = MongoManager(settings=settings)
     await mongo_manager.init_database()
+    chat_session_repository = BeanieChatSessionRepository()
     postgres_manager = PostgresManager(settings.postgres_url.get_secret_value())
     clock = SystemClock(settings.app_timezone)
 
@@ -45,6 +49,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     session_service = ChatSessionService(
         summary_service,
+        repository=chat_session_repository,
         logger=create_logger(ChatSessionService.__module__),
         clock=clock,
     )
@@ -61,6 +66,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger=create_logger(TransactionService.__module__),
     )
     chat_history_service = ChatHistoryService(
+        repository=chat_session_repository,
         logger=create_logger(ChatHistoryService.__module__),
     )
 
