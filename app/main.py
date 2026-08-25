@@ -1,8 +1,5 @@
-from typing import Awaitable, Callable
-
 from fastapi import FastAPI
-from fastapi.requests import Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .api.middleware.exception_handler import register_exception_handlers
@@ -23,17 +20,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-register_exception_handlers(app, create_logger(register_exception_handlers.__module__))
-
-
-@app.middleware("http")
-async def logging_context_middleware(
-    request: Request,
-    call_next: Callable[[Request], Awaitable[Response]],
-) -> Response:
-    session_id = getattr(request.app.state, "session_id", "")
-    with bind_session_context(session_id):
-        return await call_next(request)
+register_exception_handlers(
+    app,
+    logger=create_logger(register_exception_handlers.__module__),
+    session_context_factory=bind_session_context,
+)
 
 
 for router in ROUTES:

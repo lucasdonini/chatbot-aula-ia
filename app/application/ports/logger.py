@@ -45,3 +45,4 @@ class Logger(Protocol):
 type LoggerFactory = Callable[[str], Logger]
 type TraceContextFactory = Callable[[str], AbstractContextManager[None]]
 type InteractionIncrementer = Callable[[], int]
+type SessionContextFactory = Callable[[str], AbstractContextManager[None]]

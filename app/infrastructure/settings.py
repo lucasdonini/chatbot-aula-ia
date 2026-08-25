@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 _DUMMY_API_KEY = "No key provided"
 
 
-class Settings(BaseSettings):
+class PydanticSettings(BaseSettings):
     gemini_api_key: SecretStr = SecretStr(_DUMMY_API_KEY)
     groq_api_key: SecretStr = SecretStr(_DUMMY_API_KEY)
 
@@ -38,4 +38,4 @@ class Settings(BaseSettings):
             raise ValueError(f"Configure as chaves de API: {variables}.")
 
 
-settings = Settings()
+settings = PydanticSettings()

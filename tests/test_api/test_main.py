@@ -65,4 +65,4 @@ def test_openapi_describes_chat_endpoint(client: TestClient) -> None:
     response = client.get("/openapi.json")
 
     assert response.status_code == 200
-    assert "/api/chat" in response.json()["paths"]
+    assert "/api/chat/{session_id}" in response.json()["paths"]

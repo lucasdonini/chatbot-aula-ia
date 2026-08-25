@@ -1,7 +1,8 @@
 import re
 from datetime import datetime
 
-from beanie.operators import Push, Set
+from beanie import UpdateResponse
+from beanie.operators import Push, Set, SetOnInsert
 from pymongo import DESCENDING
 
 from app.domain.model.chat_entry import ChatEntry
@@ -17,9 +18,27 @@ from app.infrastructure.mongodb.mappers.chat_session_mapper import (
 
 
 class BeanieChatSessionRepository:
-    async def create(self, session: ChatSession) -> None:
-        document = ChatSessionMapper.model_to_document(session)
-        await document.insert()
+    async def get_or_create(self, session: ChatSession) -> ChatSession:
+        document = await ChatSessionDocument.find_one(
+            ChatSessionDocument.session_id == session.session_id
+        ).update(
+            SetOnInsert(
+                {
+                    ChatSessionDocument.session_id: session.session_id,
+                    ChatSessionDocument.updated_at: session.updated_at,
+                    ChatSessionDocument.started_at: session.started_at,
+                    ChatSessionDocument.summary: session.summary,
+                    ChatSessionDocument.entries: [
+                        ChatSessionMapper.model_entry_to_document(entry)
+                        for entry in session.entries
+                    ],
+                }
+            ),
+            response_type=UpdateResponse.NEW_DOCUMENT,
+            upsert=True,
+        )
+        assert isinstance(document, ChatSessionDocument)
+        return ChatSessionMapper.document_to_model(document)
 
     async def append_entry(
         self,

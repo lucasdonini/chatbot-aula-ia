@@ -1,14 +1,48 @@
-from typing import cast
+from typing import Annotated, AsyncGenerator, cast
 
-from fastapi import Request
+from fastapi import Depends, Request
 
 from ..application.ports.agent_graph import AgentGraph
+from ..application.ports.clock import Clock
+from ..application.ports.logger import LoggerFactory, SessionContextFactory
+from ..application.ports.text_generator import TextGenerator
+from ..application.repositories.chat_session_repository import ChatSessionRepository
+from ..infrastructure.clock import SystemClock
+from ..infrastructure.llms import fast_llm
+from ..infrastructure.logger import create_logger
+from ..infrastructure.mongodb.repositories.chat_session_repository import (
+    BeanieChatSessionRepository,
+)
+from ..infrastructure.text_generator import LLMTextGenerator
 from ..services.chat_session_service import ChatSessionService
 from ..services.session_summary_service import SessionSummaryService
 
 
-def get_session_id(request: Request) -> str:
-    return cast(str, request.app.state.session_id)
+def _get_logger_factory() -> LoggerFactory:
+    return create_logger
+
+
+def _get_text_generator() -> TextGenerator:
+    return LLMTextGenerator(fast_llm)
+
+
+def _get_clock() -> Clock:
+    return SystemClock("America/Sao_Paulo")
+
+
+def _get_chat_session_repository() -> ChatSessionRepository:
+    return BeanieChatSessionRepository()
+
+
+def _get_session_summary_service(
+    logger_factory: Annotated[LoggerFactory, Depends(_get_logger_factory)],
+    text_generator: Annotated[TextGenerator, Depends(_get_text_generator)],
+) -> SessionSummaryService:
+    logger = logger_factory(SessionSummaryService.__module__)
+    return SessionSummaryService(
+        text_generator=text_generator,
+        logger=logger,
+    )
 
 
 def get_graph(request: Request) -> AgentGraph:
@@ -17,15 +51,33 @@ def get_graph(request: Request) -> AgentGraph:
     return graph
 
 
-def get_session_summary_service(request: Request) -> SessionSummaryService:
-    service = request.app.state.session_summary_service
-    assert isinstance(service, SessionSummaryService)
-    return service
-
-
 def get_chat_session_service(
-    request: Request,
+    clock: Annotated[Clock, Depends(_get_clock)],
+    logger_factory: Annotated[LoggerFactory, Depends(_get_logger_factory)],
+    session_repository: Annotated[
+        ChatSessionRepository, Depends(_get_chat_session_repository)
+    ],
+    session_summary_service: Annotated[
+        SessionSummaryService, Depends(_get_session_summary_service)
+    ],
 ) -> ChatSessionService:
-    service = request.app.state.chat_session_service
-    assert isinstance(service, ChatSessionService)
-    return service
+    logger = logger_factory(ChatSessionService.__module__)
+    return ChatSessionService(
+        service=session_summary_service,
+        repository=session_repository,
+        logger=logger,
+        clock=clock,
+    )
+
+
+async def bind_session_logging_context(
+    request: Request,
+    session_id: str,
+) -> AsyncGenerator[None, None]:
+    session_context_factory = cast(
+        SessionContextFactory, request.app.state.session_context_factory
+    )
+
+    request.state.session_id = session_id
+    with session_context_factory(session_id):
+        yield
