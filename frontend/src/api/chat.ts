@@ -4,15 +4,21 @@ type ChatRequest = {
   message: string
 }
 
-export async function sendChatMessage(message: string): Promise<string> {
+export async function sendChatMessage(
+  sessionId: string,
+  message: string,
+): Promise<string> {
   let apiResponse: Response
 
   try {
-    apiResponse = await fetch(CHAT_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message } satisfies ChatRequest),
-    })
+    apiResponse = await fetch(
+      `${CHAT_ENDPOINT}/${encodeURIComponent(sessionId)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message } satisfies ChatRequest),
+      },
+    )
   } catch {
     throw new Error('Não foi possível conectar ao assistente.')
   }
