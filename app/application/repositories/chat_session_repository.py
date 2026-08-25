@@ -6,7 +6,7 @@ from app.domain.model.chat_session import ChatSession, ChatSessionSummarized
 
 
 class ChatSessionRepository(Protocol):
-    async def create(self, session: ChatSession) -> None: ...
+    async def get_or_create(self, session: ChatSession) -> ChatSession: ...
 
     async def append_entry(
         self,

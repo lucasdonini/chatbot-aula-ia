@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from beanie import UpdateResponse
+from beanie.operators import SetOnInsert
 from pydantic import ValidationError
 
 from app.domain.model.chat_entry import HumanMessage
@@ -22,20 +24,47 @@ class TestBeanieChatSessionRepository:
         return datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
 
     @pytest.mark.asyncio
-    async def test_create_inserts_mapped_document(self, repository, fixed):
+    async def test_get_or_create_uses_atomic_upsert_and_maps_document(
+        self, repository, fixed
+    ):
         session = ChatSession(session_id="session-123", started_at=fixed)
-        document = MagicMock()
-        document.insert = AsyncMock()
+        expected = ChatSession(session_id="session-123", started_at=fixed)
+        query = MagicMock()
 
-        with patch(
-            "app.infrastructure.mongodb.repositories.chat_session_repository."
-            "ChatSessionMapper.model_to_document",
-            return_value=document,
-        ) as mapper:
-            await repository.create(session)
+        class DocumentStub:
+            session_id = "session_id"
+            started_at = "started_at"
+            updated_at = "updated_at"
+            summary = "summary"
+            entries = "entries"
+            find_one = MagicMock(return_value=query)
 
-        mapper.assert_called_once_with(session)
-        document.insert.assert_awaited_once_with()
+        document = DocumentStub()
+        query.update = AsyncMock(return_value=document)
+
+        with (
+            patch(
+                "app.infrastructure.mongodb.repositories.chat_session_repository."
+                "ChatSessionDocument",
+                DocumentStub,
+            ),
+            patch(
+                "app.infrastructure.mongodb.repositories.chat_session_repository."
+                "ChatSessionMapper.document_to_model",
+                return_value=expected,
+            ) as mapper,
+        ):
+            result = await repository.get_or_create(session)
+
+        assert result is expected
+        DocumentStub.find_one.assert_called_once()
+        update_call = query.update.await_args
+        assert isinstance(update_call.args[0], SetOnInsert)
+        assert update_call.kwargs == {
+            "response_type": UpdateResponse.NEW_DOCUMENT,
+            "upsert": True,
+        }
+        mapper.assert_called_once_with(document)
 
     @pytest.mark.asyncio
     async def test_append_entry_uses_atomic_update(self, repository, fixed):

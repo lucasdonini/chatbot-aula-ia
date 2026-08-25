@@ -13,14 +13,18 @@ from app.application.exceptions import (
     TransactionNotFoundError,
 )
 from app.application.ports.logger import Logger
+from app.infrastructure.logger import bind_session_context
 
 
 @pytest.mark.asyncio
 async def test_unexpected_exception_is_forwarded_to_logger() -> None:
     app = FastAPI()
-    app.state.session_id = "session-123"
     logger = MagicMock(spec=Logger)
-    register_exception_handlers(app, logger)
+    register_exception_handlers(
+        app,
+        logger=logger,
+        session_context_factory=bind_session_context,
+    )
     exception = RuntimeError("failure")
 
     handler = app.exception_handlers[Exception]
@@ -30,7 +34,6 @@ async def test_unexpected_exception_is_forwarded_to_logger() -> None:
     logger.exception.assert_called_once_with(
         "Unhandled error",
         exception=exception,
-        details={"session": "session-"},
     )
 
 
@@ -38,7 +41,11 @@ async def test_unexpected_exception_is_forwarded_to_logger() -> None:
 async def test_timeout_is_logged_without_unexpected_exception_traceback() -> None:
     app = FastAPI()
     logger = MagicMock(spec=Logger)
-    register_exception_handlers(app, logger)
+    register_exception_handlers(
+        app,
+        logger=logger,
+        session_context_factory=bind_session_context,
+    )
     exception = TimeoutError()
 
     handler = app.exception_handlers[TimeoutError]
@@ -66,7 +73,11 @@ async def test_application_errors_are_translated(
 ) -> None:
     app = FastAPI()
     logger = MagicMock(spec=Logger)
-    register_exception_handlers(app, logger)
+    register_exception_handlers(
+        app,
+        logger=logger,
+        session_context_factory=bind_session_context,
+    )
 
     handler = app.exception_handlers[handler_type]
     response = await handler(MagicMock(), exception)
@@ -82,7 +93,11 @@ async def test_application_errors_are_translated(
 async def test_unexpected_exception_without_session_id_is_still_handled() -> None:
     app = FastAPI()
     logger = MagicMock(spec=Logger)
-    register_exception_handlers(app, logger)
+    register_exception_handlers(
+        app,
+        logger=logger,
+        session_context_factory=bind_session_context,
+    )
     exception = RuntimeError("failure")
 
     handler = app.exception_handlers[Exception]
@@ -92,5 +107,4 @@ async def test_unexpected_exception_without_session_id_is_still_handled() -> Non
     logger.exception.assert_called_once_with(
         "Unhandled error",
         exception=exception,
-        details={"session": ""},
     )

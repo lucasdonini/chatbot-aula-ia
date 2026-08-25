@@ -10,7 +10,7 @@ from pymongo.monitoring import (
     register,
 )
 
-from ..settings import Settings
+from ..settings import PydanticSettings
 from .entities.chat_session import ChatSessionDocument
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class LoggingMongoCommandListener(CommandListener):
 
 
 class MongoManager:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: PydanticSettings) -> None:
         self._settings = settings
         self._client: AsyncMongoClient | None = None
         self._registered_listeners: bool = False

@@ -1,4 +1,3 @@
-import uuid
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -10,7 +9,6 @@ from .infrastructure.llms import fast_llm
 from .infrastructure.logger import (
     bind_session_context,
     bind_trace_context,
-    clear_session_interactions,
     create_logger,
     increment_interaction,
     setup_logger,
@@ -26,8 +24,6 @@ from .infrastructure.postgres.repositories.transaction_repository import (
 from .infrastructure.settings import settings
 from .infrastructure.text_generator import LLMTextGenerator
 from .services.chat_history_service import ChatHistoryService
-from .services.chat_session_service import ChatSessionService
-from .services.session_summary_service import SessionSummaryService
 from .services.transaction_service import TransactionService
 
 
@@ -43,21 +39,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     clock = SystemClock(settings.app_timezone)
 
     text_generator = LLMTextGenerator(fast_llm)
-    summary_service = SessionSummaryService(
-        text_generator,
-        logger=create_logger(SessionSummaryService.__module__),
-    )
-    session_service = ChatSessionService(
-        summary_service,
-        repository=chat_session_repository,
-        logger=create_logger(ChatSessionService.__module__),
-        clock=clock,
-    )
-
-    session_id = str(uuid.uuid4())
-    with bind_session_context(session_id):
-        await session_service.init_session(session_id)
-
     transaction_repository = SQLAlchemyTransactionRepository(
         session_factory=postgres_manager.session_factory
     )
@@ -81,17 +62,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         execution_timeout_seconds=settings.agent_execution_timeout_seconds,
     )
 
-    app.state.session_summary_service = summary_service
-    app.state.chat_session_service = session_service
-    app.state.session_id = session_id
     app.state.graph = graph
+    app.state.session_context_factory = bind_session_context
 
     try:
         yield
     finally:
-        try:
-            with bind_session_context(session_id):
-                await session_service.finalize_session(session_id)
-        finally:
-            clear_session_interactions(session_id)
-            await postgres_manager.dispose()
+        await postgres_manager.dispose()

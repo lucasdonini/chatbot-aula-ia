@@ -113,12 +113,3 @@ def agent_graph(transaction_service, application_clock):
         interaction_incrementer=lambda: 1,
         clock=application_clock,
     )
-
-
-@pytest.fixture(autouse=True)
-def clear_active_sessions() -> Generator:
-    from app.services import chat_session_service
-
-    chat_session_service._active_sessions.clear()
-    yield
-    chat_session_service._active_sessions.clear()

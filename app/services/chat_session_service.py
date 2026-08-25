@@ -12,8 +12,6 @@ from app.domain.model.chat_session import ChatSession
 
 from .session_summary_service import SessionSummaryService
 
-_active_sessions: dict[str, str] = {}
-
 
 class ChatSessionService:
     def __init__(
@@ -28,7 +26,7 @@ class ChatSessionService:
         self._logger = logger
         self._clock = clock
 
-    async def init_session(self, session_id: str) -> None:
+    async def get_or_create_session(self, session_id: str) -> ChatSession:
         now = self._clock.now()
         session = ChatSession(
             session_id=session_id,
@@ -38,22 +36,14 @@ class ChatSessionService:
             entries=[],
         )
 
-        await self._repository.create(session)
-        _active_sessions[session_id] = session_id
-        self._logger.debug(
-            "Session initialized",
-            details={"session_id": session_id[:8]},
-        )
-
-    def get_active_sessions(self) -> dict[str, str]:
-        return _active_sessions.copy()
+        return await self._repository.get_or_create(session)
 
     async def _save_entry(self, session_id: str, entry: ChatEntry) -> None:
-        active_session_id = _active_sessions[session_id]
+        now = self._clock.now()
         await self._repository.append_entry(
-            active_session_id,
-            entry,
-            self._clock.now(),
+            session_id=session_id,
+            entry=entry,
+            updated_at=now,
         )
 
     async def save_message(self, session_id: str, message: ChatMessage) -> None:
@@ -93,26 +83,18 @@ class ChatSessionService:
         Returns the generated summary or an empty string.
         """
 
-        active_session_id = _active_sessions.get(session_id)
-        if active_session_id is None:
-            return
-
-        session = await self._repository.find_by_session_id(active_session_id)
+        session = await self._repository.find_by_session_id(session_id)
         if not session or not session.entries:
             return
 
         summary = await self._service.summarize_session(session.entries)
         await self._repository.update_summary(
-            active_session_id,
-            summary,
-            self._clock.now(),
+            session_id=session_id,
+            summary=summary,
+            updated_at=self._clock.now(),
         )
 
-        _active_sessions.pop(session_id)
         self._logger.debug(
             "Session finalized",
-            details={
-                "session_id": session_id[:8],
-                "entry_count": len(session.entries),
-            },
+            details={"entry_count": len(session.entries)},
         )
