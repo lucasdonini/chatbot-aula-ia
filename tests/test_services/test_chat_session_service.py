@@ -16,12 +16,16 @@ _FIXED_TIME = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
 _SESSION_ID = "session-123"
 
 
-def _session(*, entries: list[ChatEntry] | None = None) -> ChatSession:
+def _session(
+    *,
+    entries: list[ChatEntry] | None = None,
+    summary: str | None = "",
+) -> ChatSession:
     return ChatSession(
         session_id=_SESSION_ID,
         started_at=_FIXED_TIME,
         updated_at=_FIXED_TIME,
-        summary="",
+        summary=summary,
         entries=[] if entries is None else entries,
     )
 
@@ -130,7 +134,7 @@ class TestChatSessionService:
 
         result = await service.finalize_session(_SESSION_ID)
 
-        assert result is None
+        assert result == "Resumo da sessão"
         repository.find_by_session_id.assert_awaited_once_with(_SESSION_ID)
         summary_service.summarize_session.assert_awaited_once_with(entries)
         repository.update_summary.assert_awaited_once_with(
@@ -149,5 +153,21 @@ class TestChatSessionService:
         result = await service.finalize_session(_SESSION_ID)
 
         assert result is None
+        summary_service.summarize_session.assert_not_awaited()
+        repository.update_summary.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_finalize_session_already_summarized_is_idempotent(
+        self, service, summary_service, repository
+    ):
+        repository.find_by_session_id.return_value = _session(
+            entries=[HumanMessage(content="Olá")],
+            summary="Resumo existente",
+        )
+
+        result = await service.finalize_session(_SESSION_ID)
+
+        assert result == "Resumo existente"
+        repository.find_by_session_id.assert_awaited_once_with(_SESSION_ID)
         summary_service.summarize_session.assert_not_awaited()
         repository.update_summary.assert_not_awaited()
