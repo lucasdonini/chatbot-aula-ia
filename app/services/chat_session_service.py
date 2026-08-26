@@ -73,19 +73,22 @@ class ChatSessionService:
                 details={"original_exception_type": type(error).__name__},
             )
 
-    async def finalize_session(self, session_id: str) -> None:
+    async def finalize_session(self, session_id: str) -> str | None:
         """
         Finalizes the active session:
-            1. Load entries from MongoDB
-            2. Generate a summary via LLM
-            3. Update document with the summary
-            4. Remove session from internal state
-        Returns the generated summary or an empty string.
+            1. Fetch session from MongoDB
+            2. If the session is not found or has no entries, returns None
+            3. If the session is already finalized (has summary), returns the summary
+            4. Summarize the entries and update the session in MongoDB
+            5. Returns the generated summary
         """
 
         session = await self._repository.find_by_session_id(session_id)
         if not session or not session.entries:
-            return
+            return None
+
+        if session.summary and (summary := session.summary.strip()):
+            return summary
 
         summary = await self._service.summarize_session(session.entries)
         await self._repository.update_summary(
@@ -98,3 +101,5 @@ class ChatSessionService:
             "Session finalized",
             details={"entry_count": len(session.entries)},
         )
+
+        return summary
