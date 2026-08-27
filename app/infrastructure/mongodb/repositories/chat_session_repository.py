@@ -2,9 +2,15 @@ import re
 from datetime import datetime
 
 from beanie import UpdateResponse
-from beanie.operators import Push, Set, SetOnInsert
+from beanie.operators import In, Push, Set, SetOnInsert
 from pymongo import DESCENDING
+from pymongo.results import UpdateResult
 
+from app.domain.exception.chat_session import (
+    ChatSessionAlreadyFinalizedException,
+    ChatSessionNotFoundException,
+    ChatSessionWriteConflictException,
+)
 from app.domain.model.chat_entry import ChatEntry
 from app.domain.model.chat_session import ChatSession, ChatSessionSummarized
 from app.infrastructure.mongodb.entities.chat_session import (
@@ -45,13 +51,48 @@ class BeanieChatSessionRepository:
         session_id: str,
         entry: ChatEntry,
         updated_at: datetime,
+        *,
+        is_retry: bool = False,
     ) -> None:
         document_entry = ChatSessionMapper.model_entry_to_document(entry)
-        await ChatSessionDocument.find_one(
-            ChatSessionDocument.session_id == session_id
+        result = await ChatSessionDocument.find_one(
+            ChatSessionDocument.session_id == session_id,
+            In(ChatSessionDocument.summary, [None, ""]),
         ).update(
             Push({ChatSessionDocument.entries: document_entry}),
             Set({ChatSessionDocument.updated_at: updated_at}),
+            response_type=UpdateResponse.UPDATE_RESULT,
+        )
+
+        if not isinstance(result, UpdateResult):
+            raise TypeError(
+                "The result of the update was not of the expected type. "
+                f"Received: {type(result).__name__!r}. "
+                f"Expected: {UpdateResult.__name__!r}."
+            )
+
+        if result.matched_count == 1:
+            return
+
+        session = await ChatSessionDocument.find_one(
+            ChatSessionDocument.session_id == session_id
+        )
+        if not session:
+            raise ChatSessionNotFoundException(session_id)
+        if session.summary and session.summary.strip():
+            raise ChatSessionAlreadyFinalizedException(session_id)
+
+        # Because of concurrency, if the session's state
+        # was updated during the function execution
+        # the filter might fail in the first update
+        # and succeed in the second, so we try again once
+        if is_retry:
+            raise ChatSessionWriteConflictException(session_id)
+        await self.append_entry(
+            session_id=session_id,
+            entry=entry,
+            updated_at=updated_at,
+            is_retry=True,
         )
 
     async def find_by_session_id(self, session_id: str) -> ChatSession | None:

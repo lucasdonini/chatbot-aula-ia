@@ -55,7 +55,7 @@ class SessionSummaryService:
         self._text_generator = text_generator
         self._logger = logger
 
-    def _format_conversation(self, entries: list[ChatEntry]) -> str:
+    def _format_conversation(self, entries: tuple[ChatEntry, ...]) -> str:
         """Formats entries array for summary"""
         lines = []
         for entry in entries:
@@ -65,7 +65,7 @@ class SessionSummaryService:
                 lines.append(f"ERROR: {entry.exception} -> {entry.summary}")
         return "\n".join(lines)
 
-    async def summarize_session(self, entries: list[ChatEntry]) -> str:
+    async def summarize_session(self, entries: tuple[ChatEntry, ...]) -> str:
         """Summarizes the session's entries"""
         self._logger.debug(
             "Summarizing entries",

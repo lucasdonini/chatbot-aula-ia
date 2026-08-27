@@ -32,8 +32,6 @@ class ChatSessionService:
             session_id=session_id,
             started_at=now,
             updated_at=now,
-            summary="",
-            entries=[],
         )
 
         return await self._repository.get_or_create(session)

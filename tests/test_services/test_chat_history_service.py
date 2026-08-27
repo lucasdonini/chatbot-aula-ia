@@ -45,10 +45,10 @@ class TestChatHistoryService:
     @pytest.mark.asyncio
     async def test_fetch_entries_found(self, service, repository):
         fixed = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
-        entries = [
+        entries = (
             HumanMessage(content="Olá"),
             AssistantMessage(content="Oi!"),
-        ]
+        )
         repository.find_by_session_id.return_value = ChatSession(
             session_id="session-123",
             started_at=fixed,
@@ -65,4 +65,4 @@ class TestChatHistoryService:
 
         result = await service.fetch_entries("nonexistent")
 
-        assert result == []
+        assert result == ()

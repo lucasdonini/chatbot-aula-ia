@@ -31,13 +31,13 @@ class ChatHistoryService:
 
         return await self._repository.find_summaries(search=search, limit=limit)
 
-    async def fetch_entries(self, session_id: str) -> list[ChatEntry]:
+    async def fetch_entries(self, session_id: str) -> tuple[ChatEntry, ...]:
         self._logger.debug(
             "Fetching entries",
             details={"session_id": session_id[:8]},
         )
         session = await self._repository.find_by_session_id(session_id)
-        entries = session.entries if session else []
+        entries = session.entries if session else tuple()
 
         self._logger.debug(
             "Entries fetched",

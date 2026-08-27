@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Depends
 
 from app.application.ports.agent_graph import AgentGraph
+from app.domain.exception.chat_session import ChatSessionException
 from app.domain.model.chat_entry import HumanMessage
 from app.services.chat_session_service import ChatSessionService
 
@@ -34,6 +35,8 @@ async def chat(
 
         return ChatResponse(session_id=session_id, content=response.content)
     except TimeoutError:
+        raise
+    except ChatSessionException:
         raise
     except Exception as e:
         await session_service.save_error(session_id, e)

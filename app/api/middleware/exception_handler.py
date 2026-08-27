@@ -8,6 +8,12 @@ from app.application.exceptions import (
     TransactionNotFoundError,
 )
 from app.application.ports.logger import Logger, SessionContextFactory
+from app.domain.exception.chat_session import (
+    ChatSessionAlreadyFinalizedException,
+    ChatSessionException,
+    ChatSessionNotFoundException,
+    ChatSessionWriteConflictException,
+)
 
 
 def register_exception_handlers(
@@ -89,3 +95,48 @@ def register_exception_handlers(
                 status_code=500,
                 content={"detail": "Internal Server Error"},
             )
+
+    async def chat_session_exception_response(
+        *, status_code: int, log_message: str, exc: ChatSessionException
+    ) -> JSONResponse:
+        logger.warning(
+            log_message,
+            details={"error_code": exc.code, "session_id": exc.session_id},
+        )
+        return JSONResponse(
+            status_code=status_code,
+            content={"code": exc.code, "detail": exc.public_message},
+        )
+
+    @app.exception_handler(ChatSessionNotFoundException)
+    async def handle_chat_session_not_found_exception(
+        request: Request, exc: ChatSessionNotFoundException
+    ) -> JSONResponse:
+        return await chat_session_exception_response(
+            log_message="User tried to interact with an unexisting session",
+            status_code=404,
+            exc=exc,
+        )
+
+    @app.exception_handler(ChatSessionAlreadyFinalizedException)
+    async def handle_chat_session_already_finalized_exception(
+        request: Request, exc: ChatSessionAlreadyFinalizedException
+    ) -> JSONResponse:
+        return await chat_session_exception_response(
+            log_message="User tried to interact with an already finalized session",
+            status_code=409,
+            exc=exc,
+        )
+
+    @app.exception_handler(ChatSessionWriteConflictException)
+    async def handle_chat_session_write_conflict_exception(
+        request: Request, exc: ChatSessionWriteConflictException
+    ) -> JSONResponse:
+        return await chat_session_exception_response(
+            log_message=(
+                "Conflict occurred while trying to write a session in database. "
+                "Possible concurrency situation."
+            ),
+            status_code=409,
+            exc=exc,
+        )
