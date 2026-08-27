@@ -83,6 +83,17 @@ button:hover:not(:disabled) {
   background: #36a996;
 }
 
+.secondary-button {
+  margin-top: 16px;
+  color: #bfe4de;
+  background: transparent;
+  border: 1px solid #45615c;
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: #203431;
+}
+
 button:focus-visible {
   outline: 3px solid rgba(117, 203, 191, 0.4);
   outline-offset: 2px;

@@ -8,18 +8,25 @@ afterEach(() => {
 describe('sendChatMessage', () => {
   it('envia a mensagem e devolve a resposta textual', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify('Resposta do assistente'), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({
+          session_id: 'session-123',
+          content: 'Resposta do assistente',
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
     )
     vi.stubGlobal('fetch', fetchMock)
 
     await expect(
       sendChatMessage('session-123', 'Minha pergunta'),
-    ).resolves.toBe(
-      'Resposta do assistente',
-    )
+    ).resolves.toEqual({
+      session_id: 'session-123',
+      content: 'Resposta do assistente',
+    })
     expect(fetchMock).toHaveBeenCalledWith('/api/chat/session-123', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -29,7 +36,13 @@ describe('sendChatMessage', () => {
 
   it('codifica o identificador da sessão antes de montar a URL', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify('Resposta'), { status: 200 }),
+      new Response(
+        JSON.stringify({
+          session_id: 'sessão 123',
+          content: 'Resposta',
+        }),
+        { status: 200 },
+      ),
     )
     vi.stubGlobal('fetch', fetchMock)
 
@@ -63,7 +76,18 @@ describe('sendChatMessage', () => {
 
   it.each([
     new Response('conteúdo inválido', { status: 200 }),
-    new Response(JSON.stringify({ response: 'texto' }), {
+    new Response(JSON.stringify({ session_id: 'session-123' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+    new Response(
+      JSON.stringify({ session_id: 'outra-sessão', content: 'texto' }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    ),
+    new Response(JSON.stringify({ session_id: 'session-123', content: 1 }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     }),
