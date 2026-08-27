@@ -21,10 +21,10 @@ class TestSessionSummaryService:
 
     @pytest.mark.asyncio
     async def test_summarize_session(self, service):
-        entries = [
+        entries = (
             HumanMessage(content="Gastei 100 reais"),
             AssistantMessage(content="Registrado como despesa"),
-        ]
+        )
         service._text_generator.generate.return_value = (
             "Usuário registrou despesa de 100 reais."
         )
@@ -35,14 +35,14 @@ class TestSessionSummaryService:
         service._text_generator.generate.assert_awaited_once()
 
     def test_format_conversation(self, service):
-        entries = [
+        entries = (
             HumanMessage(content="Olá"),
             ChatError(
                 exception="ValueError",
                 summary="Ocorreu um erro interno inesperado.",
             ),
             AssistantMessage(content="Oi!"),
-        ]
+        )
         expected = (
             "human: Olá\n"
             "ERROR: ValueError -> Ocorreu um erro interno inesperado.\n"
@@ -55,13 +55,13 @@ class TestSessionSummaryService:
     async def test_summarize_session_empty(self, service):
         service._text_generator.generate.return_value = "Nenhuma conversa para resumir."
 
-        result = await service.summarize_session([])
+        result = await service.summarize_session(())
 
         assert result == "Nenhuma conversa para resumir."
 
     @pytest.mark.asyncio
     async def test_summarize_session_calls_text_generator(self, service):
-        entries = [HumanMessage(content="teste")]
+        entries = (HumanMessage(content="teste"),)
         service._text_generator.generate.return_value = "resumo"
 
         await service.summarize_session(entries)

@@ -4,13 +4,13 @@ from datetime import datetime
 from .chat_entry import ChatEntry
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class ChatSession:
     session_id: str
     started_at: datetime
     updated_at: datetime | None = None
     summary: str | None = None
-    entries: list[ChatEntry] = field(default_factory=list)
+    entries: tuple[ChatEntry, ...] = field(default_factory=tuple)
 
 
 @dataclass(slots=True, frozen=True)

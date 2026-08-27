@@ -18,15 +18,15 @@ _SESSION_ID = "session-123"
 
 def _session(
     *,
-    entries: list[ChatEntry] | None = None,
-    summary: str | None = "",
+    entries: tuple[ChatEntry, ...] | None = None,
+    summary: str | None = None,
 ) -> ChatSession:
     return ChatSession(
         session_id=_SESSION_ID,
         started_at=_FIXED_TIME,
         updated_at=_FIXED_TIME,
         summary=summary,
-        entries=[] if entries is None else entries,
+        entries=() if entries is None else entries,
     )
 
 
@@ -128,7 +128,7 @@ class TestChatSessionService:
     async def test_finalize_session_with_summary(
         self, service, summary_service, repository
     ):
-        entries = [HumanMessage(content="Olá")]
+        entries = (HumanMessage(content="Olá"),)
         repository.find_by_session_id.return_value = _session(entries=entries)
         summary_service.summarize_session.return_value = "Resumo da sessão"
 
@@ -144,7 +144,7 @@ class TestChatSessionService:
         )
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("session", [None, _session(entries=[])])
+    @pytest.mark.parametrize("session", [None, _session(entries=())])
     async def test_finalize_session_without_entries(
         self, service, summary_service, repository, session
     ):
@@ -161,7 +161,7 @@ class TestChatSessionService:
         self, service, summary_service, repository
     ):
         repository.find_by_session_id.return_value = _session(
-            entries=[HumanMessage(content="Olá")],
+            entries=(HumanMessage(content="Olá"),),
             summary="Resumo existente",
         )
 

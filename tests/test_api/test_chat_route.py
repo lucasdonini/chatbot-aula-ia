@@ -11,6 +11,9 @@ from app.api.dependencies import get_chat_session_service, get_graph
 from app.api.middleware.exception_handler import register_exception_handlers
 from app.api.routes.chat import router
 from app.application.ports.logger import Logger
+from app.domain.exception.chat_session import (
+    ChatSessionAlreadyFinalizedException,
+)
 from app.domain.model.chat_entry import AssistantMessage, ChatMessage, HumanMessage
 from app.domain.model.chat_session import ChatSession
 from app.infrastructure.logger import bind_session_context
@@ -40,6 +43,7 @@ class SessionServiceStub:
     messages: list[tuple[str, ChatMessage]] = field(default_factory=list)
     errors: list[tuple[str, Exception]] = field(default_factory=list)
     ensured_sessions: list[str] = field(default_factory=list)
+    save_message_error: Exception | None = None
 
     async def get_or_create_session(self, session_id: str) -> ChatSession:
         self.ensured_sessions.append(session_id)
@@ -49,6 +53,8 @@ class SessionServiceStub:
         )
 
     async def save_message(self, session_id: str, message: ChatMessage) -> None:
+        if self.save_message_error is not None:
+            raise self.save_message_error
         self.messages.append((session_id, message))
 
     async def save_error(self, session_id: str, error: Exception) -> None:
@@ -168,3 +174,24 @@ def test_chat_timeout_is_not_persisted_as_unexpected_error(
     assert session_service.messages == [
         (_SESSION_ID, HumanMessage(content="Minha pergunta"))
     ]
+
+
+def test_chat_rejects_message_for_finalized_session_without_persisting_error(
+    client: TestClient, graph: GraphStub, session_service: SessionServiceStub
+) -> None:
+    exception = ChatSessionAlreadyFinalizedException(_SESSION_ID)
+    session_service.save_message_error = exception
+
+    response = client.post(
+        f"/api/chat/{_SESSION_ID}", json={"message": "Minha pergunta"}
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "code": exception.code,
+        "detail": exception.public_message,
+    }
+    assert graph.messages == []
+    assert session_service.messages == []
+    assert session_service.errors == []
+    assert session_service.ensured_sessions == [_SESSION_ID]

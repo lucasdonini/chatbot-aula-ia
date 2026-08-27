@@ -67,9 +67,9 @@ class ChatSessionMapper:
     def document_to_model(document: ChatSessionDocument) -> ChatSession:
         return ChatSession(
             **document.model_dump(exclude={"id", "entries"}),
-            entries=[
+            entries=tuple(
                 ChatSessionMapper.document_entry_to_model(e) for e in document.entries
-            ],
+            ),
         )
 
 

@@ -6,12 +6,33 @@ import pytest
 from beanie import UpdateResponse
 from beanie.operators import SetOnInsert
 from pydantic import ValidationError
+from pymongo.results import UpdateResult
 
+from app.domain.exception.chat_session import (
+    ChatSessionAlreadyFinalizedException,
+    ChatSessionNotFoundException,
+    ChatSessionWriteConflictException,
+)
 from app.domain.model.chat_entry import HumanMessage
 from app.domain.model.chat_session import ChatSession, ChatSessionSummarized
 from app.infrastructure.mongodb.repositories.chat_session_repository import (
     BeanieChatSessionRepository,
 )
+
+
+def _update_result(matched_count: int) -> UpdateResult:
+    return UpdateResult(
+        {
+            "n": matched_count,
+            "nModified": matched_count,
+            "ok": 1.0,
+        },
+        acknowledged=True,
+    )
+
+
+async def _async_value(value):
+    return value
 
 
 class TestBeanieChatSessionRepository:
@@ -75,7 +96,7 @@ class TestBeanieChatSessionRepository:
             "ChatSessionDocument"
         ) as document_class:
             query = MagicMock()
-            query.update = AsyncMock()
+            query.update = AsyncMock(return_value=_update_result(1))
             document_class.find_one.return_value = query
 
             await repository.append_entry("session-123", message, fixed)
@@ -83,6 +104,101 @@ class TestBeanieChatSessionRepository:
         document_class.find_one.assert_called_once()
         query.update.assert_awaited_once()
         assert len(query.update.await_args.args) == 2
+        assert query.update.await_args.kwargs == {
+            "response_type": UpdateResponse.UPDATE_RESULT
+        }
+
+    @pytest.mark.asyncio
+    async def test_append_entry_raises_when_session_does_not_exist(
+        self, repository, fixed
+    ):
+        message = HumanMessage(content="Olá")
+        query = MagicMock()
+        query.update = AsyncMock(return_value=_update_result(0))
+
+        with patch(
+            "app.infrastructure.mongodb.repositories.chat_session_repository."
+            "ChatSessionDocument"
+        ) as document_class:
+            document_class.find_one.side_effect = [query, _async_value(None)]
+
+            with pytest.raises(ChatSessionNotFoundException):
+                await repository.append_entry("missing", message, fixed)
+
+    @pytest.mark.asyncio
+    async def test_append_entry_raises_when_session_is_finalized(
+        self, repository, fixed
+    ):
+        message = HumanMessage(content="Olá")
+        query = MagicMock()
+        query.update = AsyncMock(return_value=_update_result(0))
+        finalized_session = MagicMock(summary="Resumo existente")
+
+        with patch(
+            "app.infrastructure.mongodb.repositories.chat_session_repository."
+            "ChatSessionDocument"
+        ) as document_class:
+            document_class.find_one.side_effect = [
+                query,
+                _async_value(finalized_session),
+            ]
+
+            with pytest.raises(ChatSessionAlreadyFinalizedException):
+                await repository.append_entry("session-123", message, fixed)
+
+    @pytest.mark.asyncio
+    async def test_append_entry_retries_once_after_concurrent_state_change(
+        self, repository, fixed
+    ):
+        message = HumanMessage(content="Olá")
+        first_query = MagicMock()
+        first_query.update = AsyncMock(return_value=_update_result(0))
+        retry_query = MagicMock()
+        retry_query.update = AsyncMock(return_value=_update_result(1))
+        open_session = MagicMock(summary=None)
+
+        with patch(
+            "app.infrastructure.mongodb.repositories.chat_session_repository."
+            "ChatSessionDocument"
+        ) as document_class:
+            document_class.find_one.side_effect = [
+                first_query,
+                _async_value(open_session),
+                retry_query,
+            ]
+
+            await repository.append_entry("session-123", message, fixed)
+
+        first_query.update.assert_awaited_once()
+        retry_query.update.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_append_entry_raises_write_conflict_after_retry(
+        self, repository, fixed
+    ):
+        message = HumanMessage(content="Olá")
+        first_query = MagicMock()
+        first_query.update = AsyncMock(return_value=_update_result(0))
+        retry_query = MagicMock()
+        retry_query.update = AsyncMock(return_value=_update_result(0))
+        open_session = MagicMock(summary="")
+
+        with patch(
+            "app.infrastructure.mongodb.repositories.chat_session_repository."
+            "ChatSessionDocument"
+        ) as document_class:
+            document_class.find_one.side_effect = [
+                first_query,
+                _async_value(open_session),
+                retry_query,
+                _async_value(open_session),
+            ]
+
+            with pytest.raises(ChatSessionWriteConflictException):
+                await repository.append_entry("session-123", message, fixed)
+
+        first_query.update.assert_awaited_once()
+        retry_query.update.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_append_entry_preserves_document_validation(self, repository, fixed):

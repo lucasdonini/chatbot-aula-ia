@@ -13,6 +13,11 @@ from app.application.exceptions import (
     TransactionNotFoundError,
 )
 from app.application.ports.logger import Logger
+from app.domain.exception.chat_session import (
+    ChatSessionAlreadyFinalizedException,
+    ChatSessionNotFoundException,
+    ChatSessionWriteConflictException,
+)
 from app.infrastructure.logger import bind_session_context
 
 
@@ -86,6 +91,41 @@ async def test_application_errors_are_translated(
     assert response.status_code == status_code
     assert content["code"] == exception.code
     assert content["detail"] == exception.public_message
+    logger.exception.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("exception", "status_code"),
+    [
+        (ChatSessionNotFoundException("session-123"), 404),
+        (ChatSessionAlreadyFinalizedException("session-123"), 409),
+        (ChatSessionWriteConflictException("session-123"), 409),
+    ],
+)
+async def test_chat_session_errors_are_translated(
+    exception: Exception, status_code: int
+) -> None:
+    app = FastAPI()
+    logger = MagicMock(spec=Logger)
+    register_exception_handlers(
+        app,
+        logger=logger,
+        session_context_factory=bind_session_context,
+    )
+
+    handler = app.exception_handlers[type(exception)]
+    response = await handler(MagicMock(), exception)
+    content = json.loads(response.body)
+
+    assert response.status_code == status_code
+    assert content["code"] == exception.code
+    assert content["detail"] == exception.public_message
+    logger.warning.assert_called_once()
+    assert logger.warning.call_args.kwargs["details"] == {
+        "error_code": exception.code,
+        "session_id": "session-123",
+    }
     logger.exception.assert_not_called()
 
 
