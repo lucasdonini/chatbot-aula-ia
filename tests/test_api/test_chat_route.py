@@ -99,7 +99,10 @@ def test_chat_persists_messages_and_returns_graph_response(
     )
 
     assert response.status_code == 200
-    assert response.json() == "Resposta do assistente"
+    assert response.json() == {
+        "session_id": _SESSION_ID,
+        "content": "Resposta do assistente",
+    }
     assert graph.messages == [(HumanMessage(content="Minha pergunta"), _SESSION_ID)]
     assert session_service.messages == [
         (_SESSION_ID, HumanMessage(content="Minha pergunta")),
