@@ -1,35 +1,26 @@
-const CHAT_ENDPOINT = '/api/chat'
+const SESSION_ENDPOINT = '/api/session'
 
-type ChatRequest = {
-  message: string
-}
-
-export type ChatResponse = {
+export type SessionFinalizationResponse = {
   session_id: string
-  content: string
+  session_summary: string | null
 }
 
-export async function sendChatMessage(
+export async function finalizeSession(
   sessionId: string,
-  message: string,
-): Promise<ChatResponse> {
+): Promise<SessionFinalizationResponse> {
   let apiResponse: Response
 
   try {
     apiResponse = await fetch(
-      `${CHAT_ENDPOINT}/${encodeURIComponent(sessionId)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message } satisfies ChatRequest),
-      },
+      `${SESSION_ENDPOINT}/${encodeURIComponent(sessionId)}/finalize`,
+      { method: 'POST' },
     )
   } catch {
     throw new Error('Não foi possível conectar ao assistente.')
   }
 
   if (!apiResponse.ok) {
-    throw new Error('Não foi possível obter uma resposta do assistente.')
+    throw new Error('Não foi possível encerrar a sessão.')
   }
 
   let responseBody: unknown
@@ -44,17 +35,20 @@ export async function sendChatMessage(
     throw new Error('O assistente retornou uma resposta em formato inválido.')
   }
 
-  const { session_id: responseSessionId, content } = responseBody as Record<
-    string,
-    unknown
-  >
+  const {
+    session_id: responseSessionId,
+    session_summary: sessionSummary,
+  } = responseBody as Record<string, unknown>
   if (
     typeof responseSessionId !== 'string' ||
     responseSessionId !== sessionId ||
-    typeof content !== 'string'
+    (typeof sessionSummary !== 'string' && sessionSummary !== null)
   ) {
     throw new Error('O assistente retornou uma resposta em formato inválido.')
   }
 
-  return { session_id: responseSessionId, content }
+  return {
+    session_id: responseSessionId,
+    session_summary: sessionSummary,
+  }
 }
