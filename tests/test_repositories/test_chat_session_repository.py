@@ -293,14 +293,17 @@ class TestBeanieChatSessionRepository:
             result = await repository.find_summaries(search=search, limit=5)
 
         assert result == [expected]
-        find_filter = document_class.find.call_args.args[0]
+        find_filters = document_class.find.call_args.args
+        assert len(find_filters) == (2 if search else 1)
+        summary_filter = next(iter(find_filters[0].values()))
+        assert summary_filter == {"$nin": [None, ""]}
+
         if search:
-            pattern = next(iter(find_filter.values()))
+            regex_filter = next(iter(find_filters[1].values()))
+            pattern = regex_filter["$regex"]
             assert isinstance(pattern, re.Pattern)
             assert pattern.pattern == search
             assert pattern.flags & re.IGNORECASE
-        else:
-            assert find_filter == {}
         projected_query.sort.assert_called_once_with(document_class.updated_at, -1)
         sorted_query.limit.assert_called_once_with(5)
         mapper.assert_called_once_with(document)

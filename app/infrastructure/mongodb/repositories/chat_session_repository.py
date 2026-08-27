@@ -1,8 +1,9 @@
 import re
 from datetime import datetime
+from typing import Mapping
 
 from beanie import UpdateResponse
-from beanie.operators import In, Push, Set, SetOnInsert
+from beanie.operators import In, NotIn, Push, RegEx, Set, SetOnInsert
 from pymongo import DESCENDING
 from pymongo.results import UpdateResult
 
@@ -125,15 +126,13 @@ class BeanieChatSessionRepository:
         search: str = "",
         limit: int = 3,
     ) -> list[ChatSessionSummarized]:
-        find_filter = {}
+        find_filter: list[Mapping] = [NotIn(ChatSessionDocument.summary, [None, ""])]
         if search:
-            find_filter[ChatSessionDocument.summary] = re.compile(
-                search,
-                re.IGNORECASE,
-            )
+            pattern = re.compile(pattern=search, flags=re.IGNORECASE)
+            find_filter.append(RegEx(ChatSessionDocument.summary, pattern=pattern))
 
         documents = await (
-            ChatSessionDocument.find(find_filter)
+            ChatSessionDocument.find(*find_filter)
             .project(ChatSessionSummaryProjection)
             .sort(ChatSessionDocument.updated_at, DESCENDING)  # type: ignore[arg-type]
             .limit(limit)
