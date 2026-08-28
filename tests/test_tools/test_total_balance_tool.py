@@ -18,7 +18,7 @@ class TestTotalBalanceTool:
     def tool(self):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
-        return TotalBalanceTool(service=service, logger=MagicMock(spec=Logger))
+        return TotalBalanceTool(service=service, logger_factory=MagicMock(spec=Logger))
 
     async def test_returns_balance(self, tool):
         tool.service.calculate_total_balance = AsyncMock(return_value=5000.0)

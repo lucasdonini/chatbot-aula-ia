@@ -1,3 +1,5 @@
+from typing import Annotated, Literal
+
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
@@ -5,7 +7,7 @@ from app.application.exceptions import ApplicationError
 from app.application.models.transaction_query import (
     TransactionQueryParams,
 )
-from app.application.ports.logger import Logger
+from app.application.ports.logger import LoggerFactory
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolResponse,
@@ -23,11 +25,8 @@ class _SearchTransactionsResponse(BaseModel):
     transactions: list[TransactionOutput]
 
 
-TOOL_NAME = "search_transactions"
-
-
 class SearchTransactionsTool(BaseTool):
-    name: str = TOOL_NAME
+    name: Literal["search_transactions"] = "search_transactions"
     args_schema: type[BaseModel] = _SearchTransactionsArgsSchema
     description: str = (
         "Busca no banco de dados uma transação de acordo com os parâmetros passados. "
@@ -43,8 +42,8 @@ class SearchTransactionsTool(BaseTool):
         "'fiz uma doação para ...' sejam retornadas buscando apenas por 'doação'."
     )
 
-    service: TransactionService = Field(exclude=True)
-    logger: Logger = Field(exclude=True)
+    service: Annotated[TransactionService, Field(exclude=True)]
+    logger_factory: Annotated[LoggerFactory, Field(exclude=True)]
 
     def _run(
         self, params: TransactionQueryParams
@@ -54,7 +53,8 @@ class SearchTransactionsTool(BaseTool):
     async def _arun(
         self, params: TransactionQueryParams
     ) -> ToolResponse[_SearchTransactionsResponse]:
-        self.logger.debug(
+        logger = self.logger_factory(__name__)
+        logger.debug(
             "Tool called",
             details={
                 "tool": self.name,
@@ -67,7 +67,7 @@ class SearchTransactionsTool(BaseTool):
         )
         try:
             result = await self.service.search_transactions(params)
-            self.logger.debug(
+            logger.debug(
                 "Tool succeeded",
                 details={"tool": self.name, "count": len(result)},
             )
@@ -79,13 +79,13 @@ class SearchTransactionsTool(BaseTool):
                 )
             )
         except ApplicationError as e:
-            self.logger.warning(
+            logger.warning(
                 "Tool rejected operation",
                 details={"tool": self.name, "error_code": e.code},
             )
             return ToolFailure.application_error(e)
         except Exception as e:
-            self.logger.exception(
+            logger.exception(
                 "Tool failed",
                 exception=e,
                 details={"tool": self.name},

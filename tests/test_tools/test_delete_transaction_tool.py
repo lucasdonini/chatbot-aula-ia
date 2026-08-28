@@ -27,7 +27,9 @@ class TestDeleteTransactionTool:
     def tool(self):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
-        return DeleteTransactionTool(service=service, logger=MagicMock(spec=Logger))
+        return DeleteTransactionTool(
+            service=service, logger_factory=MagicMock(spec=Logger)
+        )
 
     async def test_deletes_by_id_returns_true(self, tool):
         query = UpdateTransactionQuery(id=uuid4())

@@ -43,37 +43,45 @@ pytestmark = [
 
 @pytest.fixture
 def total_balance_tool(transaction_service, mock_logger):
-    return TotalBalanceTool(service=transaction_service, logger=mock_logger)
+    return TotalBalanceTool(service=transaction_service, logger_factory=mock_logger)
 
 
 @pytest.fixture
 def daily_balance_tool(transaction_service, mock_logger):
-    return DailyBalanceTool(service=transaction_service, logger=mock_logger)
+    return DailyBalanceTool(service=transaction_service, logger_factory=mock_logger)
 
 
 @pytest.fixture
 def search_tool(transaction_service, mock_logger):
-    return SearchTransactionsTool(service=transaction_service, logger=mock_logger)
+    return SearchTransactionsTool(
+        service=transaction_service, logger_factory=mock_logger
+    )
 
 
 @pytest.fixture
 def add_tool(transaction_service, mock_logger):
-    return AddTransactionTool(service=transaction_service, logger=mock_logger)
+    return AddTransactionTool(service=transaction_service, logger_factory=mock_logger)
 
 
 @pytest.fixture
 def update_tool(transaction_service, mock_logger):
-    return UpdateTransactionTool(service=transaction_service, logger=mock_logger)
+    return UpdateTransactionTool(
+        service=transaction_service, logger_factory=mock_logger
+    )
 
 
 @pytest.fixture
 def delete_tool(transaction_service, mock_logger):
-    return DeleteTransactionTool(service=transaction_service, logger=mock_logger)
+    return DeleteTransactionTool(
+        service=transaction_service, logger_factory=mock_logger
+    )
 
 
 @pytest.fixture
 def restore_tool(transaction_service, mock_logger):
-    return RestoreTransactionTool(service=transaction_service, logger=mock_logger)
+    return RestoreTransactionTool(
+        service=transaction_service, logger_factory=mock_logger
+    )
 
 
 class TestTotalBalanceTool:

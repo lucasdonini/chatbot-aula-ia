@@ -1,3 +1,3 @@
-from .pdf_rag import create_faq_retriever
+from .pdf_rag import FaqRag
 
-__all__ = ["create_faq_retriever"]
+__all__ = ["FaqRag"]

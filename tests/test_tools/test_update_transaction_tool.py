@@ -28,7 +28,9 @@ class TestUpdateTransactionTool:
     def tool(self):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
-        return UpdateTransactionTool(service=service, logger=MagicMock(spec=Logger))
+        return UpdateTransactionTool(
+            service=service, logger_factory=MagicMock(spec=Logger)
+        )
 
     async def test_updates_and_returns_ok(self, tool):
         params = UpdateTransactionParams(

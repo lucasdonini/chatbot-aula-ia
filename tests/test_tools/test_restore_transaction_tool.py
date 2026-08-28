@@ -27,7 +27,9 @@ class TestRestoreTransactionTool:
     def tool(self):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
-        return RestoreTransactionTool(service=service, logger=MagicMock(spec=Logger))
+        return RestoreTransactionTool(
+            service=service, logger_factory=MagicMock(spec=Logger)
+        )
 
     async def test_restores_by_id_returns_true(self, tool):
         query = UpdateTransactionQuery(id=uuid4())

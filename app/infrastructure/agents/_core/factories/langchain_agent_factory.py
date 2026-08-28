@@ -13,23 +13,22 @@ class LangChainAgentFactory:
         self,
         *,
         llm: BaseChatModel,
-        tools: Sequence[BaseTool] = (),
         middlewares: Sequence[AgentMiddleware] = (),
     ) -> None:
         self._llm = llm
-        self._tools = tuple(tools)
         self._middlewares = tuple(middlewares)
 
     def create(
         self,
         *,
         system_prompt: str,
+        tools: Sequence[BaseTool] = (),
         response_format: type[BaseModel] | None = None,
     ) -> CompiledStateGraph:
         return create_agent(
             model=self._llm,
             system_prompt=system_prompt,
             response_format=response_format,
-            tools=list(self._tools),
+            tools=list(tools),
             middleware=list(self._middlewares),
         )

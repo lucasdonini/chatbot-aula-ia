@@ -2,21 +2,30 @@ from typing import Any, ClassVar
 
 from langgraph.graph.state import CompiledStateGraph
 
-from app.application.ports.logger import Logger
+from app.application.ports.logger import Logger, LoggerFactory
 from app.infrastructure.agents._core.state import GraphState, GraphStateKeys
 
 from .._core.contracts.agent_factory import AgentFactory
 from .._core.contracts.agent_node import AgentNode
-from .faq_prompt import FAQ_NODE_NAME, PROMPT
+from .faq_prompt import build_faq_prompt
+from .tools import FaqRag
 
 
 class FAQAgentNode(AgentNode):
     _agent: CompiledStateGraph
-    name: ClassVar[str] = FAQ_NODE_NAME
+    _logger: Logger
+    name: ClassVar[str] = "faq"
 
-    def __init__(self, agent_factory: AgentFactory, logger: Logger) -> None:
-        self._logger = logger
-        self._agent = agent_factory.create(system_prompt=PROMPT)
+    def __init__(
+        self,
+        *,
+        logger_factory: LoggerFactory,
+        faq_rag: FaqRag,
+        agent_factory: AgentFactory,
+    ) -> None:
+        self._logger = logger_factory(__name__)
+        prompt = build_faq_prompt(node_name=self.name, faq_rag_name=faq_rag.name)
+        self._agent = agent_factory.create(system_prompt=prompt, tools=(faq_rag,))
 
     async def __call__(self, state: GraphState) -> dict[GraphStateKeys, Any]:
         input_length = len(state["messages"][-1].content)

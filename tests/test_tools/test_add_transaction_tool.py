@@ -23,7 +23,9 @@ class TestAddTransactionTool:
     def tool(self):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
-        return AddTransactionTool(service=service, logger=MagicMock(spec=Logger))
+        return AddTransactionTool(
+            service=service, logger_factory=MagicMock(spec=Logger)
+        )
 
     async def test_adds_and_returns_ok(self, tool):
         t = TransactionInput(

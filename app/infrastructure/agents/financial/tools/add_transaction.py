@@ -1,8 +1,10 @@
+from typing import Annotated, Literal
+
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
 from app.application.exceptions import ApplicationError
-from app.application.ports.logger import Logger
+from app.application.ports.logger import LoggerFactory
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolResponse,
@@ -23,16 +25,13 @@ class _AddTransactionResponse(BaseModel):
     transaction: TransactionOutput
 
 
-TOOL_NAME = "add_transaction"
-
-
 class AddTransactionTool(BaseTool):
-    name: str = TOOL_NAME
+    name: Literal["add_transaction"] = "add_transaction"
     args_schema: type[BaseModel] = _AddTransactionArgsSchema
     description: str = "Insere uma transação financeira no banco de dados PosthreSQL."
 
-    service: TransactionService = Field(exclude=True)
-    logger: Logger = Field(exclude=True)
+    service: Annotated[TransactionService, Field(exclude=True)]
+    logger_factory: Annotated[LoggerFactory, Field(exclude=True)]
 
     def _run(
         self, transaction: TransactionInput
@@ -42,7 +41,8 @@ class AddTransactionTool(BaseTool):
     async def _arun(
         self, transaction: TransactionInput
     ) -> ToolResponse[_AddTransactionResponse]:
-        self.logger.debug(
+        logger = self.logger_factory(__name__)
+        logger.debug(
             "Tool called",
             details={
                 "tool": self.name,
@@ -52,7 +52,7 @@ class AddTransactionTool(BaseTool):
         )
         try:
             added = await self.service.add_transaction(transaction.to_domain())
-            self.logger.debug(
+            logger.debug(
                 "Tool succeeded",
                 details={"tool": self.name, "added": True},
             )
@@ -62,13 +62,13 @@ class AddTransactionTool(BaseTool):
                 )
             )
         except ApplicationError as e:
-            self.logger.warning(
+            logger.warning(
                 "Tool rejected operation",
                 details={"tool": self.name, "error_code": e.code},
             )
             return ToolFailure.application_error(e)
         except Exception as e:
-            self.logger.exception(
+            logger.exception(
                 "Tool failed",
                 exception=e,
                 details={"tool": self.name},
