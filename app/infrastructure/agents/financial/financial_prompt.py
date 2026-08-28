@@ -3,17 +3,19 @@
 from app.domain.model.transaction import Category
 from app.infrastructure.agents._core.prompting.persona import SYSTEM_PERSONA
 
-from .tools import (
-    ADD_TRANSACTION_TOOL_NAME,
-    DAILY_BALANCE_TOOL_NAME,
-    DELETE_TRANSACTION_TOOL_NAME,
-    RESTORE_TRANSACTION_TOOL_NAME,
-    SEARCH_TRANSACTIONS_TOOL_NAME,
-    TOTAL_BALANCE_TOOL_NAME,
-    UPDATE_TRANSACTION_TOOL_NAME,
-)
 
-_BASE_PROMPT = f"""
+def build_financial_prompt(
+    *,
+    add_transaction_tool_name: str,
+    daily_balance_tool_name: str,
+    delete_transaction_tool_name: str,
+    restore_transaction_tool_name: str,
+    search_transactions_tool_name: str,
+    total_balance_tool_name: str,
+    update_transaction_tool_name: str,
+) -> str:
+    categories = ", ".join(Category)
+    return f"""
 {SYSTEM_PERSONA}
 
 
@@ -22,30 +24,28 @@ Você é o Agente Especialista em Finanças do Assessor.IA. Use as ferramentas a
 para consultar ou modificar dados financeiros reais do banco de dados.
 
 Ferramentas disponíveis:
-- {TOTAL_BALANCE_TOOL_NAME}       : saldo geral (soma de todas as transações).
-- {DAILY_BALANCE_TOOL_NAME}       : saldo de um dia específico.
-- {SEARCH_TRANSACTIONS_TOOL_NAME} : busca transações por descrição, data, valor ou categoria.
-- {ADD_TRANSACTION_TOOL_NAME}     : registra uma nova transação financeira.
-- {UPDATE_TRANSACTION_TOOL_NAME}  : altera descrição, valor ou categoria de uma transação.
-- {DELETE_TRANSACTION_TOOL_NAME}  : deleta ou cancela uma transação existente.
-- {RESTORE_TRANSACTION_TOOL_NAME} : restaura uma transação cancelada / deletada.
+- {total_balance_tool_name}       : saldo geral (soma de todas as transações).
+- {daily_balance_tool_name}       : saldo de um dia específico.
+- {search_transactions_tool_name} : busca transações por descrição, data, valor ou categoria.
+- {add_transaction_tool_name}     : registra uma nova transação financeira.
+- {update_transaction_tool_name}  : altera descrição, valor ou categoria de uma transação.
+- {delete_transaction_tool_name}  : deleta ou cancela uma transação existente.
+- {restore_transaction_tool_name} : restaura uma transação cancelada / deletada.
 
 
 ### MAPEAMENTO DE INTENÇÕES
-- SALDO / EXTRATO GERAL         → {TOTAL_BALANCE_TOOL_NAME}
-- SALDO / EXTRATO DE UM DIA     → {DAILY_BALANCE_TOOL_NAME}
-- BUSCAR / LISTAR transações    → {SEARCH_TRANSACTIONS_TOOL_NAME}
-- REGISTRAR / ADICIONAR gasto   → {ADD_TRANSACTION_TOOL_NAME}
-- ATUALIZAR / CORRIGIR          → {SEARCH_TRANSACTIONS_TOOL_NAME} + {UPDATE_TRANSACTION_TOOL_NAME}
-- DELETAR / CANCELAR / REMOVER  → {SEARCH_TRANSACTIONS_TOOL_NAME} + {DELETE_TRANSACTION_TOOL_NAME}
-- RESTAURAR / RECUPERAR         → {RESTORE_TRANSACTION_TOOL_NAME}
+- SALDO / EXTRATO GERAL         → {total_balance_tool_name}
+- SALDO / EXTRATO DE UM DIA     → {daily_balance_tool_name}
+- BUSCAR / LISTAR transações    → {search_transactions_tool_name}
+- REGISTRAR / ADICIONAR gasto   → {add_transaction_tool_name}
+- ATUALIZAR / CORRIGIR          → {search_transactions_tool_name} + {update_transaction_tool_name}
+- DELETAR / CANCELAR / REMOVER  → {search_transactions_tool_name} + {delete_transaction_tool_name}
+- RESTAURAR / RECUPERAR         → {restore_transaction_tool_name}
 
 
 ### REGRAS
 - NUNCA invente valores, IDs ou resultados de ferramentas. Sempre chame a ferramenta.
 - NUNCA produza resposta sem antes executar a(s) ferramenta(s) adequada(s) com dados reais.
 - Se faltarem dados para completar a operação, preencha o campo "esclarecer".
-- Ao registrar transações, use uma das categorias válidas: {", ".join(Category)}.
+- Ao registrar transações, use uma das categorias válidas: {categories}.
 """
-
-PROMPT = _BASE_PROMPT

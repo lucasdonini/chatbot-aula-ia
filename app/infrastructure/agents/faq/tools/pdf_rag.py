@@ -1,9 +1,10 @@
-from langchain.tools import tool
+from typing import Annotated, Literal
+
+from langchain.tools import BaseTool
 from langchain_core.documents.base import Document
-from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from app.application.ports.logger import Logger
+from app.application.ports.logger import LoggerFactory
 from app.infrastructure.faiss_store import get_faq_db
 
 
@@ -11,15 +12,17 @@ class GetFAQAnswerArgsSchema(BaseModel):
     question: str = Field(..., description="Pergunta do usuário a ser respondida")
 
 
-TOOL_NAME = "faq_retreiver"
+class FaqRag(BaseTool):
+    name: Literal["faq_rag"] = "faq_rag"
+    args_schema: type[BaseModel] = GetFAQAnswerArgsSchema
+    description: str = (
+        "Busca no FAQ oficial os trechos relevantes para responder a pergunta."
+    )
 
+    logger_factory: Annotated[LoggerFactory, Field(exclude=True)]
 
-def create_faq_retriever(logger: Logger) -> BaseTool:
-    @tool(TOOL_NAME, args_schema=GetFAQAnswerArgsSchema)
-    def faq_retriever(question: str) -> list[Document]:
-        """Busca no FAQ oficial os trechos relevantes para responder a pergunta."""
-        logger.debug("Tool called", details={"tool": TOOL_NAME})
+    def _run(self, question: str) -> list[Document]:
+        logger = self.logger_factory(__name__)
+        logger.debug("Tool called", details={"tool": self.name})
         db = get_faq_db()
         return db.similarity_search(question, k=6)
-
-    return faq_retriever

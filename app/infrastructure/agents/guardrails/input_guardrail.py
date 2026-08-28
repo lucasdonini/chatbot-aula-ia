@@ -4,7 +4,7 @@ from typing import Any, ClassVar, Final
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
 from langgraph.graph import END
 
-from app.application.ports.logger import Logger
+from app.application.ports.logger import Logger, LoggerFactory
 from app.application.ports.text_generator import TextGenerator
 from app.infrastructure.agents._core.state import GraphState, GraphStateKeys
 from app.infrastructure.agents.guardrails.result import GuardrailResult
@@ -18,17 +18,19 @@ from .guardrails_prompts import CLASSIFIER_PROMPT
 class InputGuardrailNode(AgentNode):
     name: ClassVar[str] = "input_guardrail"
     _text_generator: Final[TextGenerator]
+    _logger: Logger
+    _approved_route: str
 
     def __init__(
         self,
         *,
-        text_generator: TextGenerator,
         approved_route: str,
-        logger: Logger,
+        text_generator: TextGenerator,
+        logger_factory: LoggerFactory,
     ) -> None:
         self._text_generator = text_generator
         self._approved_route = approved_route
-        self._logger = logger
+        self._logger = logger_factory(__name__)
 
     def _check_prompt_injection(self, input: str) -> bool:
         for pattern in INJECTION_PATTERNS:

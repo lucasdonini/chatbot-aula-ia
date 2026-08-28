@@ -1,9 +1,9 @@
 import re
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Final
 
 from langchain_core.messages import AIMessage
 
-from app.application.ports.logger import Logger
+from app.application.ports.logger import Logger, LoggerFactory
 from app.application.ports.text_generator import TextGenerator
 from app.infrastructure.agents._core.contracts.agent_node import AgentNode
 from app.infrastructure.agents._core.state import GraphState, GraphStateKeys
@@ -16,10 +16,17 @@ from .guardrails_prompts import COMPLIANCE_PROMPT
 
 class OutputGuardrailNode(AgentNode):
     name: ClassVar[str] = "output_guardrail"
+    _text_generator: Final[TextGenerator]
+    _logger: Logger
 
-    def __init__(self, text_generator: TextGenerator, logger: Logger) -> None:
+    def __init__(
+        self,
+        *,
+        text_generator: TextGenerator,
+        logger_factory: LoggerFactory,
+    ) -> None:
         self._text_generator = text_generator
-        self._logger = logger
+        self._logger = logger_factory(__name__)
 
     async def _guard_output(
         self,

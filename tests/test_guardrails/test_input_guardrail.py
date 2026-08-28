@@ -15,7 +15,7 @@ def _build_node(*, response: str = "", error: Exception | None = None):
     node = InputGuardrailNode(
         text_generator=text_generator,
         approved_route="router",
-        logger=MagicMock(spec=Logger),
+        logger_factory=MagicMock(spec=Logger),
     )
     return node, text_generator
 

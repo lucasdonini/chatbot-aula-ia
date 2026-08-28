@@ -19,7 +19,7 @@ class TestDailyBalanceTool:
     def tool(self):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
-        return DailyBalanceTool(service=service, logger=MagicMock(spec=Logger))
+        return DailyBalanceTool(service=service, logger_factory=MagicMock(spec=Logger))
 
     async def test_returns_daily_balance(self, tool):
         tool.service.calculate_daily_balance = AsyncMock(return_value=300.0)

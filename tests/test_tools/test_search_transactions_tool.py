@@ -25,7 +25,9 @@ class TestSearchTransactionsTool:
     def tool(self):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
-        return SearchTransactionsTool(service=service, logger=MagicMock(spec=Logger))
+        return SearchTransactionsTool(
+            service=service, logger_factory=MagicMock(spec=Logger)
+        )
 
     async def test_returns_transactions(self, tool):
         mock_result = [

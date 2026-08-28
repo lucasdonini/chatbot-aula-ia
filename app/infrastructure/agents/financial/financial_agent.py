@@ -1,10 +1,11 @@
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Sequence, TypedDict, cast
 
+from langchain.tools import BaseTool
 from langchain_core.messages import SystemMessage
 from langgraph.graph.state import CompiledStateGraph
 
 from app.application.ports.clock import Clock
-from app.application.ports.logger import Logger
+from app.application.ports.logger import Logger, LoggerFactory
 from app.infrastructure.agents._core.prompting.temporal_context import (
     build_temporal_context,
 )
@@ -13,23 +14,56 @@ from app.infrastructure.agents._core.state import GraphState, GraphStateKeys
 
 from .._core.contracts.agent_factory import AgentFactory
 from .._core.contracts.agent_node import AgentNode
-from .financial_prompt import PROMPT
+from .financial_prompt import build_financial_prompt
+from .tools import (
+    AddTransactionTool,
+    DailyBalanceTool,
+    DeleteTransactionTool,
+    RestoreTransactionTool,
+    SearchTransactionsTool,
+    TotalBalanceTool,
+    UpdateTransactionTool,
+)
+
+
+class FinancialAgentTools(TypedDict):
+    total_balance: TotalBalanceTool
+    daily_balance: DailyBalanceTool
+    search_transactions: SearchTransactionsTool
+    add_transaction: AddTransactionTool
+    update_transaction: UpdateTransactionTool
+    delete_transaction: DeleteTransactionTool
+    restore_transaction: RestoreTransactionTool
 
 
 class FinancialAgentNode(AgentNode):
     _agent: CompiledStateGraph
+    _logger: Logger
+    _clock: Clock
     name: ClassVar[str] = "financial"
 
     def __init__(
         self,
+        *,
         agent_factory: AgentFactory,
-        logger: Logger,
+        logger_factory: LoggerFactory,
+        tools: FinancialAgentTools,
         clock: Clock,
     ) -> None:
-        self._logger = logger
+        prompt = build_financial_prompt(
+            total_balance_tool_name=tools["total_balance"].name,
+            daily_balance_tool_name=tools["daily_balance"].name,
+            search_transactions_tool_name=tools["search_transactions"].name,
+            add_transaction_tool_name=tools["add_transaction"].name,
+            update_transaction_tool_name=tools["update_transaction"].name,
+            delete_transaction_tool_name=tools["delete_transaction"].name,
+            restore_transaction_tool_name=tools["restore_transaction"].name,
+        )
+        self._logger = logger_factory(__name__)
         self._clock = clock
         self._agent = agent_factory.create(
-            system_prompt=PROMPT,
+            system_prompt=prompt,
+            tools=cast(Sequence[BaseTool], tools.values()),
             response_format=FinancialOutput,
         )
 

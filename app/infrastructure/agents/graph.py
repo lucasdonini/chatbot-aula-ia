@@ -14,7 +14,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from app.application.ports.logger import (
     InteractionIncrementer,
-    Logger,
+    LoggerFactory,
     TraceContextFactory,
 )
 from app.domain.model.chat_entry import AssistantMessage, HumanMessage
@@ -34,7 +34,7 @@ class AgentGraphImpl:
         orquestrator: AgentNode,
         output_guardrail: AgentNode,
         execution_timeout_seconds: float,
-        logger: Logger,
+        logger_factory: LoggerFactory,
         trace_context_factory: TraceContextFactory,
         interaction_incrementer: InteractionIncrementer,
     ) -> None:
@@ -44,7 +44,7 @@ class AgentGraphImpl:
         self._orquestrator = orquestrator
         self._output_guardrail = output_guardrail
         self._execution_timeout_seconds = execution_timeout_seconds
-        self._logger = logger
+        self._logger = logger_factory(__name__)
         self._trace_context_factory = trace_context_factory
         self._interaction_incrementer = interaction_incrementer
         self._specialists_by_name = {

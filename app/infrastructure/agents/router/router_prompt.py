@@ -4,10 +4,13 @@ from collections.abc import Sequence
 
 from .._core.prompting.persona import SYSTEM_PERSONA
 from .._core.specialist import SpecialistRegistration
-from .tools import SEARCH_HISTORY_TOOL_NAME
 
 
-def build_router_prompt(specialists: Sequence[SpecialistRegistration]) -> str:
+def build_router_prompt(
+    *,
+    search_history_tool_name: str,
+    specialists: Sequence[SpecialistRegistration],
+) -> str:
     if not specialists:
         raise ValueError("Router requires at least one specialist")
 
@@ -36,7 +39,7 @@ def build_router_prompt(specialists: Sequence[SpecialistRegistration]) -> str:
   (b) solicitações fora do escopo,
   (c) perguntas sobre conversas passadas ou histórico,
   (d) pedidos de esclarecimento.
-- Consultar o histórico de conversas com a tool {SEARCH_HISTORY_TOOL_NAME}.
+- Consultar o histórico de conversas com a tool {search_history_tool_name}.
 
 ### AGENTES DISPONÍVEIS
 {available_agents}
@@ -54,7 +57,7 @@ PERGUNTA_ORIGINAL=[mensagem completa do usuário, sem edições]
 ### REGRAS
 - NUNCA execute ações fora do seu contexto.
 - NUNCA responda perguntas que deveriam ser encaminhadas a especialistas.
-- Use `{SEARCH_HISTORY_TOOL_NAME}` SOMENTE para histórico de sessões anteriores.
+- Use `{search_history_tool_name}` SOMENTE para histórico de sessões anteriores.
 - Não use a tool de histórico para saldo, transações, eventos ou outros dados sob responsabilidade dos especialistas.
 - Em solicitações fora do escopo, ofereça 1-2 sugestões práticas para voltar ao escopo.
 - Ao encaminhar, NÃO responda ao usuário: devolva somente o protocolo com a mensagem original.

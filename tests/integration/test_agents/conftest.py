@@ -84,13 +84,13 @@ def mock_all_llms(
 def financial_agent_node(transaction_service, application_clock) -> FinancialAgentNode:
     logger = MagicMock(spec=Logger)
     tools = (
-        TotalBalanceTool(service=transaction_service, logger=logger),
-        DailyBalanceTool(service=transaction_service, logger=logger),
-        SearchTransactionsTool(service=transaction_service, logger=logger),
-        AddTransactionTool(service=transaction_service, logger=logger),
-        UpdateTransactionTool(service=transaction_service, logger=logger),
-        DeleteTransactionTool(service=transaction_service, logger=logger),
-        RestoreTransactionTool(service=transaction_service, logger=logger),
+        TotalBalanceTool(service=transaction_service, logger_factory=logger),
+        DailyBalanceTool(service=transaction_service, logger_factory=logger),
+        SearchTransactionsTool(service=transaction_service, logger_factory=logger),
+        AddTransactionTool(service=transaction_service, logger_factory=logger),
+        UpdateTransactionTool(service=transaction_service, logger_factory=logger),
+        DeleteTransactionTool(service=transaction_service, logger_factory=logger),
+        RestoreTransactionTool(service=transaction_service, logger_factory=logger),
     )
     return FinancialAgentNode(
         LangChainAgentFactory(llm=llm_gemini, tools=tools),

@@ -16,7 +16,7 @@ from ._core.middleware import FallbackOn429Middleware
 from ._core.specialist import SpecialistRegistration
 from .agenda import AgendaAgentNode
 from .faq import FAQAgentNode
-from .faq.tools import create_faq_retriever
+from .faq.tools import FaqRag
 from .financial import FinancialAgentNode
 from .financial.tools import (
     AddTransactionTool,
@@ -47,70 +47,88 @@ def build_agent_graph(
 ) -> AgentGraphImpl:
     specialist_fallback = FallbackOn429Middleware(
         llm_groq,
-        logger=logger_factory(FallbackOn429Middleware.__module__),
+        logger_factory=logger_factory,
     )
 
-    financial_tools = (
-        TotalBalanceTool(
-            service=transaction_service,
-            logger=logger_factory(TotalBalanceTool.__module__),
-        ),
-        DailyBalanceTool(
-            service=transaction_service,
-            logger=logger_factory(DailyBalanceTool.__module__),
-        ),
-        SearchTransactionsTool(
-            service=transaction_service,
-            logger=logger_factory(SearchTransactionsTool.__module__),
-        ),
-        AddTransactionTool(
-            service=transaction_service,
-            logger=logger_factory(AddTransactionTool.__module__),
-        ),
-        UpdateTransactionTool(
-            service=transaction_service,
-            logger=logger_factory(UpdateTransactionTool.__module__),
-        ),
-        DeleteTransactionTool(
-            service=transaction_service,
-            logger=logger_factory(DeleteTransactionTool.__module__),
-        ),
-        RestoreTransactionTool(
-            service=transaction_service,
-            logger=logger_factory(RestoreTransactionTool.__module__),
-        ),
+    specialist_factory = LangChainAgentFactory(
+        llm=llm_gemini,
+        middlewares=(specialist_fallback,),
     )
+
+    support_agent_factory = LangChainAgentFactory(llm=fast_llm)
+
+    total_balance_tool = TotalBalanceTool(
+        service=transaction_service,
+        logger_factory=logger_factory,
+    )
+
+    daily_balance_tool = DailyBalanceTool(
+        service=transaction_service,
+        logger_factory=logger_factory,
+    )
+
+    search_transactions_tool = SearchTransactionsTool(
+        service=transaction_service,
+        logger_factory=logger_factory,
+    )
+
+    add_transaction_tool = AddTransactionTool(
+        service=transaction_service,
+        logger_factory=logger_factory,
+    )
+
+    update_transaction_tool = UpdateTransactionTool(
+        service=transaction_service,
+        logger_factory=logger_factory,
+    )
+
+    delete_transaction_tool = DeleteTransactionTool(
+        service=transaction_service,
+        logger_factory=logger_factory,
+    )
+
+    restore_transaction_tool = RestoreTransactionTool(
+        service=transaction_service,
+        logger_factory=logger_factory,
+    )
+
+    faq_rag = FaqRag(logger_factory=logger_factory)
+
+    search_history_tool = SearchHistoryTool(
+        service=chat_history_service,
+        logger_factory=logger_factory,
+    )
+
     financial = FinancialAgentNode(
-        LangChainAgentFactory(
-            llm=llm_gemini,
-            tools=financial_tools,
-            middlewares=(specialist_fallback,),
-        ),
-        logger=logger_factory(FinancialAgentNode.__module__),
+        agent_factory=specialist_factory,
+        logger_factory=logger_factory,
         clock=clock,
+        tools={
+            "add_transaction": add_transaction_tool,
+            "daily_balance": daily_balance_tool,
+            "delete_transaction": delete_transaction_tool,
+            "restore_transaction": restore_transaction_tool,
+            "search_transactions": search_transactions_tool,
+            "total_balance": total_balance_tool,
+            "update_transaction": update_transaction_tool,
+        },
     )
+
     agenda = AgendaAgentNode(
-        LangChainAgentFactory(
-            llm=llm_gemini,
-            middlewares=(specialist_fallback,),
-        ),
-        logger=logger_factory(AgendaAgentNode.__module__),
+        agent_factory=specialist_factory,
+        logger_factory=logger_factory,
         clock=clock,
     )
+
     faq = FAQAgentNode(
-        LangChainAgentFactory(
-            llm=fast_llm,
-            tools=(
-                create_faq_retriever(
-                    logger_factory("app.infrastructure.agents.faq.tools.pdf_rag")
-                ),
-            ),
-        ),
-        logger=logger_factory(FAQAgentNode.__module__),
+        agent_factory=support_agent_factory,
+        logger_factory=logger_factory,
+        faq_rag=faq_rag,
     )
+
     orquestrator = OrquestratorAgentNode(
-        LangChainAgentFactory(llm=fast_llm),
-        logger=logger_factory(OrquestratorAgentNode.__module__),
+        agent_factory=support_agent_factory,
+        logger_factory=logger_factory,
         clock=clock,
     )
 
@@ -139,28 +157,23 @@ def build_agent_graph(
         ),
     )
 
-    history_tool = SearchHistoryTool(
-        service=chat_history_service,
-        logger=logger_factory(SearchHistoryTool.__module__),
-    )
     router = RouterAgentNode(
-        agent_factory=LangChainAgentFactory(
-            llm=fast_llm,
-            tools=(history_tool,),
-        ),
-        logger=logger_factory(RouterAgentNode.__module__),
+        agent_factory=support_agent_factory,
+        search_history_tool=search_history_tool,
+        logger_factory=logger_factory,
         specialists=specialists,
-        allowed_tool_names=(history_tool.name,),
         clock=clock,
     )
+
     input_guardrail = InputGuardrailNode(
         text_generator=text_generator,
         approved_route=router.name,
-        logger=logger_factory(InputGuardrailNode.__module__),
+        logger_factory=logger_factory,
     )
+
     output_guardrail = OutputGuardrailNode(
-        text_generator,
-        logger=logger_factory(OutputGuardrailNode.__module__),
+        text_generator=text_generator,
+        logger_factory=logger_factory,
     )
 
     return AgentGraphImpl(
@@ -170,7 +183,7 @@ def build_agent_graph(
         orquestrator=orquestrator,
         output_guardrail=output_guardrail,
         execution_timeout_seconds=execution_timeout_seconds,
-        logger=logger_factory(AgentGraphImpl.__module__),
+        logger_factory=logger_factory,
         trace_context_factory=trace_context_factory,
         interaction_incrementer=interaction_incrementer,
     )

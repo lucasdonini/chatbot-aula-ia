@@ -4,7 +4,7 @@ from langchain_core.messages import SystemMessage
 from langgraph.graph.state import CompiledStateGraph
 
 from app.application.ports.clock import Clock
-from app.application.ports.logger import Logger
+from app.application.ports.logger import Logger, LoggerFactory
 from app.infrastructure.agents._core.prompting.temporal_context import (
     build_temporal_context,
 )
@@ -18,15 +18,17 @@ from .agenda_prompt import PROMPT
 
 class AgendaAgentNode(AgentNode):
     _agent: CompiledStateGraph
+    _logger: Logger
+    _clock: Clock
     name: ClassVar[str] = "agenda"
 
     def __init__(
         self,
         agent_factory: AgentFactory,
-        logger: Logger,
+        logger_factory: LoggerFactory,
         clock: Clock,
     ) -> None:
-        self._logger = logger
+        self._logger = logger_factory(__name__)
         self._clock = clock
         self._agent = agent_factory.create(
             system_prompt=PROMPT,

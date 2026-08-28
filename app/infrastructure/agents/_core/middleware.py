@@ -7,7 +7,7 @@ from langchain.agents.middleware import (
 )
 from langchain.chat_models import BaseChatModel
 
-from app.application.ports.logger import Logger
+from app.application.ports.logger import LoggerFactory
 
 
 def _iter_exception_chain(exc: BaseException) -> Iterator[BaseException]:
@@ -29,9 +29,11 @@ def is_rate_limit_error(exc: Exception) -> bool:
 
 
 class FallbackOn429Middleware(AgentMiddleware):
-    def __init__(self, fallback_llm: BaseChatModel, logger: Logger) -> None:
+    def __init__(
+        self, fallback_llm: BaseChatModel, *, logger_factory: LoggerFactory
+    ) -> None:
         self._fallback_llm = fallback_llm
-        self._logger = logger
+        self._logger = logger_factory(__name__)
 
     async def awrap_model_call(
         self,
