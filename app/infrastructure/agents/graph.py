@@ -11,7 +11,9 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.types import Overwrite
 
+from app.application.models.agent_execution import AgentExecutionResult
 from app.application.ports.logger import (
     InteractionIncrementer,
     LoggerFactory,
@@ -152,7 +154,7 @@ class AgentGraphImpl:
         self,
         user_input: HumanMessage,
         session_id: str,
-    ) -> AssistantMessage:
+    ) -> AgentExecutionResult:
         self._interaction_incrementer()
         trace_id = str(uuid.uuid4())
         with self._trace_context_factory(trace_id):
@@ -162,9 +164,10 @@ class AgentGraphImpl:
                 details={"input_length": len(user_input.content)},
             )
 
-            initial_state: GraphState = {
+            initial_state: dict[str, object] = {
                 "messages": [message],
-                "called_agents": [],
+                # Reset this turn's trace without clearing conversation memory.
+                "called_agents": Overwrite([]),
                 "route": "",
                 "pii_map": {},
             }
@@ -199,4 +202,7 @@ class AgentGraphImpl:
                     "Expected last message content to be str, "
                     f"received {type(last.content).__name__!r}"
                 )
-            return AssistantMessage(content=last.content)
+            return AgentExecutionResult(
+                message=AssistantMessage(content=last.content),
+                called_agents=tuple(final_state["called_agents"]),
+            )

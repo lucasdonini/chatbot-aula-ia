@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { sendChatMessage } from './api/chat'
@@ -20,8 +20,9 @@ vi.mock('./api/session', () => ({
 
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   localStorage.clear()
-  vi.clearAllMocks()
+  vi.resetAllMocks()
   vi.unstubAllGlobals()
 })
 
@@ -37,12 +38,20 @@ function renderApp(nextSessionId = SESSION_ID) {
   return { randomUUID }
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
 describe('App', () => {
   it('envia a mensagem e apresenta a resposta do assistente', async () => {
     const user = userEvent.setup()
     vi.mocked(sendChatMessage).mockResolvedValue({
       session_id: SESSION_ID,
-      content: '**Resposta** do assistente',
+      called_agents: [], content: '**Resposta** do assistente',
     })
     renderApp()
 
@@ -51,7 +60,7 @@ describe('App', () => {
 
     expect(sendChatMessage).toHaveBeenCalledWith(SESSION_ID, 'Minha pergunta')
     await waitFor(() => {
-      expect(screen.getByRole('status').textContent).toContain(
+      expect(screen.getByRole('log').textContent).toContain(
         'Resposta do assistente',
       )
     })
@@ -70,6 +79,9 @@ describe('App', () => {
     expect(
       await screen.findByText('Não foi possível conectar ao assistente.'),
     ).toBeTruthy()
+    const input = screen.getByLabelText('Sua mensagem') as HTMLTextAreaElement
+    expect(input.value).toBe('Minha pergunta')
+    expect(document.activeElement).toBe(input)
   })
 
   it('não permite enviar uma mensagem vazia', () => {
@@ -93,7 +105,7 @@ describe('App', () => {
     localStorage.setItem(SESSION_STORAGE_KEY, SESSION_ID)
     vi.mocked(sendChatMessage).mockResolvedValue({
       session_id: SESSION_ID,
-      content: 'Resposta do assistente',
+      called_agents: [], content: 'Resposta do assistente',
     })
 
     const { randomUUID } = renderApp(NEXT_SESSION_ID)
@@ -122,7 +134,7 @@ describe('App', () => {
     const user = userEvent.setup()
     vi.mocked(sendChatMessage).mockResolvedValue({
       session_id: SESSION_ID,
-      content: 'Resposta do assistente',
+      called_agents: [], content: 'Resposta do assistente',
     })
     renderApp()
 
@@ -158,7 +170,7 @@ describe('App', () => {
     })
     vi.mocked(sendChatMessage).mockResolvedValue({
       session_id: NEXT_SESSION_ID,
-      content: 'Resposta da nova sessão',
+      called_agents: [], content: 'Resposta da nova sessão',
     })
     renderApp(NEXT_SESSION_ID)
 
@@ -186,7 +198,7 @@ describe('App', () => {
     )
     vi.mocked(sendChatMessage).mockResolvedValue({
       session_id: SESSION_ID,
-      content: 'Resposta do assistente',
+      called_agents: [], content: 'Resposta do assistente',
     })
     renderApp(NEXT_SESSION_ID)
 
@@ -205,5 +217,173 @@ describe('App', () => {
         'Tentar novamente',
       ),
     )
+  })
+
+  it('mantém todas as perguntas e respostas em ordem na conversa', async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendChatMessage)
+      .mockResolvedValueOnce({ session_id: SESSION_ID, called_agents: [], content: 'Primeira resposta' })
+      .mockResolvedValueOnce({ session_id: SESSION_ID, called_agents: [], content: 'Segunda resposta' })
+    renderApp()
+
+    const input = screen.getByLabelText('Sua mensagem')
+    await user.type(input, 'Primeira pergunta{Enter}')
+    await screen.findByText('Primeira resposta')
+    await user.type(input, 'Segunda pergunta{Enter}')
+    await screen.findByText('Segunda resposta')
+
+    const messages = within(screen.getByRole('log')).getAllByRole('article')
+    expect(messages.map((message) => message.textContent)).toEqual([
+      'vocêPrimeira pergunta',
+      'assistentePrimeira resposta',
+      'vocêSegunda pergunta',
+      'assistenteSegunda resposta',
+    ])
+    expect((input as HTMLTextAreaElement).value).toBe('')
+  })
+
+  it('associa as etapas somente à resposta correspondente, inclusive em bloqueios', async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendChatMessage)
+      .mockResolvedValueOnce({
+        session_id: SESSION_ID, content: 'Resposta financeira',
+        called_agents: ['input_guardrail', 'router', 'financial', 'orquestrator', 'output_guardrail'],
+      })
+      .mockResolvedValueOnce({
+        session_id: SESSION_ID, content: 'Resposta da agenda',
+        called_agents: ['input_guardrail', 'router', 'agenda', 'orquestrator', 'output_guardrail'],
+      })
+      .mockResolvedValueOnce({
+        session_id: SESSION_ID, content: 'Solicitação bloqueada',
+        called_agents: ['input_guardrail'],
+      })
+    renderApp()
+    const input = screen.getByLabelText('Sua mensagem')
+    await user.type(input, 'Saldo{Enter}')
+    await screen.findByText('Resposta financeira')
+    await user.type(input, 'Compromissos{Enter}')
+    await screen.findByText('Resposta da agenda')
+    await user.type(input, 'Entrada bloqueada{Enter}')
+    await screen.findByText('Solicitação bloqueada')
+
+    const lists = screen.getAllByRole('list', { name: 'Etapas executadas nesta pergunta' })
+    expect(lists.map((list) => within(list).getAllByRole('listitem').map((item) => item.textContent))).toEqual([
+      ['Validação de entrada', 'Roteador', 'Financeiro', 'Orquestrador', 'Validação de saída'],
+      ['Validação de entrada', 'Roteador', 'Agenda', 'Orquestrador', 'Validação de saída'],
+      ['Validação de entrada'],
+    ])
+  })
+
+  it('preserva nomes novos e repetições reais dentro da mesma execução', async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendChatMessage).mockResolvedValue({
+      session_id: SESSION_ID, content: 'Resposta',
+      called_agents: ['router', 'novo_especialista', 'router'],
+    })
+    renderApp()
+    await user.type(screen.getByLabelText('Sua mensagem'), 'Pergunta{Enter}')
+    await screen.findByText('Resposta')
+    const list = screen.getByRole('list', { name: 'Etapas executadas nesta pergunta' })
+    expect(within(list).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Roteador', 'novo_especialista', 'Roteador',
+    ])
+  })
+
+  it('quebra a linha com Shift+Enter e envia com Ctrl+Enter', async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendChatMessage).mockResolvedValue({
+      session_id: SESSION_ID, called_agents: [], content: 'Resposta',
+    })
+    renderApp()
+    const input = screen.getByLabelText('Sua mensagem') as HTMLTextAreaElement
+
+    await user.type(input, 'Linha um{Shift>}{Enter}{/Shift}Linha dois')
+    expect(input.value).toBe('Linha um\nLinha dois')
+    expect(sendChatMessage).not.toHaveBeenCalled()
+
+    await user.keyboard('{Control>}{Enter}{/Control}')
+    await screen.findByText('Resposta')
+    expect(sendChatMessage).toHaveBeenCalledWith(SESSION_ID, 'Linha um\nLinha dois')
+  })
+
+  it('não envia Enter enquanto o teclado está compondo um caractere', () => {
+    renderApp()
+    const input = screen.getByLabelText('Sua mensagem')
+    fireEvent.change(input, { target: { value: 'Pergunta' } })
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true })
+    fireEvent.keyDown(input, { key: 'Enter', keyCode: 229 })
+    expect(sendChatMessage).not.toHaveBeenCalled()
+  })
+
+  it('bloqueia envio duplicado e nova sessão enquanto aguarda resposta', async () => {
+    const pending = deferred<Awaited<ReturnType<typeof sendChatMessage>>>()
+    vi.mocked(sendChatMessage).mockReturnValue(pending.promise)
+    renderApp()
+    const input = screen.getByLabelText('Sua mensagem') as HTMLTextAreaElement
+    const form = screen.getByRole('form', { name: 'Enviar mensagem ao assistente' })
+    const reset = screen.getByRole('button', { name: 'Nova sessão' }) as HTMLButtonElement
+
+    fireEvent.change(input, { target: { value: 'Pergunta' } })
+    fireEvent.submit(form)
+    fireEvent.submit(form)
+    fireEvent.click(reset)
+
+    expect(sendChatMessage).toHaveBeenCalledTimes(1)
+    expect(finalizeSession).not.toHaveBeenCalled()
+    expect(input.disabled).toBe(true)
+    expect(reset.disabled).toBe(true)
+    expect(screen.getByRole('status').textContent).toContain('preparando uma resposta')
+
+    await act(async () => {
+      pending.resolve({ session_id: SESSION_ID, called_agents: [], content: 'Resposta' })
+      await pending.promise
+    })
+    expect(input.disabled).toBe(false)
+    expect(reset.disabled).toBe(false)
+  })
+
+  it('só limpa a conversa e troca a sessão após finalizar, exibindo o resumo', async () => {
+    const user = userEvent.setup()
+    const pending = deferred<Awaited<ReturnType<typeof finalizeSession>>>()
+    vi.mocked(finalizeSession).mockReturnValue(pending.promise)
+    vi.mocked(sendChatMessage).mockResolvedValue({
+      session_id: SESSION_ID, called_agents: [], content: 'Resposta antiga',
+    })
+    renderApp(NEXT_SESSION_ID)
+    const input = screen.getByLabelText('Sua mensagem') as HTMLTextAreaElement
+    await user.type(input, 'Pergunta antiga{Enter}')
+    await screen.findByText('Resposta antiga')
+    await user.click(screen.getByRole('button', { name: 'Nova sessão' }))
+
+    expect(localStorage.getItem(SESSION_STORAGE_KEY)).toBe(SESSION_ID)
+    expect(screen.getByText('Resposta antiga')).toBeTruthy()
+    expect(input.disabled).toBe(true)
+    fireEvent.submit(screen.getByRole('form', { name: 'Enviar mensagem ao assistente' }))
+    expect(sendChatMessage).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      pending.resolve({ session_id: SESSION_ID, session_summary: '**Resumo** anterior' })
+      await pending.promise
+    })
+
+    expect(localStorage.getItem(SESSION_STORAGE_KEY)).toBe(NEXT_SESSION_ID)
+    expect(screen.queryByText('Resposta antiga')).toBeNull()
+    expect(within(screen.getByRole('log')).queryAllByRole('article')).toHaveLength(0)
+    await user.click(screen.getByText('Resumo da sessão anterior'))
+    expect(screen.getByText('Resumo', { selector: 'strong' })).toBeTruthy()
+    expect(input.disabled).toBe(false)
+  })
+
+  it('continua funcionando quando o navegador bloqueia o armazenamento', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('Blocked') })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Blocked') })
+    vi.mocked(sendChatMessage).mockResolvedValue({
+      session_id: SESSION_ID, called_agents: [], content: 'Resposta sem armazenamento',
+    })
+    const user = userEvent.setup()
+    renderApp()
+    await user.type(screen.getByLabelText('Sua mensagem'), 'Pergunta{Enter}')
+    await screen.findByText('Resposta sem armazenamento')
+    expect(sendChatMessage).toHaveBeenCalledWith(SESSION_ID, 'Pergunta')
   })
 })

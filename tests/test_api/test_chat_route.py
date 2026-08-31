@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from app.api.dependencies import get_chat_session_service, get_graph
 from app.api.middleware.exception_handler import register_exception_handlers
 from app.api.routes.chat import router
+from app.application.models.agent_execution import AgentExecutionResult
 from app.application.ports.logger import Logger
 from app.domain.exception.chat_session import (
     ChatSessionAlreadyFinalizedException,
@@ -23,15 +24,23 @@ _SESSION_ID = "session-123"
 
 @dataclass
 class GraphStub:
-    response: AssistantMessage = field(
-        default_factory=lambda: AssistantMessage(content="Resposta do assistente")
+    response: AgentExecutionResult = field(
+        default_factory=lambda: AgentExecutionResult(
+            message=AssistantMessage(content="Resposta do assistente"),
+            called_agents=(
+                "input_guardrail",
+                "router",
+                "financial",
+                "output_guardrail",
+            ),
+        )
     )
     error: Exception | None = None
     messages: list[tuple[HumanMessage, str]] = field(default_factory=list)
 
     async def execute_agent_flux(
         self, message: HumanMessage, session_id: str
-    ) -> AssistantMessage:
+    ) -> AgentExecutionResult:
         self.messages.append((message, session_id))
         if self.error is not None:
             raise self.error
@@ -108,6 +117,7 @@ def test_chat_persists_messages_and_returns_graph_response(
     assert response.json() == {
         "session_id": _SESSION_ID,
         "content": "Resposta do assistente",
+        "called_agents": ["input_guardrail", "router", "financial", "output_guardrail"],
     }
     assert graph.messages == [(HumanMessage(content="Minha pergunta"), _SESSION_ID)]
     assert session_service.messages == [

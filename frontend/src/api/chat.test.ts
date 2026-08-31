@@ -12,6 +12,7 @@ describe('sendChatMessage', () => {
         JSON.stringify({
           session_id: 'session-123',
           content: 'Resposta do assistente',
+          called_agents: ['input_guardrail', 'router', 'financial', 'output_guardrail'],
         }),
         {
           status: 200,
@@ -26,6 +27,7 @@ describe('sendChatMessage', () => {
     ).resolves.toEqual({
       session_id: 'session-123',
       content: 'Resposta do assistente',
+      called_agents: ['input_guardrail', 'router', 'financial', 'output_guardrail'],
     })
     expect(fetchMock).toHaveBeenCalledWith('/api/chat/session-123', {
       method: 'POST',
@@ -40,6 +42,7 @@ describe('sendChatMessage', () => {
         JSON.stringify({
           session_id: 'sessão 123',
           content: 'Resposta',
+          called_agents: [],
         }),
         { status: 200 },
       ),
@@ -73,6 +76,18 @@ describe('sendChatMessage', () => {
       'Não foi possível obter uma resposta do assistente.',
     )
   })
+
+  it.each([undefined, null, 'financial', [42], [''], ['  ']])(
+    'rejeita metadados de agentes inválidos: %j', async (calledAgents) => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+        session_id: 'session-123', content: 'Resposta', called_agents: calledAgents,
+      }), { status: 200 })))
+
+      await expect(sendChatMessage('session-123', 'Pergunta')).rejects.toThrow(
+        'O assistente retornou uma resposta em formato inválido.',
+      )
+    },
+  )
 
   it.each([
     new Response('conteúdo inválido', { status: 200 }),

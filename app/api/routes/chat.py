@@ -31,9 +31,15 @@ async def chat(
         await session_service.save_message(session_id=session_id, message=question)
 
         response = await graph.execute_agent_flux(question, session_id)
-        await session_service.save_message(session_id=session_id, message=response)
+        await session_service.save_message(
+            session_id=session_id, message=response.message
+        )
 
-        return ChatResponse(session_id=session_id, content=response.content)
+        return ChatResponse(
+            session_id=session_id,
+            content=response.message.content,
+            called_agents=list(response.called_agents),
+        )
     except TimeoutError:
         raise
     except ChatSessionException:
