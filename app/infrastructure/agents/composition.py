@@ -16,22 +16,20 @@ from ._core.middleware import FallbackOn429Middleware
 from ._core.specialist import SpecialistRegistration
 from .agenda import AgendaAgentNode
 from .faq import FAQAgentNode
-from .faq.tools import FaqRag
 from .financial import FinancialAgentNode
-from .financial.tools import (
-    AddTransactionTool,
-    DailyBalanceTool,
-    DeleteTransactionTool,
-    RestoreTransactionTool,
-    SearchTransactionsTool,
-    TotalBalanceTool,
-    UpdateTransactionTool,
-)
 from .graph import AgentGraphImpl
 from .guardrails import InputGuardrailNode, OutputGuardrailNode
 from .orquestrator import OrquestratorAgentNode
 from .router import RouterAgentNode
-from .router.tools import SearchHistoryTool
+from .tools.add_transaction import AddTransactionTool
+from .tools.daily_balance import DailyBalanceTool
+from .tools.delete_transaction import DeleteTransactionTool
+from .tools.faq_rag import FaqRag
+from .tools.restore_transaction import RestoreTransactionTool
+from .tools.search_history import SearchHistoryTool
+from .tools.search_transaction import SearchTransactionsTool
+from .tools.total_balance import TotalBalanceTool
+from .tools.update_transaction import UpdateTransactionTool
 
 
 def build_agent_graph(

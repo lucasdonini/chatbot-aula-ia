@@ -7,8 +7,8 @@ from app.infrastructure.agents._core.state import GraphState, GraphStateKeys
 
 from .._core.contracts.agent_factory import AgentFactory
 from .._core.contracts.agent_node import AgentNode
+from ..tools.faq_rag import FaqRag
 from .faq_prompt import build_faq_prompt
-from .tools import FaqRag
 
 
 class FAQAgentNode(AgentNode):
