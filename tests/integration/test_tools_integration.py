@@ -18,19 +18,19 @@ from app.infrastructure.agents.financial.schemas.transaction import (
     TransactionInput,
     TransactionOutput,
 )
-from app.infrastructure.agents.financial.tools.add_transaction import AddTransactionTool
-from app.infrastructure.agents.financial.tools.daily_balance import DailyBalanceTool
-from app.infrastructure.agents.financial.tools.delete_transaction import (
+from app.infrastructure.agents.tools.add_transaction import AddTransactionTool
+from app.infrastructure.agents.tools.daily_balance import DailyBalanceTool
+from app.infrastructure.agents.tools.delete_transaction import (
     DeleteTransactionTool,
 )
-from app.infrastructure.agents.financial.tools.restore_transaction import (
+from app.infrastructure.agents.tools.restore_transaction import (
     RestoreTransactionTool,
 )
-from app.infrastructure.agents.financial.tools.search_transaction import (
+from app.infrastructure.agents.tools.search_transaction import (
     SearchTransactionsTool,
 )
-from app.infrastructure.agents.financial.tools.total_balance import TotalBalanceTool
-from app.infrastructure.agents.financial.tools.update_transaction import (
+from app.infrastructure.agents.tools.total_balance import TotalBalanceTool
+from app.infrastructure.agents.tools.update_transaction import (
     UpdateTransactionTool,
 )
 
@@ -42,45 +42,51 @@ pytestmark = [
 
 
 @pytest.fixture
-def total_balance_tool(transaction_service, mock_logger):
-    return TotalBalanceTool(service=transaction_service, logger_factory=mock_logger)
+def total_balance_tool(transaction_service, mock_logger_factory):
+    return TotalBalanceTool(
+        service=transaction_service, logger_factory=mock_logger_factory
+    )
 
 
 @pytest.fixture
-def daily_balance_tool(transaction_service, mock_logger):
-    return DailyBalanceTool(service=transaction_service, logger_factory=mock_logger)
+def daily_balance_tool(transaction_service, mock_logger_factory):
+    return DailyBalanceTool(
+        service=transaction_service, logger_factory=mock_logger_factory
+    )
 
 
 @pytest.fixture
-def search_tool(transaction_service, mock_logger):
+def search_tool(transaction_service, mock_logger_factory):
     return SearchTransactionsTool(
-        service=transaction_service, logger_factory=mock_logger
+        service=transaction_service, logger_factory=mock_logger_factory
     )
 
 
 @pytest.fixture
-def add_tool(transaction_service, mock_logger):
-    return AddTransactionTool(service=transaction_service, logger_factory=mock_logger)
+def add_tool(transaction_service, mock_logger_factory):
+    return AddTransactionTool(
+        service=transaction_service, logger_factory=mock_logger_factory
+    )
 
 
 @pytest.fixture
-def update_tool(transaction_service, mock_logger):
+def update_tool(transaction_service, mock_logger_factory):
     return UpdateTransactionTool(
-        service=transaction_service, logger_factory=mock_logger
+        service=transaction_service, logger_factory=mock_logger_factory
     )
 
 
 @pytest.fixture
-def delete_tool(transaction_service, mock_logger):
+def delete_tool(transaction_service, mock_logger_factory):
     return DeleteTransactionTool(
-        service=transaction_service, logger_factory=mock_logger
+        service=transaction_service, logger_factory=mock_logger_factory
     )
 
 
 @pytest.fixture
-def restore_tool(transaction_service, mock_logger):
+def restore_tool(transaction_service, mock_logger_factory):
     return RestoreTransactionTool(
-        service=transaction_service, logger_factory=mock_logger
+        service=transaction_service, logger_factory=mock_logger_factory
     )
 
 

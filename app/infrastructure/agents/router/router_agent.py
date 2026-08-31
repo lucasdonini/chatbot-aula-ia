@@ -38,7 +38,7 @@ class RouterAgentNode(AgentNode):
     ) -> None:
         self._logger = logger_factory(__name__)
         self._clock = clock
-        self._allowed_tool_names = frozenset(search_history_tool.name)
+        self._allowed_tool_names = frozenset((search_history_tool.name,))
         self._agent = agent_factory.create(
             tools=(search_history_tool,),
             system_prompt=build_router_prompt(

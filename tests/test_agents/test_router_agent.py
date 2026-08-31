@@ -1,80 +1,116 @@
+from datetime import datetime, timezone
+from unittest.mock import MagicMock, create_autospec
+
+import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-from app.infrastructure.agents.router.router_agent import (
-    _filter_messages_for_router,
-    _is_specialist_json,
-)
+from app.infrastructure.agents._core.contracts.agent_factory import AgentFactory
+from app.infrastructure.agents._core.contracts.agent_node import AgentNode
+from app.infrastructure.agents._core.specialist import SpecialistRegistration
+from app.infrastructure.agents.router.router_agent import RouterAgentNode
+from app.infrastructure.agents.tools.search_history import SearchHistoryTool
+from app.infrastructure.clock import FixedClock
+from app.services.chat_history_service import ChatHistoryService
 
-ALLOWED_TOOL_NAMES = {"search_history"}
+
+@pytest.fixture
+def router(mock_logger_factory: MagicMock) -> RouterAgentNode:
+    specialist = MagicMock(spec=AgentNode)
+    specialist.name = "financial"
+    history_tool = SearchHistoryTool(
+        service=MagicMock(spec=ChatHistoryService),
+        logger_factory=mock_logger_factory,
+    )
+    return RouterAgentNode(
+        agent_factory=create_autospec(AgentFactory, instance=True),
+        search_history_tool=history_tool,
+        logger_factory=mock_logger_factory,
+        specialists=(
+            SpecialistRegistration(
+                node=specialist, description="Finanças", destination="end"
+            ),
+        ),
+        clock=FixedClock(
+            datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc),
+            "America/Sao_Paulo",
+        ),
+    )
+
+
+def test_router_registers_complete_tool_name(router: RouterAgentNode) -> None:
+    assert router._allowed_tool_names == frozenset({"search_history"})
 
 
 class TestIsSpecialistJson:
-    def test_valid_json_with_dominio(self):
+    def test_valid_json_with_dominio(self, router: RouterAgentNode) -> None:
         assert (
-            _is_specialist_json('{"dominio": "financeiro", "resposta": "ok"}') is True
+            router._is_specialist_json('{"dominio": "financeiro", "resposta": "ok"}')
+            is True
         )
 
-    def test_valid_json_with_dominio_agenda(self):
-        assert _is_specialist_json('{"dominio": "agenda"}') is True
+    def test_valid_json_with_dominio_agenda(self, router: RouterAgentNode) -> None:
+        assert router._is_specialist_json('{"dominio": "agenda"}') is True
 
-    def test_valid_json_without_dominio(self):
-        assert _is_specialist_json('{"outro": "valor"}') is False
+    def test_valid_json_without_dominio(self, router: RouterAgentNode) -> None:
+        assert router._is_specialist_json('{"outro": "valor"}') is False
 
-    def test_not_json_string(self):
-        assert _is_specialist_json("hello world") is False
+    def test_not_json_string(self, router: RouterAgentNode) -> None:
+        assert router._is_specialist_json("hello world") is False
 
-    def test_not_string_int(self):
-        assert _is_specialist_json(123) is False
+    def test_not_string_int(self, router: RouterAgentNode) -> None:
+        assert router._is_specialist_json(123) is False
 
-    def test_not_string_none(self):
-        assert _is_specialist_json(None) is False
+    def test_not_string_none(self, router: RouterAgentNode) -> None:
+        assert router._is_specialist_json(None) is False
 
-    def test_not_string_dict(self):
-        assert _is_specialist_json({"dominio": "teste"}) is False
+    def test_not_string_dict(self, router: RouterAgentNode) -> None:
+        assert router._is_specialist_json({"dominio": "teste"}) is False
 
-    def test_malformed_json(self):
-        assert _is_specialist_json("{dominio:}") is False
+    def test_malformed_json(self, router: RouterAgentNode) -> None:
+        assert router._is_specialist_json("{dominio:}") is False
 
-    def test_empty_dict(self):
-        assert _is_specialist_json("{}") is False
+    def test_empty_dict(self, router: RouterAgentNode) -> None:
+        assert router._is_specialist_json("{}") is False
 
-    def test_whitespace_prefix_suffix(self):
-        assert _is_specialist_json('  {"dominio": "agenda"}  ') is True
+    def test_whitespace_prefix_suffix(self, router: RouterAgentNode) -> None:
+        assert router._is_specialist_json('  {"dominio": "agenda"}  ') is True
 
 
 class TestFilterMessagesForRouter:
-    def test_filters_out_foreign_tool_calls(self):
+    def test_filters_out_foreign_tool_calls(self, router: RouterAgentNode) -> None:
         msg = AIMessage(
             content="",
             tool_calls=[
                 {"name": "total_balance", "args": {}, "id": "call_tb"},
             ],
         )
-        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
+        result = router._filter_messages_for_router([msg])
         assert len(result) == 0
 
-    def test_keeps_own_tool_calls(self):
+    def test_keeps_own_tool_calls(self, router: RouterAgentNode) -> None:
         msg = AIMessage(
             content="",
             tool_calls=[
                 {"name": "search_history", "args": {"search": "test"}, "id": "call_sh"},
             ],
         )
-        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
+        result = router._filter_messages_for_router([msg])
         assert len(result) == 1
 
-    def test_filters_specialist_json_aimessage(self):
+    def test_filters_specialist_json_aimessage(self, router: RouterAgentNode) -> None:
         msg = AIMessage(content='{"dominio": "financeiro", "resposta": "saldo ok"}')
-        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
+        result = router._filter_messages_for_router([msg])
         assert len(result) == 0
 
-    def test_keeps_non_specialist_aimessage(self):
+    def test_keeps_non_specialist_aimessage(self, router: RouterAgentNode) -> None:
         msg = AIMessage(content="Olá, como posso ajudar?")
-        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
+        result = router._filter_messages_for_router([msg])
         assert len(result) == 1
         assert result[0].content == "Olá, como posso ajudar?"
 
-    def test_filters_toolmessage_for_foreign_tool(self):
+    def test_filters_toolmessage_for_foreign_tool(
+        self, router: RouterAgentNode
+    ) -> None:
         msgs = [
             AIMessage(
                 content="",
@@ -84,15 +120,17 @@ class TestFilterMessagesForRouter:
             ),
             ToolMessage(content="5000", tool_call_id="call_tb"),
         ]
-        result = _filter_messages_for_router(msgs, ALLOWED_TOOL_NAMES)
+        result = router._filter_messages_for_router(msgs)
         assert len(result) == 0
 
-    def test_keeps_toolmessage_for_own_tool(self):
+    def test_keeps_toolmessage_for_own_tool(self, router: RouterAgentNode) -> None:
         msg = ToolMessage(content='[{"summary": "teste"}]', tool_call_id="call_sh")
-        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
+        result = router._filter_messages_for_router([msg])
         assert len(result) == 1
 
-    def test_removes_foreign_calls_but_keeps_own_mixed(self):
+    def test_removes_foreign_calls_but_keeps_own_mixed(
+        self, router: RouterAgentNode
+    ) -> None:
         msg = AIMessage(
             content="",
             tool_calls=[
@@ -100,27 +138,29 @@ class TestFilterMessagesForRouter:
                 {"name": "search_history", "args": {"search": "test"}, "id": "call_sh"},
             ],
         )
-        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
+        result = router._filter_messages_for_router([msg])
         assert len(result) == 1
         assert len(result[0].tool_calls) == 1
         assert result[0].tool_calls[0]["name"] == "search_history"
 
-    def test_keeps_human_message(self):
+    def test_keeps_human_message(self, router: RouterAgentNode) -> None:
         msg = HumanMessage(content="Qual meu saldo?")
-        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
+        result = router._filter_messages_for_router([msg])
         assert len(result) == 1
 
-    def test_foreign_tool_call_without_id_is_ignored(self):
+    def test_foreign_tool_call_without_id_is_ignored(
+        self, router: RouterAgentNode
+    ) -> None:
         msg = AIMessage(
             content="",
             tool_calls=[
-                {"name": "total_balance", "args": {}, "id": "call_tb_no_id"},
+                {"name": "total_balance", "args": {}, "id": None},
             ],
         )
-        result = _filter_messages_for_router([msg], ALLOWED_TOOL_NAMES)
+        result = router._filter_messages_for_router([msg])
         assert len(result) == 0
 
-    def test_complex_scenario(self):
+    def test_complex_scenario(self, router: RouterAgentNode) -> None:
         msgs = [
             HumanMessage(content="Qual meu saldo?"),
             AIMessage(
@@ -132,6 +172,6 @@ class TestFilterMessagesForRouter:
             ToolMessage(content="5000", tool_call_id="call_tb"),
             AIMessage(content='{"dominio": "financeiro", "resposta": "R$ 5000"}'),
         ]
-        result = _filter_messages_for_router(msgs, ALLOWED_TOOL_NAMES)
+        result = router._filter_messages_for_router(msgs)
         assert len(result) == 1
         assert isinstance(result[0], HumanMessage)

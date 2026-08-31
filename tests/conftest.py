@@ -158,6 +158,14 @@ def mock_logger() -> MagicMock:
 
 
 @pytest.fixture
+def mock_logger_factory(mock_logger: MagicMock) -> MagicMock:
+    def factory(module_name: str) -> Logger:
+        return mock_logger
+
+    return create_autospec(factory, side_effect=factory)
+
+
+@pytest.fixture
 def service(mock_repository: MagicMock, mock_logger: MagicMock) -> TransactionService:
     return TransactionService(repository=mock_repository, logger=mock_logger)
 

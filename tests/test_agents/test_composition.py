@@ -2,7 +2,7 @@ import asyncio
 from contextlib import nullcontext
 from datetime import datetime, timezone
 from typing import Any, ClassVar
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -10,6 +10,13 @@ from app.application.ports.logger import Logger
 from app.domain.model.chat_entry import HumanMessage
 from app.infrastructure.agents import AgentGraphImpl, build_agent_graph
 from app.infrastructure.agents._core.contracts.agent_node import AgentNode
+from app.infrastructure.agents._core.factories.langchain_agent_factory import (
+    LangChainAgentFactory,
+)
+from app.infrastructure.agents._core.schemas.specialist_output import (
+    AgendaOutput,
+    FinancialOutput,
+)
 from app.infrastructure.agents._core.state import GraphState, GraphStateKeys
 from app.infrastructure.clock import FixedClock
 from app.services.chat_history_service import ChatHistoryService
@@ -48,6 +55,49 @@ def test_build_agent_graph_returns_initialized_graph() -> None:
 
     assert isinstance(graph, AgentGraphImpl)
     assert not hasattr(graph, "initialize")
+
+
+def test_specialists_receive_history_tool_without_losing_domain_tools() -> None:
+    with patch.object(
+        LangChainAgentFactory, "create", return_value=MagicMock()
+    ) as create:
+        build_agent_graph(
+            transaction_service=MagicMock(spec=TransactionService),
+            chat_history_service=MagicMock(spec=ChatHistoryService),
+            text_generator=MagicMock(),
+            logger_factory=lambda _: MagicMock(spec=Logger),
+            trace_context_factory=lambda _: nullcontext(),
+            interaction_incrementer=lambda: 1,
+            clock=_fixed_clock(),
+        )
+
+    financial_call = next(
+        call
+        for call in create.call_args_list
+        if call.kwargs.get("response_format") is FinancialOutput
+    )
+    agenda_call = next(
+        call
+        for call in create.call_args_list
+        if call.kwargs.get("response_format") is AgendaOutput
+    )
+    financial_tools = {tool.name: tool for tool in financial_call.kwargs["tools"]}
+    agenda_tools = {tool.name: tool for tool in agenda_call.kwargs["tools"]}
+
+    assert set(financial_tools) == {
+        "total_balance",
+        "daily_balance",
+        "search_transactions",
+        "add_transaction",
+        "update_transaction",
+        "delete_transaction",
+        "restore_transaction",
+        "search_history",
+    }
+    assert set(agenda_tools) == {"search_history"}
+    assert financial_tools["search_history"] is agenda_tools["search_history"]
+    assert "search_history" in financial_call.kwargs["system_prompt"]
+    assert "search_history" in agenda_call.kwargs["system_prompt"]
 
 
 @pytest.mark.asyncio

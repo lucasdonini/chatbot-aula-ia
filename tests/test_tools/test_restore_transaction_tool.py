@@ -8,13 +8,12 @@ from app.application.exceptions import TransactionNotFoundError
 from app.application.models.transaction_update import (
     UpdateTransactionQuery,
 )
-from app.application.ports.logger import Logger
 from app.domain.model.transaction import Category, Transaction, TransactionType
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolSuccess,
 )
-from app.infrastructure.agents.financial.tools.restore_transaction import (
+from app.infrastructure.agents.tools.restore_transaction import (
     RestoreTransactionTool,
 )
 from app.services.transaction_service import TransactionService
@@ -24,11 +23,11 @@ pytestmark = pytest.mark.asyncio
 
 class TestRestoreTransactionTool:
     @pytest.fixture
-    def tool(self):
+    def tool(self, mock_logger_factory: MagicMock):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
         return RestoreTransactionTool(
-            service=service, logger_factory=MagicMock(spec=Logger)
+            service=service, logger_factory=mock_logger_factory
         )
 
     async def test_restores_by_id_returns_true(self, tool):

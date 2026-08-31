@@ -18,6 +18,7 @@ from ..tools.add_transaction import AddTransactionTool
 from ..tools.daily_balance import DailyBalanceTool
 from ..tools.delete_transaction import DeleteTransactionTool
 from ..tools.restore_transaction import RestoreTransactionTool
+from ..tools.search_history import SearchHistoryTool
 from ..tools.search_transaction import SearchTransactionsTool
 from ..tools.total_balance import TotalBalanceTool
 from ..tools.update_transaction import UpdateTransactionTool
@@ -32,6 +33,7 @@ class FinancialAgentTools(TypedDict):
     update_transaction: UpdateTransactionTool
     delete_transaction: DeleteTransactionTool
     restore_transaction: RestoreTransactionTool
+    search_history: SearchHistoryTool
 
 
 class FinancialAgentNode(AgentNode):
@@ -56,6 +58,7 @@ class FinancialAgentNode(AgentNode):
             update_transaction_tool_name=tools["update_transaction"].name,
             delete_transaction_tool_name=tools["delete_transaction"].name,
             restore_transaction_tool_name=tools["restore_transaction"].name,
+            search_history_tool_name=tools["search_history"].name,
         )
         self._logger = logger_factory(__name__)
         self._clock = clock

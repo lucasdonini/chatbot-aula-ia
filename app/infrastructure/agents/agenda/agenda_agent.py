@@ -13,7 +13,8 @@ from app.infrastructure.agents._core.state import GraphState, GraphStateKeys
 
 from .._core.contracts.agent_factory import AgentFactory
 from .._core.contracts.agent_node import AgentNode
-from .agenda_prompt import PROMPT
+from ..tools.search_history import SearchHistoryTool
+from .agenda_prompt import build_agenda_prompt
 
 
 class AgendaAgentNode(AgentNode):
@@ -27,12 +28,15 @@ class AgendaAgentNode(AgentNode):
         agent_factory: AgentFactory,
         logger_factory: LoggerFactory,
         clock: Clock,
+        search_history_tool: SearchHistoryTool,
     ) -> None:
+        prompt = build_agenda_prompt(search_history_tool_name=search_history_tool.name)
         self._logger = logger_factory(__name__)
         self._clock = clock
         self._agent = agent_factory.create(
-            system_prompt=PROMPT,
+            system_prompt=prompt,
             response_format=AgendaOutput,
+            tools=(search_history_tool,),
         )
 
     async def __call__(self, state: GraphState) -> dict[GraphStateKeys, Any]:

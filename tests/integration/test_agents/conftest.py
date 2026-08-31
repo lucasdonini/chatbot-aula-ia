@@ -1,11 +1,10 @@
 from collections.abc import Generator
 from contextlib import nullcontext
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
+from unittest.mock import AsyncMock, create_autospec, patch
 
 import pytest
 
-from app.application.ports.logger import Logger
 from app.application.repositories.chat_session_repository import (
     ChatSessionRepository,
 )
@@ -14,15 +13,15 @@ from app.infrastructure.agents._core.factories.langchain_agent_factory import (
     LangChainAgentFactory,
 )
 from app.infrastructure.agents.financial import FinancialAgentNode
-from app.infrastructure.agents.financial.tools import (
-    AddTransactionTool,
-    DailyBalanceTool,
-    DeleteTransactionTool,
-    RestoreTransactionTool,
-    SearchTransactionsTool,
-    TotalBalanceTool,
-    UpdateTransactionTool,
-)
+from app.infrastructure.agents.financial.financial_agent import FinancialAgentTools
+from app.infrastructure.agents.tools.add_transaction import AddTransactionTool
+from app.infrastructure.agents.tools.daily_balance import DailyBalanceTool
+from app.infrastructure.agents.tools.delete_transaction import DeleteTransactionTool
+from app.infrastructure.agents.tools.restore_transaction import RestoreTransactionTool
+from app.infrastructure.agents.tools.search_history import SearchHistoryTool
+from app.infrastructure.agents.tools.search_transaction import SearchTransactionsTool
+from app.infrastructure.agents.tools.total_balance import TotalBalanceTool
+from app.infrastructure.agents.tools.update_transaction import UpdateTransactionTool
 from app.infrastructure.clock import FixedClock
 from app.infrastructure.llms import fast_llm, llm_gemini
 from app.infrastructure.text_generator import LLMTextGenerator
@@ -81,34 +80,59 @@ def mock_all_llms(
 
 
 @pytest.fixture
-def financial_agent_node(transaction_service, application_clock) -> FinancialAgentNode:
-    logger = MagicMock(spec=Logger)
-    tools = (
-        TotalBalanceTool(service=transaction_service, logger_factory=logger),
-        DailyBalanceTool(service=transaction_service, logger_factory=logger),
-        SearchTransactionsTool(service=transaction_service, logger_factory=logger),
-        AddTransactionTool(service=transaction_service, logger_factory=logger),
-        UpdateTransactionTool(service=transaction_service, logger_factory=logger),
-        DeleteTransactionTool(service=transaction_service, logger_factory=logger),
-        RestoreTransactionTool(service=transaction_service, logger_factory=logger),
-    )
+def chat_history_service(mock_logger) -> ChatHistoryService:
+    repository = create_autospec(ChatSessionRepository, instance=True)
+    repository.find_summaries.return_value = []
+    return ChatHistoryService(repository=repository, logger=mock_logger)
+
+
+@pytest.fixture
+def financial_agent_node(
+    transaction_service, application_clock, chat_history_service, mock_logger_factory
+) -> FinancialAgentNode:
+    tools: FinancialAgentTools = {
+        "total_balance": TotalBalanceTool(
+            service=transaction_service, logger_factory=mock_logger_factory
+        ),
+        "daily_balance": DailyBalanceTool(
+            service=transaction_service, logger_factory=mock_logger_factory
+        ),
+        "search_transactions": SearchTransactionsTool(
+            service=transaction_service, logger_factory=mock_logger_factory
+        ),
+        "add_transaction": AddTransactionTool(
+            service=transaction_service, logger_factory=mock_logger_factory
+        ),
+        "update_transaction": UpdateTransactionTool(
+            service=transaction_service, logger_factory=mock_logger_factory
+        ),
+        "delete_transaction": DeleteTransactionTool(
+            service=transaction_service, logger_factory=mock_logger_factory
+        ),
+        "restore_transaction": RestoreTransactionTool(
+            service=transaction_service, logger_factory=mock_logger_factory
+        ),
+        "search_history": SearchHistoryTool(
+            service=chat_history_service, logger_factory=mock_logger_factory
+        ),
+    }
     return FinancialAgentNode(
-        LangChainAgentFactory(llm=llm_gemini, tools=tools),
-        logger=logger,
+        agent_factory=LangChainAgentFactory(llm=llm_gemini),
+        tools=tools,
+        logger_factory=mock_logger_factory,
         clock=application_clock,
     )
 
 
 @pytest.fixture
-def agent_graph(transaction_service, application_clock):
+def agent_graph(
+    transaction_service, application_clock, chat_history_service, mock_logger_factory
+):
     return build_agent_graph(
         transaction_service=transaction_service,
-        chat_history_service=ChatHistoryService(
-            repository=create_autospec(ChatSessionRepository, instance=True),
-            logger=MagicMock(),
-        ),
+        chat_history_service=chat_history_service,
         text_generator=LLMTextGenerator(fast_llm),
-        logger_factory=lambda _: MagicMock(spec=Logger),
+        logger_factory=mock_logger_factory,
         trace_context_factory=lambda _: nullcontext(),
         interaction_incrementer=lambda: 1,
         clock=application_clock,
