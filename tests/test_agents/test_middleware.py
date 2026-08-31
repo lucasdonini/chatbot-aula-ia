@@ -59,7 +59,7 @@ async def test_middleware_uses_fallback_for_wrapped_rate_limit() -> None:
     fallback_llm = MagicMock()
     middleware = FallbackOn429Middleware(
         fallback_llm,
-        logger=MagicMock(spec=Logger),
+        logger_factory=lambda _: MagicMock(spec=Logger),
     )
     request = MagicMock()
     fallback_request = MagicMock()
@@ -86,7 +86,7 @@ async def test_middleware_logs_fallback_activation() -> None:
     logger = MagicMock(spec=Logger)
     middleware = FallbackOn429Middleware(
         fallback_llm,
-        logger=logger,
+        logger_factory=lambda _: logger,
     )
     request = MagicMock()
     request.override.return_value = MagicMock()
@@ -113,7 +113,7 @@ async def test_middleware_logs_fallback_activation() -> None:
 async def test_middleware_reraises_non_rate_limit_error() -> None:
     middleware = FallbackOn429Middleware(
         MagicMock(),
-        logger=MagicMock(spec=Logger),
+        logger_factory=lambda _: MagicMock(spec=Logger),
     )
     request = MagicMock()
     wrapped = _wrap_exception(_CodeError(409))

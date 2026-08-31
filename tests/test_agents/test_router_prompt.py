@@ -36,16 +36,21 @@ def test_build_router_prompt_uses_registered_specialists() -> None:
         ),
     )
 
-    prompt = build_router_prompt(specialists)
+    prompt = build_router_prompt(
+        specialists=specialists,
+        search_history_tool_name="custom_memory_lookup",
+    )
 
     assert "financial: finanças pessoais" in prompt
     assert "agenda: compromissos e horários" in prompt
     assert "financial | agenda" in prompt
+    assert "custom_memory_lookup" in prompt
+    assert "search_history" not in prompt
 
 
 def test_build_router_prompt_rejects_empty_catalog() -> None:
     try:
-        build_router_prompt(())
+        build_router_prompt(specialists=(), search_history_tool_name="search_history")
     except ValueError as exc:
         assert str(exc) == "Router requires at least one specialist"
     else:

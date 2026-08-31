@@ -9,13 +9,12 @@ from app.application.models.transaction_update import (
     UpdateTransactionParams,
     UpdateTransactionQuery,
 )
-from app.application.ports.logger import Logger
 from app.domain.model.transaction import Category, Transaction, TransactionType
 from app.infrastructure.agents.financial.schemas.tool_response import (
     ToolFailure,
     ToolSuccess,
 )
-from app.infrastructure.agents.financial.tools.update_transaction import (
+from app.infrastructure.agents.tools.update_transaction import (
     UpdateTransactionTool,
 )
 from app.services.transaction_service import TransactionService
@@ -25,11 +24,11 @@ pytestmark = pytest.mark.asyncio
 
 class TestUpdateTransactionTool:
     @pytest.fixture
-    def tool(self):
+    def tool(self, mock_logger_factory: MagicMock):
         service = TransactionService.__new__(TransactionService)
         object.__setattr__(service, "_repository", None)
         return UpdateTransactionTool(
-            service=service, logger_factory=MagicMock(spec=Logger)
+            service=service, logger_factory=mock_logger_factory
         )
 
     async def test_updates_and_returns_ok(self, tool):

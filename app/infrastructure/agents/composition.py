@@ -109,6 +109,7 @@ def build_agent_graph(
             "search_transactions": search_transactions_tool,
             "total_balance": total_balance_tool,
             "update_transaction": update_transaction_tool,
+            "search_history": search_history_tool,
         },
     )
 
@@ -116,6 +117,7 @@ def build_agent_graph(
         agent_factory=specialist_factory,
         logger_factory=logger_factory,
         clock=clock,
+        search_history_tool=search_history_tool,
     )
 
     faq = FAQAgentNode(
