@@ -1,4 +1,11 @@
-import { type KeyboardEvent, type SubmitEvent, useState } from 'react'
+import {
+  type KeyboardEvent,
+  type SubmitEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { sendChatMessage } from './api/chat'
 import { finalizeSession } from './api/session'
 import { MarkdownResponse } from './components/MarkdownResponse'
@@ -7,6 +14,26 @@ import './App.css'
 const SESSION_STORAGE_KEY = 'assessor-ia.session-id'
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+type Message = Readonly<{
+  id: number
+  kind: 'user' | 'assistant' | 'error'
+  text: string
+  calledAgents: readonly string[]
+}>
+
+const AGENT_LABELS: Readonly<Record<string, string>> = {
+  input_guardrail: 'Validação de entrada',
+  router: 'Roteador',
+  financial: 'Financeiro',
+  agenda: 'Agenda',
+  faq: 'Perguntas frequentes',
+  orquestrator: 'Orquestrador',
+  output_guardrail: 'Validação de saída',
+}
+
+type Phase = 'idle' | 'sending' | 'finalizing'
+type Connection = 'ready' | 'connected' | 'error'
 
 function persistSessionId(sessionId: string) {
   try {
@@ -37,117 +64,274 @@ function getOrCreateSessionId() {
 
 function App() {
   const [sessionId, setSessionId] = useState(getOrCreateSessionId)
-  const [message, setMessage] = useState('')
-  const [response, setResponse] = useState('')
-  const [error, setError] = useState('')
-  const [isSending, setIsSending] = useState(false)
-  const [isFinalizing, setIsFinalizing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [messages, setMessages] = useState<readonly Message[]>([])
+  const [phase, setPhase] = useState<Phase>('idle')
+  const [connection, setConnection] = useState<Connection>('ready')
+  const [summary, setSummary] = useState<string | null>(null)
+  const [notice, setNotice] = useState('')
+  const [finalizationError, setFinalizationError] = useState('')
+  const busyRef = useRef(false)
+  const nextMessageId = useRef(0)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const threadRef = useRef<HTMLDivElement>(null)
+  const isBusy = phase !== 'idle'
 
-  const isBusy = isSending || isFinalizing
+  useEffect(() => {
+    if (phase === 'idle') inputRef.current?.focus()
+  }, [phase])
+
+  useLayoutEffect(() => {
+    const input = inputRef.current
+    if (!input) return
+    input.style.height = 'auto'
+    const borderHeight = input.offsetHeight - input.clientHeight
+    input.style.height = Math.min(input.scrollHeight + borderHeight, 140) + 'px'
+  }, [draft])
+
+  useEffect(() => {
+    const thread = threadRef.current
+    if (thread) thread.scrollTop = thread.scrollHeight
+  }, [messages, phase])
+
+  function appendMessage(
+    kind: Message['kind'],
+    text: string,
+    calledAgents: readonly string[] = [],
+  ) {
+    const message: Message = { id: nextMessageId.current++, kind, text, calledAgents }
+    setMessages((previous) => [...previous, message])
+  }
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
+    const question = draft.trim()
+    if (!question || busyRef.current) return
 
-    const trimmedMessage = message.trim()
-    if (!trimmedMessage) {
-      return
-    }
-
-    setIsSending(true)
-    setError('')
-    setResponse('')
+    busyRef.current = true
+    setPhase('sending')
+    setNotice('')
+    setFinalizationError('')
+    appendMessage('user', question)
+    setDraft('')
 
     try {
-      const chatResponse = await sendChatMessage(sessionId, trimmedMessage)
-      setResponse(chatResponse.content)
-    } catch (caughtError: unknown) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : 'Ocorreu um erro ao enviar sua mensagem.',
+      const reply = await sendChatMessage(sessionId, question)
+      appendMessage('assistant', reply.content, reply.called_agents)
+      setConnection('connected')
+    } catch (error: unknown) {
+      appendMessage(
+        'error',
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível obter uma resposta. Tente novamente.',
       )
+      setConnection('error')
+      setDraft(question)
     } finally {
-      setIsSending(false)
+      busyRef.current = false
+      setPhase('idle')
     }
   }
 
   async function handleNewSession() {
-    setIsFinalizing(true)
-    setError('')
+    if (busyRef.current) return
+
+    busyRef.current = true
+    setPhase('finalizing')
+    setNotice('')
+    setFinalizationError('')
 
     try {
-      await finalizeSession(sessionId)
+      const result = await finalizeSession(sessionId)
       setSessionId(createSessionId())
-      setMessage('')
-      setResponse('')
-    } catch (caughtError: unknown) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : 'Ocorreu um erro ao encerrar a sessão.',
+      setMessages([])
+      setDraft('')
+      setSummary(result.session_summary)
+      setNotice('Nova sessão iniciada.')
+      setConnection('connected')
+    } catch (error: unknown) {
+      setFinalizationError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível encerrar a sessão. Tente novamente.',
       )
+      setConnection('error')
     } finally {
-      setIsFinalizing(false)
+      busyRef.current = false
+      setPhase('idle')
     }
   }
 
-  function handleMessageKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.ctrlKey && event.key === 'Enter') {
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      event.key === 'Enter' &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing &&
+      event.keyCode !== 229
+    ) {
       event.preventDefault()
       event.currentTarget.form?.requestSubmit()
     }
   }
 
+  const statusText =
+    phase === 'sending'
+      ? 'O assistente está preparando uma resposta…'
+      : phase === 'finalizing'
+        ? 'Encerrando a sessão atual…'
+        : notice ||
+          (connection === 'error'
+            ? 'A última operação não foi concluída. Você pode tentar novamente.'
+            : connection === 'connected'
+              ? 'Resposta recebida. Pode continuar a conversa.'
+              : 'Pronto para conversar.')
+
   return (
-    <main className="chat-page">
-      <section className="chat-card" aria-labelledby="page-title">
-        <header className="chat-header">
-          <p className="eyebrow">Assessor.IA</p>
-          <h1 id="page-title">Como posso ajudar?</h1>
-          <p className="subtitle">
-            Envie uma mensagem para conversar com seu assistente.
-          </p>
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={handleNewSession}
-            disabled={isBusy}
-          >
-            {isFinalizing ? 'Encerrando sessão...' : 'Nova sessão'}
-          </button>
+    <main className="console-page">
+      <section className="console" aria-labelledby="console-title">
+        <header className="console__header">
+          <div className="header__identity">
+            <span
+              className={'header__dot' + (connection === 'error' ? ' is-error' : '')}
+              aria-hidden="true"
+            />
+            <h1 className="header__title" id="console-title">
+              assistente<span className="header__cursor" aria-hidden="true">_</span>
+            </h1>
+          </div>
+          <div className="header__meta">
+            <span className="header__label">sessão</span>
+            <code
+              className="header__session"
+              title={sessionId}
+              aria-label={'Sessão atual: ' + sessionId}
+            >
+              {sessionId.slice(0, 8)}…
+            </code>
+            <button
+              className="header__reset"
+              type="button"
+              onClick={handleNewSession}
+              disabled={isBusy}
+              title="Encerrar esta conversa e iniciar uma nova sessão"
+            >
+              {phase === 'finalizing' ? 'Encerrando…' : 'Nova sessão'}
+            </button>
+          </div>
         </header>
 
-        <form className="chat-form" onSubmit={handleSubmit}>
-          <label htmlFor="message">Sua mensagem</label>
+        {summary && (
+          <details className="session-summary">
+            <summary>Resumo da sessão anterior</summary>
+            <div className="session-summary__content">
+              <MarkdownResponse content={summary} />
+            </div>
+          </details>
+        )}
+
+        <div
+          className="console__thread"
+          ref={threadRef}
+          role="log"
+          aria-label="Conversa com o assistente"
+          aria-live="polite"
+          aria-relevant="additions"
+        >
+          {messages.length === 0 && (
+            <div className="thread__empty">
+              <p className="empty__eyebrow">// pronto para receber</p>
+              <p className="empty__text">
+                Escreva uma pergunta abaixo para conversar sobre finanças e rotina.
+              </p>
+              <p className="empty__note">
+                A sessão é mantida ao reabrir o app. Aqui aparecem as mensagens
+                trocadas nesta tela.
+              </p>
+            </div>
+          )}
+          {messages.map((message) => (
+            <article className={'message message--' + message.kind} key={message.id}>
+              <span className="message__label">
+                {message.kind === 'user'
+                  ? 'você'
+                  : message.kind === 'error'
+                    ? 'não foi possível responder'
+                    : 'assistente'}
+              </span>
+              <div className="message__bubble">
+                {message.kind === 'assistant'
+                  ? <MarkdownResponse content={message.text} />
+                  : message.text}
+              </div>
+              {message.kind === 'assistant' && message.calledAgents.length > 0 && (
+                <ul className="message__agents" aria-label="Etapas executadas nesta pergunta">
+                  {message.calledAgents.map((agent, index) => (
+                    <li
+                      className={'agent-tag' + (agent === 'input_guardrail' || agent === 'output_guardrail' ? ' agent-tag--validation' : '')}
+                      key={`${agent}-${index}`}
+                    >
+                      {Object.hasOwn(AGENT_LABELS, agent) ? AGENT_LABELS[agent] : agent}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          ))}
+          {phase === 'sending' && (
+            <div className="message message--assistant" aria-hidden="true">
+              <span className="message__label">assistente</span>
+              <div className="message__bubble">
+                <span className="typing"><span /><span /><span /></span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <form
+          className="console__composer"
+          onSubmit={handleSubmit}
+          autoComplete="off"
+          aria-label="Enviar mensagem ao assistente"
+        >
+          <label className="sr-only" htmlFor="message">Sua mensagem</label>
           <textarea
+            className="composer__input"
             id="message"
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            onKeyDown={handleMessageKeyDown}
-            placeholder="Escreva sua pergunta aqui..."
-            rows={5}
+            ref={inputRef}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Digite sua pergunta…"
+            aria-describedby="keyboard-hint"
+            rows={1}
             disabled={isBusy}
             required
           />
-          <button type="submit" disabled={isBusy || !message.trim()}>
-            {isSending ? 'Consultando...' : 'Enviar mensagem'}
+          <button
+            className="composer__send"
+            type="submit"
+            disabled={isBusy || !draft.trim()}
+            aria-label="Enviar mensagem"
+            title="Enviar mensagem"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path d="M2 9L16 2L11 16L8.5 10.5L2 9Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+              <path d="M8.5 10.5L16 2" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+            </svg>
           </button>
         </form>
 
-        <section className="response-section" aria-labelledby="response-title">
-          <h2 id="response-title">Resposta</h2>
-          <div className="response" role="status" aria-live="polite">
-            {isSending && 'O assistente está preparando uma resposta...'}
-            {isFinalizing && 'Encerrando a sessão atual...'}
-            {!isBusy && error && <span className="error">{error}</span>}
-            {!isBusy && !error && response && (
-              <MarkdownResponse content={response} />
-            )}
-            {!isBusy && !error && !response && (
-              <span className="placeholder">A resposta aparecerá aqui.</span>
-            )}
-          </div>
-        </section>
+        <footer className="console__footer">
+          {finalizationError && (
+            <p className="console__error" role="alert">{finalizationError}</p>
+          )}
+          <p className="console__status" role="status">{statusText}</p>
+          <p className="console__hint" id="keyboard-hint">
+            <kbd>Enter</kbd> envia <span aria-hidden="true">·</span>{' '}
+            <kbd>Shift + Enter</kbd> quebra a linha
+          </p>
+        </footer>
       </section>
     </main>
   )

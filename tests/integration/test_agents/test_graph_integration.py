@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 from langchain_core.messages import AIMessage, ToolMessage
 
+from app.application.models.agent_execution import AgentExecutionResult
 from app.domain.model.chat_entry import AssistantMessage, HumanMessage
 from app.infrastructure.agents import AgentGraphImpl
 from app.infrastructure.agents._core.schemas.specialist_output import FinancialOutput
@@ -106,8 +107,16 @@ async def test_financial_question_runs_complete_chain(
         HumanMessage(content=question), session_id="test-full-flow"
     )
 
-    assert isinstance(response, AssistantMessage)
-    assert response.content == answer
+    assert isinstance(response, AgentExecutionResult)
+    assert isinstance(response.message, AssistantMessage)
+    assert response.message.content == answer
+    assert response.called_agents == (
+        "input_guardrail",
+        "router",
+        "financial",
+        "orquestrator",
+        "output_guardrail",
+    )
     await _assert_financial_chain(agent_graph, "test-full-flow", balance)
     assert mock_gemini_ainvoke.await_count == 2
     assert mock_groq_ainvoke.await_count == 4
@@ -123,8 +132,9 @@ async def test_blocked_input_injection_does_not_call_llms(
         session_id="test-session-blocked",
     )
 
-    assert isinstance(response, AssistantMessage)
-    assert response.content == "Não consigo processar essa solicitação."
+    assert isinstance(response, AgentExecutionResult)
+    assert response.message.content == "Não consigo processar essa solicitação."
+    assert response.called_agents == ("input_guardrail",)
     mock_gemini_ainvoke.assert_not_awaited()
     mock_groq_ainvoke.assert_not_awaited()
 
@@ -147,7 +157,7 @@ async def test_pii_is_anonymized_before_reaching_llms(
         session_id="test-session-pii",
     )
 
-    assert response.content == "Segue o saldo."
+    assert response.message.content == "Segue o saldo."
     await _assert_financial_chain(agent_graph, "test-session-pii", "7600.0")
     for call in mock_groq_ainvoke.await_args_list + mock_gemini_ainvoke.await_args_list:
         assert "123.456.789-00" not in str(call.args)

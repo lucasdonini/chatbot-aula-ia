@@ -7,6 +7,7 @@ type ChatRequest = {
 export type ChatResponse = {
   session_id: string
   content: string
+  called_agents: string[]
 }
 
 export async function sendChatMessage(
@@ -44,17 +45,22 @@ export async function sendChatMessage(
     throw new Error('O assistente retornou uma resposta em formato inválido.')
   }
 
-  const { session_id: responseSessionId, content } = responseBody as Record<
-    string,
-    unknown
-  >
+  const {
+    session_id: responseSessionId,
+    content,
+    called_agents,
+  } = responseBody as Record<string, unknown>
   if (
     typeof responseSessionId !== 'string' ||
     responseSessionId !== sessionId ||
-    typeof content !== 'string'
+    typeof content !== 'string' ||
+    !Array.isArray(called_agents) ||
+    !called_agents.every(
+      (agent: unknown) => typeof agent === 'string' && agent.trim().length > 0,
+    )
   ) {
     throw new Error('O assistente retornou uma resposta em formato inválido.')
   }
 
-  return { session_id: responseSessionId, content }
+  return { session_id: responseSessionId, content, called_agents }
 }
