@@ -14,8 +14,8 @@ from .._core.contracts.agent_node import AgentNode
 from .._core.prompting.temporal_context import build_temporal_context
 from .._core.specialist import SpecialistRegistration
 from .._core.state import GraphState, GraphStateKeys
+from ..tools.search_history import SearchHistoryTool
 from .router_prompt import build_router_prompt
-from .tools import SearchHistoryTool
 
 SPECIALIST_JSON_KEYS = {"dominio"}
 
