@@ -271,10 +271,10 @@ def setup_logger() -> None:
         "langgraph",
         "httpcore",
         "markdown_it",
-        "faiss",
         "asyncio",
         "pymongo",
         "google_genai",
+        "pypdf",
     ]
     for logger_name in silenced_loggers:
         lg = logging.getLogger(logger_name)
