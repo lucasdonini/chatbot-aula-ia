@@ -11,8 +11,8 @@ def test_returns_only_faq_payload_contents(
 ) -> None:
     query_response = SimpleNamespace(
         points=[
-            SimpleNamespace(payload={"page_content": "Primeiro trecho"}),
-            SimpleNamespace(payload={"page_content": "Segundo trecho"}),
+            SimpleNamespace(payload={"page_content": "Primeiro trecho"}, score=0.91),
+            SimpleNamespace(payload={"page_content": "Segundo trecho"}, score=0.82),
         ]
     )
 
@@ -38,6 +38,7 @@ def test_returns_only_faq_payload_contents(
         collection_name="faq-current",
         query=[0.1, 0.2],
         limit=2,
+        score_threshold=0.52,
         with_payload=["page_content"],
     )
 
@@ -71,10 +72,10 @@ def test_ignores_non_string_faq_payload_content(
 ) -> None:
     query_response = SimpleNamespace(
         points=[
-            SimpleNamespace(payload=None),
-            SimpleNamespace(payload={}),
-            SimpleNamespace(payload={"page_content": 1}),
-            SimpleNamespace(payload={"page_content": "Trecho válido"}),
+            SimpleNamespace(payload=None, score=0.95),
+            SimpleNamespace(payload={}, score=0.90),
+            SimpleNamespace(payload={"page_content": 1}, score=0.85),
+            SimpleNamespace(payload={"page_content": "Trecho válido"}, score=0.80),
         ]
     )
 
