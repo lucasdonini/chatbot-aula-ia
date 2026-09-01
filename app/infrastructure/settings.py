@@ -3,10 +3,12 @@ from typing import Literal
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_DUMMY_API_KEY = "No API key provided"
+
 
 class PydanticSettings(BaseSettings):
-    gemini_api_key: SecretStr = SecretStr("")
-    groq_api_key: SecretStr = SecretStr("")
+    gemini_api_key: SecretStr = SecretStr(_DUMMY_API_KEY)
+    groq_api_key: SecretStr = SecretStr(_DUMMY_API_KEY)
 
     postgres_url: SecretStr = SecretStr("postgresql://localhost:5432/acessoriadb")
 
@@ -20,7 +22,7 @@ class PydanticSettings(BaseSettings):
     agent_execution_timeout_seconds: float = Field(default=120.0, gt=0)
     llm_request_timeout_seconds: float = Field(default=30.0, gt=0)
 
-    qdrant_api_key: SecretStr = SecretStr("")
+    qdrant_api_key: SecretStr = SecretStr(_DUMMY_API_KEY)
     qdrant_url: SecretStr = SecretStr("")
     history_collection_name: str = "session-history"
     faq_collection_alias: str = "faq-current"
@@ -44,7 +46,8 @@ class PydanticSettings(BaseSettings):
                 ("QDRANT_API_KEY", self.qdrant_api_key),
                 ("QDRANT_URL", self.qdrant_url),
             )
-            if value.get_secret_value().strip() == ""
+            if value.get_secret_value() == _DUMMY_API_KEY
+            or value.get_secret_value().strip() == ""
         ]
         if missing_keys:
             variables = ", ".join(missing_keys)
