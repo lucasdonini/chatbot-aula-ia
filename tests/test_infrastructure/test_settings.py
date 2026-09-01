@@ -45,7 +45,7 @@ def test_settings_reject_dummy_api_keys_at_boot() -> None:
     settings = PydanticSettings(_env_file=None)
 
     with pytest.raises(ValueError, match="GEMINI_API_KEY, GROQ_API_KEY"):
-        settings.validate_llm_api_keys()
+        settings.validate_required_envs()
 
 
 def test_settings_accept_configured_api_keys() -> None:
@@ -55,4 +55,4 @@ def test_settings_accept_configured_api_keys() -> None:
         groq_api_key="groq-key",
     )
 
-    settings.validate_llm_api_keys()
+    settings.validate_required_envs()

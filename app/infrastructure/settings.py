@@ -3,12 +3,10 @@ from typing import Literal
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_DUMMY_API_KEY = "No key provided"
-
 
 class PydanticSettings(BaseSettings):
-    gemini_api_key: SecretStr = SecretStr(_DUMMY_API_KEY)
-    groq_api_key: SecretStr = SecretStr(_DUMMY_API_KEY)
+    gemini_api_key: SecretStr = SecretStr("")
+    groq_api_key: SecretStr = SecretStr("")
 
     postgres_url: SecretStr = SecretStr("postgresql://localhost:5432/acessoriadb")
 
@@ -22,20 +20,28 @@ class PydanticSettings(BaseSettings):
     agent_execution_timeout_seconds: float = Field(default=120.0, gt=0)
     llm_request_timeout_seconds: float = Field(default=30.0, gt=0)
 
+    qdrant_api_key: SecretStr = SecretStr("")
+    qdrant_url: SecretStr = SecretStr("")
+    history_collection: str = "session-history"
+    faq_collection: str = "faq-chunks"
+    embedding_dimmensions: int = 768
+
     model_config = SettingsConfigDict(env_file=".env", extra="forbid")
 
-    def validate_llm_api_keys(self) -> None:
+    def validate_required_envs(self) -> None:
         missing_keys = [
             key
             for key, value in (
                 ("GEMINI_API_KEY", self.gemini_api_key),
                 ("GROQ_API_KEY", self.groq_api_key),
+                ("QDRANT_API_KEY", self.qdrant_api_key),
+                ("QDRANT_URL", self.qdrant_url),
             )
-            if value.get_secret_value() == _DUMMY_API_KEY
+            if value.get_secret_value().strip() == ""
         ]
         if missing_keys:
             variables = ", ".join(missing_keys)
-            raise ValueError(f"Configure as chaves de API: {variables}.")
+            raise ValueError(f"Configure as variáveis de ambiente: {variables}.")
 
 
 settings = PydanticSettings()

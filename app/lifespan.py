@@ -30,7 +30,7 @@ from .services.transaction_service import TransactionService
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     setup_logger()
-    settings.validate_llm_api_keys()
+    settings.validate_required_envs()
 
     mongo_manager = MongoManager(settings=settings)
     await mongo_manager.init_database()
