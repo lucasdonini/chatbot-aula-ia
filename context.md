@@ -131,8 +131,8 @@ concluída no escopo atualmente entregue:
 - Docker gera e empacota os dois componentes;
 - a CI valida backend e frontend.
 
-O documento `MIGRATION_API.md` foi preservado como registro histórico das decisões
-e das diferenças entre o plano original e o escopo final.
+As decisões permanentes e as diferenças entre o plano original e o escopo final
+foram consolidadas neste documento após a conclusão da migração.
 
 ## 8. Decisões e características relevantes
 

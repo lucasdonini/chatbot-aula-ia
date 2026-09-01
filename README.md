@@ -13,11 +13,12 @@ podem ser produzidas por modelos Gemini e Groq.
 - [uv](https://docs.astral.sh/uv/);
 - Node.js 24 e npm;
 - PostgreSQL, MongoDB e Qdrant acessíveis pela aplicação;
-- chaves de API do Gemini e do Groq;
+- chaves de API do Gemini, do Groq e do Qdrant;
 - Docker, opcionalmente, para executar a aplicação em container.
 
 O `docker-compose.yml` atual constrói e executa a aplicação, mas não provisiona
-PostgreSQL nem MongoDB. Esses serviços precisam estar disponíveis separadamente.
+PostgreSQL, MongoDB nem Qdrant. Esses serviços precisam estar disponíveis
+separadamente.
 
 ## Configuração inicial
 
@@ -36,6 +37,27 @@ Na primeira execução, use `INGEST_FAQ_PDF=true` para criar a coleção vetoria
 o alias configurado em `FAQ_COLLECTION_ALIAS`. Depois da ingestão, a opção pode
 voltar para `false`. Novas ingestões constroem uma coleção versionada, trocam o
 alias atomicamente e removem a coleção anterior.
+
+### Configuração da busca no FAQ
+
+As principais variáveis do pipeline vetorial são:
+
+- `FAQ_COLLECTION_ALIAS`: alias estável consultado pela aplicação;
+- `FAQ_COLLECTION_PREFIX`: prefixo das coleções versionadas criadas na ingestão;
+- `EMBEDDING_DIMMENSIONS`: dimensão dos vetores, que deve ser compatível com o
+  modelo de embeddings;
+- `FAQ_CHUNK_SIZE` e `FAQ_CHUNK_OVERLAP`: tamanho e sobreposição dos trechos do
+  PDF. A sobreposição deve ser menor que o tamanho do trecho;
+- `FAQ_INGESTION_BATCH_SIZE`: quantidade de trechos processados por lote;
+- `FAQ_SEARCH_SCORE_THRESHOLD`: similaridade mínima, entre `0` e `1`, para um
+  trecho ser considerado relevante;
+- `INGEST_FAQ_PDF`: controla se o PDF será ingerido durante a inicialização.
+
+Mantenha `INGEST_FAQ_PDF=true` somente até uma inicialização concluir a ingestão
+com sucesso. Cada nova ingestão cria outra coleção, valida a quantidade de pontos
+e então troca o alias. O valor inicial de `FAQ_SEARCH_SCORE_THRESHOLD` é `0.52`,
+mas deve ser calibrado com perguntas representativas sempre que o modelo de
+embeddings ou o conteúdo do FAQ mudar.
 
 Instale as dependências e prepare o frontend:
 
@@ -81,7 +103,7 @@ Os atalhos equivalentes estão no `makefile`: `make dev`, `make up`,
 
 ## Execução com Docker
 
-Com PostgreSQL e MongoDB já acessíveis e o `.env` configurado:
+Com PostgreSQL, MongoDB e Qdrant já acessíveis e o `.env` configurado:
 
 ```bash
 docker compose up --build
@@ -175,9 +197,8 @@ suítes.
 - `tests` — testes unitários, arquiteturais e de integração;
 - `data` — recursos estáticos usados pelos agentes.
 
-O histórico da migração da CLI para a aplicação web está em
-[`MIGRATION_API.md`](MIGRATION_API.md), e o contexto arquitetural mais amplo está
-em [`context.md`](context.md).
+O contexto arquitetural mais amplo e o escopo consolidado da migração para a
+aplicação web estão em [`context.md`](context.md).
 
 ## Contribuição
 
