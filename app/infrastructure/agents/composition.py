@@ -1,6 +1,7 @@
 from langgraph.graph import END
 
 from app.application.ports.clock import Clock
+from app.application.ports.faq_search import FaqSearch
 from app.application.ports.logger import (
     InteractionIncrementer,
     LoggerFactory,
@@ -36,6 +37,7 @@ def build_agent_graph(
     *,
     transaction_service: TransactionService,
     chat_history_service: ChatHistoryService,
+    faq_search: FaqSearch,
     text_generator: TextGenerator,
     logger_factory: LoggerFactory,
     trace_context_factory: TraceContextFactory,
@@ -90,7 +92,10 @@ def build_agent_graph(
         logger_factory=logger_factory,
     )
 
-    faq_rag = FaqRag(logger_factory=logger_factory)
+    faq_rag = FaqRag(
+        faq_search=faq_search,
+        logger_factory=logger_factory,
+    )
 
     search_history_tool = SearchHistoryTool(
         service=chat_history_service,

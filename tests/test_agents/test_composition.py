@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.application.ports.faq_search import FaqSearch
 from app.application.ports.logger import Logger
 from app.domain.model.chat_entry import HumanMessage
 from app.infrastructure.agents import AgentGraphImpl, build_agent_graph
@@ -37,6 +38,10 @@ def _fixed_clock() -> FixedClock:
     )
 
 
+def _faq_search() -> MagicMock:
+    return MagicMock(spec=FaqSearch)
+
+
 def test_build_agent_graph_returns_initialized_graph() -> None:
     transaction_service = TransactionService.__new__(TransactionService)
     object.__setattr__(transaction_service, "_repository", None)
@@ -46,6 +51,7 @@ def test_build_agent_graph_returns_initialized_graph() -> None:
     graph = build_agent_graph(
         transaction_service=transaction_service,
         chat_history_service=MagicMock(spec=ChatHistoryService),
+        faq_search=_faq_search(),
         text_generator=text_generator,
         logger_factory=lambda _: MagicMock(spec=Logger),
         trace_context_factory=lambda _: nullcontext(),
@@ -64,6 +70,7 @@ def test_specialists_receive_history_tool_without_losing_domain_tools() -> None:
         build_agent_graph(
             transaction_service=MagicMock(spec=TransactionService),
             chat_history_service=MagicMock(spec=ChatHistoryService),
+            faq_search=_faq_search(),
             text_generator=MagicMock(),
             logger_factory=lambda _: MagicMock(spec=Logger),
             trace_context_factory=lambda _: nullcontext(),
@@ -109,6 +116,7 @@ async def test_agent_graph_times_out() -> None:
     graph = build_agent_graph(
         transaction_service=transaction_service,
         chat_history_service=MagicMock(spec=ChatHistoryService),
+        faq_search=_faq_search(),
         text_generator=text_generator,
         logger_factory=lambda _: MagicMock(spec=Logger),
         trace_context_factory=lambda _: nullcontext(),
@@ -156,6 +164,7 @@ def test_build_agent_graph_shares_application_clock_with_temporal_nodes() -> Non
     graph = build_agent_graph(
         transaction_service=transaction_service,
         chat_history_service=MagicMock(spec=ChatHistoryService),
+        faq_search=_faq_search(),
         text_generator=text_generator,
         logger_factory=lambda _: MagicMock(spec=Logger),
         trace_context_factory=lambda _: nullcontext(),

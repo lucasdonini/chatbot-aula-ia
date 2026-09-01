@@ -5,6 +5,7 @@ from fastapi import FastAPI
 
 from .infrastructure.agents import build_agent_graph
 from .infrastructure.clock import SystemClock
+from .infrastructure.faq_search import FaissFaqSearch
 from .infrastructure.llms import fast_llm
 from .infrastructure.logger import (
     bind_session_context,
@@ -54,6 +55,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     graph = build_agent_graph(
         transaction_service=transaction_service,
         chat_history_service=chat_history_service,
+        faq_search=FaissFaqSearch(),
         text_generator=text_generator,
         logger_factory=create_logger,
         trace_context_factory=bind_trace_context,

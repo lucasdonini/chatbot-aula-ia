@@ -1,10 +1,11 @@
 from collections.abc import Generator
 from contextlib import nullcontext
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, create_autospec, patch
+from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
 
 import pytest
 
+from app.application.ports.faq_search import FaqSearch
 from app.application.repositories.chat_session_repository import (
     ChatSessionRepository,
 )
@@ -131,6 +132,7 @@ def agent_graph(
     return build_agent_graph(
         transaction_service=transaction_service,
         chat_history_service=chat_history_service,
+        faq_search=MagicMock(spec=FaqSearch),
         text_generator=LLMTextGenerator(fast_llm),
         logger_factory=mock_logger_factory,
         trace_context_factory=lambda _: nullcontext(),
