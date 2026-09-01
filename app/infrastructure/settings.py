@@ -22,13 +22,20 @@ class PydanticSettings(BaseSettings):
 
     qdrant_api_key: SecretStr = SecretStr("")
     qdrant_url: SecretStr = SecretStr("")
-    history_collection: str = "session-history"
-    faq_collection: str = "faq-chunks"
-    embedding_dimmensions: int = 768
+    history_collection_name: str = "session-history"
+    faq_collection_alias: str = "faq-current"
+    faq_collection_prefix: str = "faq-chunks"
+    embedding_dimmensions: int = Field(default=768, gt=0)
+
+    faq_chunk_size: int = Field(default=700, gt=0)
+    faq_chunk_overlap: int = Field(default=150, ge=0)
+    faq_ingestion_batch_size: int = Field(default=50, gt=0)
+    faq_search_score_threshold: float = Field(default=0.52, ge=0, le=1)
+    ingest_faq_pdf: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="forbid")
 
-    def validate_required_envs(self) -> None:
+    def _validate_missing_keys(self) -> None:
         missing_keys = [
             key
             for key, value in (
@@ -41,7 +48,19 @@ class PydanticSettings(BaseSettings):
         ]
         if missing_keys:
             variables = ", ".join(missing_keys)
-            raise ValueError(f"Configure as variáveis de ambiente: {variables}.")
+            raise ValueError(f"Configure missing envs: {variables}.")
+
+    def _validate_chunk_overlap(self) -> None:
+        if self.faq_chunk_overlap >= self.faq_chunk_size:
+            raise ValueError(
+                "Chunk overlap must be smaller than chunk size. "
+                f"Overlap: {self.faq_chunk_overlap}, "
+                f"Size: {self.faq_chunk_size}."
+            )
+
+    def validate_envs(self) -> None:
+        self._validate_missing_keys()
+        self._validate_chunk_overlap()
 
 
 settings = PydanticSettings()

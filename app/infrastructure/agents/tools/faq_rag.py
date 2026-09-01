@@ -24,4 +24,10 @@ class FaqRag(BaseTool):
     def _run(self, question: str) -> list[str]:
         logger = self.logger_factory(__name__)
         logger.debug("Tool called", details={"tool": self.name})
-        return self.faq_search.search(question, limit=6)
+        result = self.faq_search.search(question, limit=6)
+        if result == []:
+            result.append(
+                "Não foi encontrada nenhuma informação relevante "
+                "sobre isso no pdf de FAQ"
+            )
+        return result

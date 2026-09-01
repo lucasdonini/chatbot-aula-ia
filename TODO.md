@@ -120,10 +120,20 @@ latência ou throughput superior ao suportado pelo desenho atual.
 
 ### Tratar avisos de dependências
 
-- Migrar de `langchain-community` para integrações mantidas.
+- Migrar `PyPDFLoader` de `langchain-community` para uma integração mantida antes
+  da remoção definitiva do pacote, acompanhando seus avisos de descontinuação.
 - Acompanhar a compatibilidade do Google GenAI com versões futuras do Python.
 - Atualizar a camada de testes quando a transição de `httpx` do Starlette estiver
   estabilizada.
+
+### Adicionar rollback da coleção vetorial do FAQ
+
+- Preservar temporariamente a coleção Qdrant anteriormente ativa.
+- Definir uma política de retenção para coleções versionadas.
+- Permitir que o alias do FAQ volte atomicamente para a versão anterior.
+
+Critério de adoção: o FAQ tornar-se crítico ou exigir recuperação imediata após
+uma ingestão semanticamente incorreta.
 
 ### Manter documentação e decisões arquiteturais
 

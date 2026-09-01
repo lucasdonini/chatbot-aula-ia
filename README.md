@@ -3,15 +3,16 @@
 Assistente web multiagente para organização financeira e apoio ao dia a dia. O
 backend usa FastAPI e LangGraph; a interface usa React, TypeScript e Vite.
 
-O PostgreSQL armazena transações e o MongoDB armazena a sessão e o histórico do
-chat. As respostas podem ser produzidas por modelos Gemini e Groq.
+O PostgreSQL armazena transações, o MongoDB armazena a sessão e o histórico do
+chat, e o Qdrant mantém os embeddings usados na consulta ao FAQ. As respostas
+podem ser produzidas por modelos Gemini e Groq.
 
 ## Requisitos
 
 - Python 3.14;
 - [uv](https://docs.astral.sh/uv/);
 - Node.js 24 e npm;
-- PostgreSQL e MongoDB acessíveis pela aplicação;
+- PostgreSQL, MongoDB e Qdrant acessíveis pela aplicação;
 - chaves de API do Gemini e do Groq;
 - Docker, opcionalmente, para executar a aplicação em container.
 
@@ -27,8 +28,14 @@ Copy-Item .env.example .env
 ```
 
 Em Linux ou macOS, use `cp .env.example .env`. Preencha ao menos
-`GEMINI_API_KEY`, `GROQ_API_KEY`, `POSTGRES_URL`, `MONGODB_URI` e
-`MONGODB_DBNAME`. O arquivo `.env` contém segredos e não deve ser versionado.
+`GEMINI_API_KEY`, `GROQ_API_KEY`, `QDRANT_API_KEY`, `QDRANT_URL`,
+`POSTGRES_URL`, `MONGODB_URI` e `MONGODB_DBNAME`. O arquivo `.env` contém
+segredos e não deve ser versionado.
+
+Na primeira execução, use `INGEST_FAQ_PDF=true` para criar a coleção vetorial e
+o alias configurado em `FAQ_COLLECTION_ALIAS`. Depois da ingestão, a opção pode
+voltar para `false`. Novas ingestões constroem uma coleção versionada, trocam o
+alias atomicamente e removem a coleção anterior.
 
 Instale as dependências e prepare o frontend:
 
@@ -175,5 +182,5 @@ em [`context.md`](context.md).
 ## Contribuição
 
 Crie uma branch por alteração, mantenha commits pequenos e abra um pull request
-para `main`. Não inclua arquivos `.env`, logs, índices FAISS ou outros artefatos
-locais no versionamento.
+para `main`. Não inclua arquivos `.env`, logs ou outros artefatos locais no
+versionamento.

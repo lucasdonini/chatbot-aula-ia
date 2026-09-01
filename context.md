@@ -31,7 +31,7 @@ quanto as decisões técnicas sem depender do histórico das aulas.
 - Alembic: evolução do schema relacional;
 - MongoDB: sessão, mensagens, erros e resumo da conversa;
 - Beanie/PyMongo: acesso ao MongoDB;
-- FAISS: índice vetorial local para consulta ao FAQ.
+- Qdrant: banco vetorial usado para indexação e consulta ao FAQ.
 
 ## 3. Arquitetura
 
@@ -78,7 +78,8 @@ parte do escopo entregue.
 - health check: `/health`.
 
 PostgreSQL e MongoDB são dependências externas. O Compose atual executa apenas a
-aplicação e não cria containers para esses bancos.
+aplicação e não cria containers para esses bancos. O Qdrant também é uma
+dependência externa e deve estar acessível antes da inicialização.
 
 Os comandos operacionais atualizados estão no `README.md` e no `makefile`.
 
@@ -146,6 +147,8 @@ e das diferenças entre o plano original e o escopo final.
 - O Markdown do frontend ignora HTML embutido.
 - O checkpointer do grafo permanece em memória e não é adequado a múltiplos
   workers com continuidade de sessão.
+- O FAQ usa coleções Qdrant versionadas e um alias estável. Cada nova ingestão
+  troca o alias atomicamente e remove a coleção anteriormente ativa.
 
 ## 9. Próximos passos fora da migração concluída
 

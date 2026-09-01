@@ -1,0 +1,2 @@
+2026-09-01 12:23:52 | INFO  | root | session=session- int=0 trace=trace-45 | Logging configured
+2026-09-01 12:23:52 | INFO  | agents.graph | session=session- int=0 trace=trace-45 | Message | {"key": "value"}
