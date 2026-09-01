@@ -250,7 +250,7 @@ def setup_logger() -> None:
     if settings.log_to_file:
         Path(settings.log_file).parent.mkdir(parents=True, exist_ok=True)
         file_handler = logging.FileHandler(
-            settings.log_file, mode="a", encoding="utf-8"
+            settings.log_file, mode="w", encoding="utf-8"
         )
         file_handler.setFormatter(file_fmt)
         file_handler.addFilter(ContextFilter())
